@@ -189,6 +189,8 @@ export type DiffSummary = {
 	added: number
 	removed: number
 	modified: number
+	/** The elements the source puts under another parent, each one change (`moved`). */
+	moved: number
 	/**
 	 * The template's changes the update lists but does not apply (`keptAttributeChanges` across the tree). They open
 	 * no decision: an instance can be `upToDate` and still carry some.

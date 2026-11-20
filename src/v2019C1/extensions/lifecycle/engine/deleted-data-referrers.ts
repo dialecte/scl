@@ -1,4 +1,5 @@
 import { DATA_REFERRER_TAGS, LOGICAL_NODE_TAGS } from './deleted-data-referrers.constants'
+import { removedElementsOf } from './moved'
 import { classifyUnmatched } from './removal-base'
 import { typeChangesOf } from './type-change'
 import { readValueTypes } from './value-ownership'
@@ -109,7 +110,10 @@ async function readDeletedTargets(
 		}),
 	)
 	const { removedRoots, kept } = splitRemoved({ node: params.instanceTree, params })
-	const removedNodes = removedRoots.flatMap(flatten)
+	// what moved out of a removed element is the source's still, written elsewhere: its data is not deleted
+	const removedNodes = removedRoots.flatMap((node) =>
+		removedElementsOf({ node, matchKey: params.matchKey, sourceUuids: params.sourceUuids }),
+	)
 	const removed = new Map(
 		removedNodes.flatMap((node): [string, string][] => {
 			if (!LOGICAL_NODE_TAGS.has(node.tagName) && !CONF_REV_CONTROL_TAGS.has(node.tagName))

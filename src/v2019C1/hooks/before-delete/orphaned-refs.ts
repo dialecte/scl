@@ -69,10 +69,15 @@ export async function collectDeleteCascade(
 		emptiesContainers: boolean
 		/** Containers never judged empty (the commit's other operations give them a child). */
 		kept?: ReadonlySet<string>
+		/** Elements below a root that do not go with it (moved out before the delete), with what they hold. */
+		stays?: ReadonlySet<string>
 	},
 ): Promise<DeleteCascade> {
 	const { emptiesContainers, kept } = params
-	const rootSubtree = await readSubtreeRecords(query, { records: params.roots })
+	const rootSubtree = await readSubtreeRecords(query, {
+		records: params.roots,
+		stays: params.stays,
+	})
 	const gone = new Set(rootSubtree.map((record) => record.id))
 
 	const deleted = new Map<string, Scl.TrackedRecord<Scl.ElementsOf>>()
@@ -355,9 +360,13 @@ export async function collectSubtreeIds(
  */
 export async function readSubtreeRecords(
 	query: Core.Query<Config>,
-	params: { records: readonly Scl.RawRecord<Scl.ElementsOf>[] },
+	params: {
+		records: readonly Scl.RawRecord<Scl.ElementsOf>[]
+		/** Children not read, nor what they hold: elements that leave the subtree (moved out of it). */
+		stays?: ReadonlySet<string>
+	},
 ): Promise<Scl.RawRecord<Scl.ElementsOf>[]> {
-	const seen = new Set<string>()
+	const seen = new Set<string>(params.stays)
 	const subtree: Scl.RawRecord<Scl.ElementsOf>[] = []
 	let level: Scl.RawRecord<Scl.ElementsOf>[] = []
 	for (const record of params.records) {

@@ -1,16 +1,22 @@
+import { instanceTagOf } from './instance-tag'
+
 import { toRef } from '@dialecte/core/helpers'
 
 import { readAttribute } from '@/v2019C1/helpers'
+import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { DecisionGroup, DiffNode } from './diff.types'
 import type {
 	FindMovedInAddedParams,
+	MovedOutParams,
 	LinkMovesParams,
 	MovedInAdded,
 	PendingMove,
 	ReplaceAddedParams,
+	TreeParentsParams,
+	WriteMovesParams,
 } from './moved.types'
-import type { Config, Scl } from '@/v2019C1/config'
+import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTreeRecord } from '@dialecte/core'
 
@@ -20,14 +26,18 @@ import type { AnyTreeRecord } from '@dialecte/core'
  * uuid is held twice. A descendant inside a moved one is the moved one's: not listed on its own.
  */
 export function findMovedInAdded(params: FindMovedInAddedParams): MovedInAdded[] {
-	const { index } = params
+	const { index, omit, notSelected } = params
 	const found: MovedInAdded[] = []
 	const pending = params.node.tree.map((child) => ({ child, parent: params.node }))
 	while (pending.length > 0) {
 		const next = pending.pop()
 		if (!next) continue
+		// a boundary another pass owns, or what the selection of variants leaves out, is not this addition's
+		if (omit?.includes(next.child.tagName) || notSelected?.has(next.child.id)) continue
 		const uuid = readAttribute({ record: next.child, name: 'uuid', defaults: 'none' })
-		const instance = uuid ? index.get(uuid) : undefined
+		const indexed = uuid ? index.get(uuid) : undefined
+		// paired as the walk pairs a child: an element of the tag the source element stands for
+		const instance = indexed?.tagName === instanceTagOf(next.child.tagName) ? indexed : undefined
 		if (instance) {
 			found.push({ source: next.child, instance, sourceParent: next.parent })
 			continue
@@ -57,11 +67,12 @@ export function replaceAdded(params: ReplaceAddedParams): DiffNode {
 export function linkMoveDependencies(params: LinkMovesParams): DecisionGroup[] {
 	const { groups } = params
 	const parentOf = parentsById(params.instanceTree)
+	// every element a group adds, its primary's subtree and its companions', names that group
 	const addedBySource = new Map(
 		groups.flatMap((group) =>
-			group.change === 'added' && group.primary.sourceRef?.id
-				? [[group.primary.sourceRef.id, group] as const]
-				: [],
+			[group.primary, ...group.companions].flatMap((node) =>
+				addedSourceIds(node).map((id) => [id, group] as const),
+			),
 		),
 	)
 	const removalByInstance = new Map(
@@ -93,6 +104,50 @@ export function linkMoveDependencies(params: LinkMovesParams): DecisionGroup[] {
 	})
 }
 
+/** The source ids of the added nodes of a diff subtree, the node itself included when added. */
+function addedSourceIds(node: DiffNode): string[] {
+	const own = node.change === 'added' && node.sourceRef?.id ? [node.sourceRef.id] : []
+	return [...own, ...node.children.flatMap(addedSourceIds)]
+}
+
+/**
+ * The diff's tree with each move's old parent named as the walk sees it: an element held in a transparent wrapper
+ * (`Private`) moved from the element holding the wrapper, not from the wrapper.
+ */
+export function withTreeParents(params: TreeParentsParams): DiffNode {
+	const parentOf = treeParentRefs(params.instanceTree)
+	return withTreeParentsBelow({ node: params.root, parentOf })
+}
+
+function withTreeParentsBelow(params: {
+	node: DiffNode
+	parentOf: ReadonlyMap<string, { tagName: string; id: string }>
+}): DiffNode {
+	const { node, parentOf } = params
+	const children = node.children.map((child) => withTreeParentsBelow({ node: child, parentOf }))
+	const wrapped =
+		node.change === 'moved' &&
+		node.movedFrom?.tagName !== undefined &&
+		isTransparentElement(node.movedFrom.tagName)
+	const treeParent = wrapped && node.instanceRef?.id ? parentOf.get(node.instanceRef.id) : undefined
+	return treeParent ? { ...node, movedFrom: treeParent, children } : { ...node, children }
+}
+
+/** Each element's parent as the walk sees it (through transparent wrappers), over a tree. */
+function treeParentRefs(tree: AnyTreeRecord): ReadonlyMap<string, { tagName: string; id: string }> {
+	const parents = new Map<string, { tagName: string; id: string }>()
+	const pending = [tree]
+	while (pending.length > 0) {
+		const node = pending.pop()
+		if (!node) continue
+		for (const child of node.tree) {
+			parents.set(child.id, { tagName: node.tagName, id: node.id })
+			pending.push(child)
+		}
+	}
+	return parents
+}
+
 /** Each element's parent id, over a tree. */
 function parentsById(tree: AnyTreeRecord): ReadonlyMap<string, string> {
 	const parents = new Map<string, string>()
@@ -115,10 +170,26 @@ function parentsById(tree: AnyTreeRecord): ReadonlyMap<string, string> {
  */
 export async function writeMoves(
 	tx: Core.Transaction<Config>,
-	params: { moves: readonly PendingMove[] },
+	params: WriteMovesParams,
 ): Promise<void> {
 	for (const move of params.moves) {
 		// the element and its parent are of tags the walk read: `any` takes them as they are
 		await tx.any.move(toRef(move.instance), { parent: move.parent })
 	}
+}
+
+/**
+ * Whether an instance element below a removed one is the source's still, elsewhere: its lineage the source holds, so
+ * the source moved it (it is reported and written as a move), and the removal does not take it.
+ */
+export function movedOut(params: MovedOutParams): boolean {
+	const { node, matchKey, sourceUuids } = params
+	const lineage = readAttribute({ record: node, name: matchKey, defaults: 'none' })
+	return lineage !== '' && sourceUuids.has(lineage)
+}
+
+/** The elements of an instance subtree a removal takes: every one, but those moved out of it and what they hold. */
+export function removedElementsOf(params: MovedOutParams): AnyTreeRecord[] {
+	const below = params.node.tree.filter((child) => !movedOut({ ...params, node: child }))
+	return [params.node, ...below.flatMap((child) => removedElementsOf({ ...params, node: child }))]
 }

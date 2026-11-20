@@ -9,7 +9,13 @@ import { markIdentityCollisions } from './identity-collisions'
 import { instanceTagOf } from './instance-tag'
 import { matchChild } from './match-child'
 import { collectUuids, indexByMatchKey } from './match-key'
-import { findMovedInAdded, linkMoveDependencies, replaceAdded } from './moved'
+import {
+	findMovedInAdded,
+	linkMoveDependencies,
+	movedOut,
+	replaceAdded,
+	withTreeParents,
+} from './moved'
 import { pairByKeyOnLineageMiss } from './pair-by-key'
 import { createPairingMemo } from './pairing-memo'
 import { projectOwnedAttributes } from './project-owned-attributes'
@@ -55,6 +61,7 @@ import type {
 	SourceRefIdentities,
 } from './diff.types'
 import type { PinnedMatches } from './match-child.types'
+import type { MovedOutParams } from './moved.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
@@ -233,7 +240,7 @@ export async function diff(params: {
 		matchKey,
 		takeOver: diffPolicy.takeOver,
 	})
-	const root = await diffMatched({
+	const walked = await diffMatched({
 		sourceQuery,
 		targetQuery,
 		sourceNode: sourceTree,
@@ -267,6 +274,8 @@ export async function diff(params: {
 		placeholderLineages: params.placeholderLineages ?? new Set(),
 		sourceIsProject: params.sourceIsProject ?? false,
 	})
+	// a move's old parent named as the walk sees it, not the wrapper it was held in
+	const root = withTreeParents({ root: walked, instanceTree })
 	// a rename of the instance itself is numbered among its siblings, as the apply numbers it
 	if (instanceTree.parent) {
 		await numberRenamedNodes({
@@ -481,7 +490,12 @@ async function diffMatched(params: {
 		} else if (!params.notSelected?.has(sourceChild.id)) {
 			let node = addedNode({ node: sourceChild, omit, notSelected: params.notSelected })
 			// what the added subtree holds that the instance holds elsewhere moves into it, never cloned a second time
-			for (const moved of findMovedInAdded({ node: sourceChild, index })) {
+			for (const moved of findMovedInAdded({
+				node: sourceChild,
+				index,
+				omit,
+				notSelected: params.notSelected,
+			})) {
 				const movedNode = await diffMatched({
 					...params,
 					sourceNode: moved.source,
@@ -534,7 +548,8 @@ async function diffMatched(params: {
 				inSource: sourceUuids.has(lineage),
 				removalBase,
 			})
-			if (unmatched === 'removed') children.push(removedNode(instanceChild))
+			if (unmatched === 'removed')
+				children.push(removedNode({ node: instanceChild, matchKey, sourceUuids }))
 			else if (unmatched === 'target-only') {
 				// it carries a lineage: the consumer's tags hide it only when the previous revision proves it is not the
 				// template's — else it may be the template's own the newer revision dropped (a level of the unit, a fork
@@ -572,7 +587,7 @@ async function diffMatched(params: {
 				if (sibling.pairedByName) kept.pairedByName = sibling.pairedByName
 				children.push(kept)
 			} else if (classifyUnpairedReference({ tagName: instanceChild.tagName }) === 'removed') {
-				children.push(removedNode(instanceChild))
+				children.push(removedNode({ node: instanceChild, matchKey, sourceUuids }))
 			} else {
 				// nothing tells one the template dropped from one the project added: listed whatever the consumer's tags
 				pushInstanceOnly({
@@ -588,7 +603,7 @@ async function diffMatched(params: {
 		if (withinProjectOwned) continue
 		// data the type the template gives its logical node no longer holds goes with the type change
 		if (params.valueOwnership.lostData.has(instanceChild.id)) {
-			children.push(removedNode(instanceChild))
+			children.push(removedNode({ node: instanceChild, matchKey, sourceUuids }))
 			continue
 		}
 		pushInstanceOnly({
@@ -655,8 +670,15 @@ function addedNode(params: {
 	return { change: 'added', tagName: instanceTagOf(node.tagName), sourceRef: toRef(node), children }
 }
 
-function removedNode(node: AnyTreeRecord): DiffNode {
-	const children: DiffNode[] = node.tree.map((child) => removedNode(child))
+/**
+ * An instance subtree the source no longer holds, every element of it removed: but an element below whose lineage the
+ * source still holds, which the source moved elsewhere (reported there as `moved`), with what it holds.
+ */
+function removedNode(params: MovedOutParams): DiffNode {
+	const { node } = params
+	const children: DiffNode[] = node.tree
+		.filter((child) => !movedOut({ ...params, node: child }))
+		.map((child) => removedNode({ ...params, node: child }))
 	return { change: 'removed', tagName: node.tagName, instanceRef: toRef(node), children }
 }
 
@@ -840,10 +862,11 @@ export function assembleReport(params: {
 				added: acc.added + instanceSummary.added,
 				removed: acc.removed + instanceSummary.removed,
 				modified: acc.modified + instanceSummary.modified,
+				moved: acc.moved + instanceSummary.moved,
 				kept: acc.kept + instanceSummary.kept,
 			}
 		},
-		{ added: 0, removed: 0, modified: 0, kept: 0 },
+		{ added: 0, removed: 0, modified: 0, moved: 0, kept: 0 },
 	)
 	return {
 		instances,
@@ -915,11 +938,12 @@ export function collectTreeIds(params: {
 }
 
 function summarize(...roots: readonly DiffNode[]): DiffSummary {
-	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, kept: 0 }
+	const summary: DiffSummary = { added: 0, removed: 0, modified: 0, moved: 0, kept: 0 }
 	function visit(node: DiffNode): void {
 		if (node.change === 'added') summary.added++
 		else if (node.change === 'removed') summary.removed++
 		else if (node.change === 'modified') summary.modified++
+		else if (node.change === 'moved') summary.moved++
 		summary.kept += (node.keptAttributeChanges?.length ?? 0) + (node.keptTextChange ? 1 : 0)
 		for (const child of node.children) visit(child)
 	}

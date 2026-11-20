@@ -176,7 +176,8 @@ export async function foldSatelliteCompanions(
 		const changed =
 			satelliteReport.summary.added +
 				satelliteReport.summary.removed +
-				satelliteReport.summary.modified >
+				satelliteReport.summary.modified +
+				satelliteReport.summary.moved >
 			0
 		if (!changed) {
 			// a change the update keeps opens no decision, nor does a reference paired by name: listed with the

@@ -20,7 +20,7 @@ import { DATA_SET_TAG } from '@/v2019C1/hooks/before-delete/orphaned-refs.consta
 import { dataSetRemovalsOf } from '@/v2019C1/hooks/shared/data-set-entry'
 import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
 
-import type { LNodeReads } from './removal-side-effects.types'
+import type { LNodeReads, SideEffectReadParams } from './removal-side-effects.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TypeReads } from '@/v2019C1/extensions/data-model/query/unused-types.types'
 import type {
@@ -47,15 +47,23 @@ export async function listRemovalSideEffects(
 	// a report writes nothing: the data types are read once for all its groups, the LNodes once when one is needed
 	const typeReads = createTypeReads(query)
 	const lnodeReads = createLNodeReads(query)
+	// an element the update moves out of a removed one is written elsewhere first: it does not go with the removal
+	const stays = new Set(
+		params.groups.flatMap((group) =>
+			group.change === 'moved' && group.primary.instanceRef?.id
+				? [group.primary.instanceRef.id]
+				: [],
+		),
+	)
 	for (const group of params.groups) {
-		const sideEffects = await readSideEffects(query, { group, typeReads, lnodeReads })
+		const sideEffects = await readSideEffects(query, { group, typeReads, lnodeReads, stays })
 		if (sideEffects.length > 0) group.sideEffects = sideEffects
 	}
 }
 
 async function readSideEffects(
 	query: Core.Query<Config>,
-	params: { group: DecisionGroup; typeReads: TypeReads; lnodeReads: LNodeReads },
+	params: SideEffectReadParams,
 ): Promise<RemovalSideEffect[]> {
 	const roots: Scl.TrackedRecord<Scl.ElementsOf>[] = []
 	for (const node of [params.group.primary, ...params.group.companions]) {
@@ -66,7 +74,7 @@ async function readSideEffects(
 		if (record) roots.push(record)
 	}
 	if (roots.length === 0) return []
-	const subtree = await readSubtreeRecords(query, { records: roots })
+	const subtree = await readSubtreeRecords(query, { records: roots, stays: params.stays })
 	const gone = new Set(subtree.map((record) => record.id))
 
 	// the types the removal leaves unused go at the commit, with the types only they name
@@ -97,6 +105,7 @@ async function readSideEffects(
 	const cascade = await collectDeleteCascade(query, {
 		roots: [...roots, ...emptied],
 		emptiesContainers: true,
+		stays: params.stays,
 	})
 
 	const sideEffects: RemovalSideEffect[] = []

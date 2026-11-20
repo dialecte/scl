@@ -1,5 +1,6 @@
 import projectNorthWithSub1 from '../ied/fixtures/project-north-with-bcu1-and-sub1-subscribing-to-it.xml?raw'
 import isdTemplateDroppingProt from './fixtures/isd-template-of-a-bay-controller-revised-dropping-prot-keeping-ptrc-in-ctrl.xml?raw'
+import isdTemplateMovingPtrcIntoNewDeviceAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrcIntoNewDevice from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device.xml?raw'
 import isdTemplateMovingPtrcAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-to-ctrl-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrc from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-to-ctrl.xml?raw'
@@ -30,6 +31,14 @@ describe('query.lifecycle.report - an S-IED update moving a logical node another
 			{
 				// the revision: PTRC1 (a…024) under CTRL instead of PROT; SUB1's input c…006 names BCU1's PTRC1 (b…024) in PROT
 				sourceXml: isdTemplateMovingPtrc,
+				targetXml: projectNorthWithSub1,
+				moved: ['moved LN skip changes-another-ied from PROT to CTRL'],
+				impacts: ['SUB1 renamed c0000000-0000-4000-8000-000000000006'],
+			},
+		// the revision drops PROT and keeps PTRC1 under CTRL: PTRC1 is moved, not removed with PROT
+		'the revision removing PROT while PTRC1 moves out of it to CTRL → SUB1 renamed only, nothing of it deleted or cleared':
+			{
+				sourceXml: isdTemplateDroppingProt,
 				targetXml: projectNorthWithSub1,
 				moved: ['moved LN skip changes-another-ied from PROT to CTRL'],
 				impacts: ['SUB1 renamed c0000000-0000-4000-8000-000000000006'],
@@ -83,6 +92,16 @@ describe('query.lifecycle.report - an S-IED update moving logical nodes', () => 
 				'moved LN PTRC1 from PROT to SUP depending on added LDevice SUP',
 			],
 		},
+		// the revision: a device SUP holding PTRC1 as PTRC2
+		'PTRC1 moved into a device the revision adds and renamed PTRC2 → the move carrying the new instance':
+			{
+				sourceXml: isdTemplateMovingPtrcIntoNewDeviceAsPtrc2,
+				targetXml: projectNorthWithSub1,
+				groups: [
+					'added LDevice SUP',
+					'moved LN PTRC1 from PROT to SUP changing inst depending on added LDevice SUP',
+				],
+			},
 		// the revision: PROT gone, PTRC1 under CTRL
 		'PROT removed while PTRC1 moves out of it to CTRL → the removal depending on the move': {
 			sourceXml: isdTemplateDroppingProt,
@@ -104,8 +123,31 @@ describe('query.lifecycle.report - an S-IED update moving logical nodes', () => 
 	runSclTestCases.withoutExport({ testCases, act })
 })
 
-type Project = SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
-type Target = NonNullable<SclTest.ActParams<SclTest.BaseXmlTestCase>['target']>
+type SummaryCase = SclTest.BaseXmlTestCase & {
+	/** The report's summary of the update: what it adds, removes and moves (the IED's own record of the revision aside). */
+	summary: { added: number; removed: number; moved: number }
+}
+
+// A move is counted as one: a report whose only changes are moves is not read as up to date.
+describe('query.lifecycle.report - the summary of an S-IED update moving logical nodes', () => {
+	const testCases: SclTest.TestCases<SummaryCase> = {
+		// the revision: PTRC1 under CTRL, CILO1 under PROT, nothing else of the tree changed
+		'PTRC1 moved to CTRL and CILO1 to PROT → two moved, nothing added or removed': {
+			sourceXml: isdTemplateSwappingPtrcAndCilo,
+			targetXml: projectNorthWithSub1,
+			summary: { added: 0, removed: 0, moved: 2 },
+		},
+	}
+
+	async function act({ project, target, testCase }: SclTest.ActParams<SummaryCase>): Promise<void> {
+		if (!target) throw new Error('target required')
+		const lifecycle = await updateOfBcu1({ project, target, sourceXml: testCase.sourceXml })
+		const report = await target.query.lifecycle.report(lifecycle)
+		expect(report.summary).toMatchObject(testCase.summary)
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
 
 /** The moved groups of the report of BCU1's update, and what it changes in another IED. */
 async function movesReported(params: {
@@ -242,21 +284,31 @@ async function deviceName(params: {
 	return record ? (readAttribute({ record, name: 'inst', defaults: 'none' }) ?? '?') : '?'
 }
 
-/** The update of BCU1 from a revision of its template ISD. */
+/** The uuid of each element. */
+async function uuidsOf(params: {
+	query: Core.Query<Config>
+	elements: readonly { tagName: string; id: string }[]
+}): Promise<string[]> {
+	const records = await params.query.any.getRecords([...params.elements])
+	return records.map((record) =>
+		record ? readAttribute({ record, name: 'uuid', defaults: 'none' }) : '',
+	)
+}
+
+type Project = SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
+type Target = NonNullable<SclTest.ActParams<SclTest.BaseXmlTestCase>['target']>
+
+/** The update of BCU1 from a revision of its template ISD, the revision imported into the project as an ISD file. */
 async function updateOfBcu1(params: { project: Project; target: Target; sourceXml: string }) {
 	const { project, target, sourceXml } = params
 	const imported = await project.importFile(
 		new File([sourceXml], 'BCU_Template.isd', { type: 'text/xml' }),
 	)
 	const sourceQuery = project.openDocument(imported.documentId).query
-	return {
-		verb: 'ied',
-		sourceQuery,
-		ref: await iedNamed({ query: sourceQuery, name: 'SPECIFICATION' }),
-		anchor: await projectRoot(target.query),
-		scenario: 'template',
-		targetInstance: await iedNamed({ query: target.query, name: 'BCU1' }),
-	} as const
+	const ref = await iedNamed({ query: sourceQuery, name: 'SPECIFICATION' })
+	const anchor = await projectRoot(target.query)
+	const targetInstance = await iedNamed({ query: target.query, name: 'BCU1' })
+	return { verb: 'ied', sourceQuery, ref, anchor, scenario: 'template', targetInstance } as const
 }
 
 /** The IED of a document named so. */
@@ -276,15 +328,4 @@ async function iedNamed(params: {
 async function projectRoot(query: Core.Query<Config>): Promise<Scl.Ref<'SCL'>> {
 	const root = await query.getRoot()
 	return { tagName: 'SCL', id: root.id }
-}
-
-/** The uuid of each element. */
-async function uuidsOf(params: {
-	query: Core.Query<Config>
-	elements: readonly { tagName: string; id: string }[]
-}): Promise<string[]> {
-	const records = await params.query.any.getRecords([...params.elements])
-	return records.map((record) =>
-		record ? readAttribute({ record, name: 'uuid', defaults: 'none' }) : '',
-	)
 }

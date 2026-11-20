@@ -289,8 +289,12 @@ update adds depends on that parent's group (`dependsOn`), and the removal of a p
 depends on the move: accepting the removal with the move skipped is refused with `DECISION_DEPENDENCY_SKIPPED`. A move
 whose referrers in another IED follow its new path waits for a decision (`changes-another-ied`), those referrers listed
 `renamed` in `otherIedImpacts`. Accepted, `apply` writes it with `tx.move` once what the update adds is there and before
-what it removes, the record keeping its id; the commit's steps make what names it follow. Skipped, nothing is written:
-the element stays where it was, and so do its attributes.
+what it removes, the record keeping its id; what the moved element itself changes (a rename, its text, what it holds)
+is written as for an element paired in place, a move into an added parent included; the commit's steps make what names
+it follow. Skipped, nothing is written: the element stays where it was, and so do its attributes. A removal never takes
+what the update moves out of the removed element: neither the report (its removal side effects, the references to its
+data waiting for a decision) nor the apply reads the moved element as removed. The report's `summary` counts each move
+in `moved`.
 
 An IED's data-flow reference the newer template lacks (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`,
 `ServerAt`) is listed the same way, whether the project added it or the template dropped it: nothing tells the two
@@ -894,7 +898,7 @@ The project element is the one carrying the source element's lineage. When the t
 type DiffReport = {
 	instances: ReportInstance[] // one entry per matched instance (both layers for an ASD)
 	needsDecisions: boolean
-	summary: { added: number; removed: number; modified: number; kept: number } // kept: changes listed, not applied
+	summary: { added: number; removed: number; modified: number; moved: number; kept: number } // moved: elements put under another parent; kept: changes listed, not applied
 	mappings: ReportMapping[] // where each shared source element lands — one entry per source element
 	templateInstances: AnyRefOrRecord[] // the instances of the template itself the report covers; none on a first placement
 	offLevel?: { templateLevel: string; startedFrom: string } // set when started above the level the template was made for

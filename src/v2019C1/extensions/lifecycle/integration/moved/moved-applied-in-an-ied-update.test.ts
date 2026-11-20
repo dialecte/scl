@@ -1,7 +1,10 @@
 import projectNorthWithSub1 from '../ied/fixtures/project-north-with-bcu1-and-sub1-subscribing-to-it.xml?raw'
 import isdTemplateDroppingProt from './fixtures/isd-template-of-a-bay-controller-revised-dropping-prot-keeping-ptrc-in-ctrl.xml?raw'
+import isdTemplateMovingPtrcIntoNewDeviceAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrcIntoNewDevice from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-into-a-new-device.xml?raw'
+import isdTemplateMovingPtrcAsPtrc2 from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-to-ctrl-as-ptrc2.xml?raw'
 import isdTemplateMovingPtrc from './fixtures/isd-template-of-a-bay-controller-revised-moving-ptrc-to-ctrl.xml?raw'
+import isdTemplateSwappingPtrcAndCilo from './fixtures/isd-template-of-a-bay-controller-revised-swapping-ptrc-and-cilo.xml?raw'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
@@ -84,9 +87,47 @@ describe('tx.lifecycle.apply - an S-IED update moving a logical node', () => {
 			keepsRecordOfPtrc1: true,
 			expectedQueries: [
 				'//default:IED[@name="BCU1"]//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"][@uuid="b0000000-0000-4000-8000-000000000024"]',
+				'//default:IED[@name="SUB1"]//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000006"][@ldInst="CTRL"][@lnUuid="b0000000-0000-4000-8000-000000000024"]',
 			],
 			unexpectedQueries: ['//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]'],
 		},
+		// the revision moves PTRC1 to CTRL as PTRC2
+		'PTRC1 moved to CTRL and renamed PTRC2, every group accepted → PTRC2 under CTRL, SUB1 naming PTRC2 there':
+			{
+				sourceXml: isdTemplateMovingPtrcAsPtrc2,
+				targetXml: projectNorthWithSub1,
+				decide: acceptEvery,
+				keepsRecordOfPtrc1: true,
+				expectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"][@inst="2"][@uuid="b0000000-0000-4000-8000-000000000024"]',
+					'//default:IED[@name="SUB1"]//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000006"][@ldInst="CTRL"][@lnInst="2"]',
+				],
+			},
+		// the revision adds SUP holding PTRC1 as PTRC2
+		'PTRC1 moved into the added SUP and renamed PTRC2, every group accepted → PTRC2 under SUP, SUB1 naming it there':
+			{
+				sourceXml: isdTemplateMovingPtrcIntoNewDeviceAsPtrc2,
+				targetXml: projectNorthWithSub1,
+				decide: acceptEvery,
+				keepsRecordOfPtrc1: true,
+				expectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="SUP"]/default:LN[@lnClass="PTRC"][@inst="2"][@uuid="b0000000-0000-4000-8000-000000000024"]',
+					'//default:IED[@name="SUB1"]//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000006"][@ldInst="SUP"][@lnInst="2"]',
+				],
+			},
+		// the revision swaps PTRC1 (to CTRL) and CILO1 (to PROT)
+		'PTRC1 moved to CTRL and CILO1 to PROT, every group accepted → each under its new device, SUB1 following PTRC1':
+			{
+				sourceXml: isdTemplateSwappingPtrcAndCilo,
+				targetXml: projectNorthWithSub1,
+				decide: acceptEvery,
+				keepsRecordOfPtrc1: true,
+				expectedQueries: [
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"]',
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]/default:LN[@lnClass="CILO"]',
+					'//default:IED[@name="SUB1"]//default:ExtRef[@uuid="c0000000-0000-4000-8000-000000000006"][@ldInst="CTRL"]',
+				],
+			},
 	}
 
 	async function act({
@@ -105,27 +146,30 @@ describe('tx.lifecycle.apply - an S-IED update moving a logical node', () => {
 })
 
 // A removal taking with it an element whose move is skipped is refused: the move it depends on is decided first.
-describe('tx.lifecycle.apply - an S-IED update removing what a skipped move leaves behind', () => {
-	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+describe('tx.lifecycle.apply - an S-IED update accepting what a skipped group holds up', () => {
+	const testCases: SclTest.TestCases<RefusedCase> = {
 		// the revision drops PROT and keeps PTRC1 under CTRL
 		'PROT removed accepted, PTRC1 moved out of it skipped → refused DECISION_DEPENDENCY_SKIPPED': {
 			sourceXml: isdTemplateDroppingProt,
 			targetXml: projectNorthWithSub1,
+			decide: removeButSkipMoves,
+		},
+		// the revision adds SUP holding PTRC1
+		'PTRC1 moved into the added SUP accepted, SUP skipped → refused DECISION_DEPENDENCY_SKIPPED': {
+			sourceXml: isdTemplateMovingPtrcIntoNewDevice,
+			targetXml: projectNorthWithSub1,
+			decide: acceptButSkipAdded,
 		},
 	}
 
-	async function act({
-		project,
-		target,
-		testCase,
-	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
+	async function act({ project, target, testCase }: SclTest.ActParams<RefusedCase>): Promise<void> {
 		if (!target) throw new Error('target required')
 		await expect(
 			updateApplied({
 				project,
 				target,
 				sourceXml: testCase.sourceXml,
-				decide: removeButSkipMoves,
+				decide: testCase.decide,
 			}).catch((error: unknown) => toDialecteError(error)?.key),
 		).resolves.toBe('DECISION_DEPENDENCY_SKIPPED')
 	}
@@ -133,15 +177,24 @@ describe('tx.lifecycle.apply - an S-IED update removing what a skipped move leav
 	runSclTestCases.withoutExport({ testCases, act })
 })
 
+type RefusedCase = SclTest.BaseXmlTestCase & {
+	/** The decisions, from the report's groups. */
+	decide: Decide
+}
+
+/** Every group accepted, but the additions skipped. */
+function acceptButSkipAdded(groups: readonly DecisionGroup[]): Map<string, 'accept' | 'skip'> {
+	return new Map(
+		groups.map((group) => [group.id, group.change === 'added' ? 'skip' : 'accept'] as const),
+	)
+}
+
 /** Every group accepted, but the moves skipped. */
 function removeButSkipMoves(groups: readonly DecisionGroup[]): Map<string, 'accept' | 'skip'> {
 	return new Map(
 		groups.map((group) => [group.id, group.change === 'moved' ? 'skip' : 'accept'] as const),
 	)
 }
-
-type Project = SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
-type Target = NonNullable<SclTest.ActParams<SclTest.BaseXmlTestCase>['target']>
 
 /** BCU1 updated from a revision of its template, as `decide` says: whether its PTRC1 kept its record. */
 async function updateApplied(params: {
@@ -183,21 +236,20 @@ async function ptrc1Of(query: Core.Query<Config>): Promise<string | undefined> {
 	return ptrc1?.id
 }
 
-/** The update of BCU1 from a revision of its template ISD. */
+type Project = SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
+type Target = NonNullable<SclTest.ActParams<SclTest.BaseXmlTestCase>['target']>
+
+/** The update of BCU1 from a revision of its template ISD, the revision imported into the project as an ISD file. */
 async function updateOfBcu1(params: { project: Project; target: Target; sourceXml: string }) {
 	const { project, target, sourceXml } = params
 	const imported = await project.importFile(
 		new File([sourceXml], 'BCU_Template.isd', { type: 'text/xml' }),
 	)
 	const sourceQuery = project.openDocument(imported.documentId).query
-	return {
-		verb: 'ied',
-		sourceQuery,
-		ref: await iedNamed({ query: sourceQuery, name: 'SPECIFICATION' }),
-		anchor: await projectRoot(target.query),
-		scenario: 'template',
-		targetInstance: await iedNamed({ query: target.query, name: 'BCU1' }),
-	} as const
+	const ref = await iedNamed({ query: sourceQuery, name: 'SPECIFICATION' })
+	const anchor = await projectRoot(target.query)
+	const targetInstance = await iedNamed({ query: target.query, name: 'BCU1' })
+	return { verb: 'ied', sourceQuery, ref, anchor, scenario: 'template', targetInstance } as const
 }
 
 /** The IED of a document named so. */

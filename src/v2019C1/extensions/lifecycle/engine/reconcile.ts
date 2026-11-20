@@ -16,6 +16,7 @@ import { compareText, readValueOwnership } from './value-ownership'
 import { visibleAttributes } from './visible-attributes'
 import { landingParent } from './wrapper'
 
+import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { KEEP_ON_ORPHAN_REFS } from '@/v2019C1/constants/reference-pairs'
@@ -565,7 +566,12 @@ async function reconcileChildren(
 		// what the source holds in a wrapper lands in the instance's wrapper of its type
 		const targetParent = await landingParent(tx, { sourceQuery, sourceChild, instanceParent })
 		// what the added subtree holds that the instance holds elsewhere moves into the clone, never cloned twice
-		const movedInside = findMovedInAdded({ node: sourceChild, index })
+		const movedInside = findMovedInAdded({
+			node: sourceChild,
+			index,
+			omit,
+			notSelected: params.notSelected,
+		})
 		const leaveOut =
 			movedInside.length > 0
 				? new Set([...(params.notSelected ?? []), ...movedInside.map((moved) => moved.source.id)])
@@ -584,9 +590,37 @@ async function reconcileChildren(
 			const parent = cloneMappings.find(
 				(mapping) => mapping.source.id === moved.sourceParent.id,
 			)?.target
-			if (parent)
-				// dialecte-allow argument-mutation: the walk's accumulator of accepted moves, as `added`
-				params.moves.push({ instance: moved.instance, parent: parent as Scl.Ref<Scl.ElementsOf> })
+			// the move depends on the addition of its parent: the decisions are checked before anything is written
+			if (!parent) {
+				return throwDialecteError('ASSERTION_FAILED', {
+					detail: `the move of ${moved.instance.tagName} "${moved.instance.id}" found no clone of its new parent ${moved.sourceParent.tagName} "${moved.sourceParent.id}"`,
+				})
+			}
+			// what the moved element itself changes is written as for any element paired in place: a rename riding on the
+			// move, its text, what it holds
+			await updateMatchedAttributes(tx, {
+				sourceQuery,
+				instanceRecord: moved.instance,
+				sourceNode: moved.source,
+				accepted,
+				overrides,
+				namesFollow,
+				typeFollowing: params.typeFollowing,
+				valueOwnership: params.valueOwnership,
+			})
+			await reconcileTextWrappers(tx, {
+				sourceQuery,
+				sourceNode: moved.source,
+				instanceRecord: moved.instance,
+				accepted,
+			})
+			await reconcileChildren(tx, {
+				...params,
+				sourceNode: moved.source,
+				instanceParent: moved.instance,
+			})
+			// dialecte-allow argument-mutation: the walk's accumulator of accepted moves, as `added`
+			params.moves.push({ instance: moved.instance, parent: parent as Scl.Ref<Scl.ElementsOf> })
 		}
 		// keep the clone mappings of the whole grafted subtree (ids are stable; the collision
 		// bump below only edits the added root's name, never its id).
