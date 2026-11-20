@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" dev:db-id="root">
+	<!-- a terminal naming by uuid a node to come, two function category references naming by uuid a function to come -->
+	<Substation dev:db-id="s1" name="S1">
+		<VoltageLevel dev:db-id="vl1" name="VL1">
+			<Bay dev:db-id="b1" name="B1">
+				<ConductingEquipment dev:db-id="qa1" name="QA1" type="CBR">
+					<Terminal dev:db-id="t1" cNodeUuid="00000000-0000-4000-8000-0000000000c1"/>
+				</ConductingEquipment>
+				<Function dev:db-id="f1" name="F1" uuid="00000000-0000-4000-8000-0000000000f1"/>
+			</Bay>
+			<Bay dev:db-id="b2" name="B2"/>
+		</VoltageLevel>
+		<eIEC61850-6-100:FunctionCategory dev:db-id="cat1" name="Cat1">
+			<eIEC61850-6-100:FunctionCatRef dev:db-id="ref-a" functionUuid="00000000-0000-4000-8000-0000000000a1"/>
+			<eIEC61850-6-100:FunctionCatRef dev:db-id="ref-b" functionUuid="00000000-0000-4000-8000-0000000000a1"/>
+		</eIEC61850-6-100:FunctionCategory>
+	</Substation>
+</SCL>

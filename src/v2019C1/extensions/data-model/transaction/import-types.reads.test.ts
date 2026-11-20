@@ -100,7 +100,7 @@ describe('importTypes - the target lookups and reads', () => {
 			},
 		},
 		// the target's OLD renamed NEW, so the source OLD finds its id free: the lookups see the rename, as on main
-		'NEW reused and named so, then the source OLD → OLD kept, not forked (main the same, 10 lookups)':
+		'NEW reused and named so, then the source OLD → OLD kept, not forked (9 lookups, main 10: signature references by value list)':
 			{
 				// the target's OLD holds the source NEW's content; the source's OLD holds other content
 				sourceXml: newThenOldXml,
@@ -119,7 +119,7 @@ describe('importTypes - the target lookups and reads', () => {
 							'records.get': 5,
 							getMany: 10,
 							'records.getMany': 14,
-							getByAttributes: 10,
+							getByAttributes: 9,
 							'records.getByAttributes': 7,
 							getByTagName: 5,
 							'records.getByTagName': 2,
@@ -131,8 +131,8 @@ describe('importTypes - the target lookups and reads', () => {
 							'records.getMany': 14,
 							getByAttributes: 0,
 							'records.getByAttributes': 0,
-							getByTagName: 15,
-							'records.getByTagName': 12,
+							getByTagName: 14,
+							'records.getByTagName': 10,
 						},
 					},
 				},
@@ -171,7 +171,7 @@ describe('importTypes - the target lookups and reads', () => {
 		},
 		// the first A renamed B; the second A still holds the id, so the source A is forked (then reclaims A), as on main.
 		// The lookup before the loop finds A twice and leaves it to a lookup alone: one lookup and 2 records more than
-		// main (12, 11 against 11, 9), for a target no valid document is
+		// main (12, 11 against 11, 9; 11, 11 since the signatures look their references up by value list), for a target no valid document is
 		'B reused and named so, the target holding A twice → A forked as on main': {
 			// the target's two DOTypes of id A hold the source B's content; the source's A holds other content
 			allowInvalidFixture: {
@@ -195,7 +195,7 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.get': 5,
 						getMany: 11,
 						'records.getMany': 15,
-						getByAttributes: 12,
+						getByAttributes: 11,
 						'records.getByAttributes': 11,
 						getByTagName: 8,
 						'records.getByTagName': 5,
@@ -207,8 +207,8 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.getMany': 15,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 20,
-						'records.getByTagName': 22,
+						getByTagName: 19,
+						'records.getByTagName': 20,
 					},
 				},
 			},

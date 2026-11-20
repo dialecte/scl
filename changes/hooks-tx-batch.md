@@ -1,0 +1,4 @@
+### Changed
+
+- An element signature resolving its references (`signature.elementSignature` with `resolveReferences`) looks up the references of each tree it signs together: one lookup per target tag for the ids that tree names, and for its uuids one lookup per target tag and round (a uuid is asked of its pair's next tag only when the tags before did not hold it). Before, each reference was one lookup. The signature is the same text. A caller signing many elements over one document, with no write between the calls, may pass the same `referenceCache` to every call (as `signatureCache`): a value answered once is not looked up again. Importing data types signs the source types and the project's types this way.
+- The hooks' path follows (`scl::followAncestry`), uuid lookups (`scl::findRecordByUuid`) and a signature's reference lookups (`scl::elementSignature.resolveReferences`) are timed as perf spans.

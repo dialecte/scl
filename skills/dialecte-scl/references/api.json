@@ -794,7 +794,7 @@
 				"detect equivalent or duplicate data types",
 				"content key of an element for dedup"
 			],
-			"declaredAt": "src/v2019C1/extensions/signature/query/element-signature.ts:40"
+			"declaredAt": "src/v2019C1/extensions/signature/query/element-signature.ts:47"
 		},
 		{
 			"path": "tx.cleanUp.commitPrune",
@@ -897,7 +897,7 @@
 				"import a type closure with dedup and id collision handling",
 				"merge DataTypeTemplates"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:79"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/import-types.ts:80"
 		},
 		{
 			"path": "tx.dataModel.unlockLNode",

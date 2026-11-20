@@ -1,3 +1,5 @@
+import { FOLLOW_ANCESTRY_PERF_SPAN } from './follow-ancestry.constants'
+
 import { isElementOf, toRawRecord } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
@@ -42,6 +44,19 @@ import type { AnyRawRecord } from '@dialecte/core'
  * or ancestor read. One operation per record written, with all it holds for every element it names.
  */
 export async function followAncestry(
+	query: Core.Query<Config>,
+	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
+): Promise<Scl.Operation[]> {
+	query.perf.start(FOLLOW_ANCESTRY_PERF_SPAN)
+	try {
+		return await followAncestryOf(query, params)
+	} finally {
+		query.perf.stop(FOLLOW_ANCESTRY_PERF_SPAN)
+	}
+}
+
+/** {@link followAncestry}, inside its span. */
+async function followAncestryOf(
 	query: Core.Query<Config>,
 	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<Scl.Operation[]> {
