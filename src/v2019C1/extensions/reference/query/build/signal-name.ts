@@ -10,7 +10,7 @@ import type * as Core from '@dialecte/core'
  */
 export function nameAmongSiblings(params: {
 	record: Core.AnyRawRecord
-	siblings: Core.AnyRawRecord[]
+	siblings: readonly Core.AnyRawRecord[]
 }): string | null {
 	return getPathSegment(params.record, { siblings: params.siblings })?.segment ?? null
 }
@@ -19,7 +19,7 @@ export function nameAmongSiblings(params: {
 export async function readSiblings(
 	query: Core.Query<Config>,
 	record: Core.AnyRawRecord,
-): Promise<Core.AnyRawRecord[]> {
+): Promise<readonly Core.AnyRawRecord[]> {
 	const [siblings] = await readSiblingsOfEach({ query, records: [record] })
 	return siblings
 }
