@@ -1,4 +1,5 @@
 import openIsdXml from '../integration/ied/fixtures/isd-bcu1-version-1.xml?raw'
+import droppingPtrc1Xml from '../integration/ied/fixtures/isd-bcu1-version-2-dropping-ptrc1.xml?raw'
 import otherVersionXml from '../integration/ied/fixtures/isd-bcu1-version-2.xml?raw'
 import projectNorthXml from '../integration/ied/fixtures/project-north-with-bcu1-placed-on-two-bays.xml?raw'
 import { listGroups } from '../integration/integration-helpers'
@@ -109,6 +110,20 @@ describe('tx.lifecycle.apply - a fork of another version of the open ISD', () =>
 			],
 			unexpectedQueries: ['//default:LN[@lnClass="PTRC"][@inst="2"]', '//default:BitRate'],
 		},
+		// v2 drops PTRC1 (b…024), the specification's LNode b…014 binding it
+		'PTRC1 dropped by v2, its removal accepted → removed, the LNode binding it released': {
+			sourceXml: openIsdXml,
+			otherXml: droppingPtrc1Xml,
+			decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+			expectedQueries: [
+				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"][@iedName="None"]',
+			],
+			unexpectedQueries: [
+				'//default:LN[@uuid="b0000000-0000-4000-8000-000000000024"]',
+				'//default:LNode[@uuid="b0000000-0000-4000-8000-000000000014"][@lnUuid]',
+			],
+		},
+		// nothing written: no type brought in, nothing added to the Communication
 		'every group skipped → the open ISD unchanged': {
 			sourceXml: openIsdXml,
 			otherXml: otherVersionXml,
@@ -118,6 +133,8 @@ describe('tx.lifecycle.apply - a fork of another version of the open ISD', () =>
 				'//default:Val[.="100"]',
 				'//default:P[@type="IP"][.="10.0.1.21"]',
 				`//default:LN[@uuid="${PROT_LPHD_UUID}"]`,
+				'/default:SCL/default:DataTypeTemplates[count(default:LNodeType) = 6][count(default:DOType) = 4]',
+				'//default:SubNetwork[count(*) = 1]/default:ConnectedAP[count(*) = 1]/default:Address[count(*) = 1]',
 			],
 			unexpectedQueries: [
 				'//default:LN[@lnClass="PTRC"][@inst="2"]',

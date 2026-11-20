@@ -11,9 +11,8 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { readDocumentFileType } from '@/v2019C1/extensions/lifecycle/source-file-type'
 import { IED_ROOT_TAG } from '@/v2019C1/extensions/lifecycle/source-root/source-root.constants'
 
-import type { ResolveIedInstanceParams } from './resolve-ied-instance.types'
+import type { ForkedIedParams, ResolveIedInstanceParams } from './resolve-ied-instance.types'
 import type { Config } from '@/v2019C1/config'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -89,7 +88,7 @@ export async function resolveIedInstance(
 /** The IED of an open ISD a fork of another version of it updates: the one carrying the source IED's uuid. */
 async function forkedIed(
 	reader: Core.Query<Config> | Core.Transaction<Config>,
-	params: { uuid: string | undefined; matchKey: MatchKey },
+	params: ForkedIedParams,
 ): Promise<AnyTrackedRecord | undefined> {
 	if ((await readDocumentFileType(reader)) !== 'ISD') return undefined
 	const [instance] = await findInstancesByTemplateUuid(reader, {

@@ -171,8 +171,11 @@ async function reportIedUpdate(
 		anchor: params.anchor,
 		policy,
 	})
-	// a connection of an access point the IED holds is the project's: the template's lands on it
-	const redirectMappings = await readInstanceRedirects(query, { instance, matchKey })
+	// a connection of an access point the IED holds is the project's: the template's lands on it (read only when the
+	// IED's connections are described, not for a fork's own Communication)
+	const redirectMappings = fileCommunications
+		? []
+		: await readInstanceRedirects(query, { instance, matchKey })
 	const communication = fileCommunications
 		? undefined
 		: await describeIedCommunication(query, {

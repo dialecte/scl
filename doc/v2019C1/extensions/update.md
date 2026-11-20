@@ -368,6 +368,9 @@ lists each as a `textChange` (`takenOver: true`), in a group suggested `accept`.
 template's, listed as any change. The reconcile takes the take-overs as its `takeOver` input; the IED update that
 passes them from `resolution.takeOver` is not offered yet.
 
+A fork keeps none of them: the other version's values follow (its names do too), listed as any change, so a
+take-over in a fork names no value the project keeps and is refused with `TAKE_OVER_NOT_OFFERED`.
+
 A kept value its enumeration no longer allows (the template's type dropped it from the `EnumType`) cannot stay
 silently: its node is `modified` with the template's value as its `textChange`, and `requiresDecision:
 'value-outside-enumeration'`. It is a group of its own, never a companion, whose `requiresDecision` says it has no
