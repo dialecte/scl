@@ -47,7 +47,7 @@ import type * as Core from '@dialecte/core'
  * source: a function or subfunction holding none of them is left out, the levels and equipment above them stay, an
  * equipment of the frame keeps the connectivity node it connects to. A behaviour description goes only when all its
  * LNodes do, variables and process resources when they belong to the LNodes written; applications, allocation roles
- * and power system relations travel with what they name unless their option is `false`. A specification of an input
+ * and power system relations travel with what they name unless their option is `false`; function categories never do. A specification of an input
  * or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its
  * own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file.
  * Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only
