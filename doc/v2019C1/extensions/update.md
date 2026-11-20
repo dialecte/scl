@@ -166,8 +166,19 @@ IED does; skipped, the other IED stays as it is. A group depending on a skipped 
   `OPTION_NOT_AVAILABLE` (`meta: { option: 'source', value: 'iid' | 'scd' }`), an ISD instance file's IED in another
   scenario with `value: 'isd-instance'`, and a fork whose IED or specification the project holds an element of by its uuid with
   `meta: { option: 'scenario', value: 'fork', held: { tagName, path } }` (`held`: the project's element holding the uuid).
-- `scenario: 'fork'` finding the IED in the project by its own `uuid` is refused with `OPTION_NOT_AVAILABLE`
+- `scenario: 'fork'` finding the IED in a project by its own `uuid` is refused with `OPTION_NOT_AVAILABLE`
   (`meta: { option: 'scenario', value: 'fork' }`). `'instantiate'` places a new IED whatever the project holds.
+- **Another version of an open ISD.** A fork whose target is an ISD document holding the source IED's `uuid` (the
+  version check passed: the same file, a version of it) is the **update** of that IED, not a placement (`targetInstance`
+  is not read: an ISD holds one IED). Its elements pair by `uuid`, so a rename is one change; names and values follow the
+  other version (a value the project may set included); an element only in the open ISD is its own (`target-only`,
+  kept unless its removal is accepted; with no report, kept). Nothing is written in the `Header` and no file is recorded
+  in `IEDSourceFiles`. The `Communication` section is the file's own: it is reported as an instance of its own, paired by
+  `uuid` (an address changed is `modified P`, a bit rate gained `added BitRate`, a subnetwork or a connection only in
+  the open ISD `target-only`), and written as its groups decide; an open ISD without one takes the other version's
+  through the placement of the IED's connections. The specification beside the IED is not reported or updated by a fork
+  yet: a type the IED and the specification's `LNode`s both name is not updated in place, the IED moves to a type of its
+  own holding the other version's content.
 - `apply` writes the first placement of the IED of an ISD or an ICD ([`instantiate.ied`](./instantiate#ied)), unless
   its group is skipped, or the update. A report of a first placement applied once its IED is in the project is refused
   with `REPORT_TARGET_MISMATCH` (`meta: { field: 'targetInstance' }`) rather than placing another.
@@ -830,8 +841,10 @@ For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolut
 
 ## `tx.lifecycle.update.ied`
 
-`tx.lifecycle.update.ied({ sourceQuery, iedRef, anchor, fileType, targetInstance?, report?, decisions?,
-keepNameTypesFrom?, takeOver? })` updates the IED of the project placed from a template ISD with a newer revision of it,
+`tx.lifecycle.update.ied({ sourceQuery, iedRef, anchor, fileType, scenario?, targetInstance?, report?, decisions?,
+keepNameTypesFrom?, takeOver? })` updates the IED of the project placed from a template ISD with a newer revision of it
+(`scenario: 'template'`, the default), or the IED of an open ISD with another version of it (`scenario: 'fork'`, see
+[An IED](#an-ied-—-verb-ied)),
 as `apply` does for an IED's report (see [An IED](#an-ied-—-verb-ied)), or places it when the project holds none
 ([`instantiate.ied`](./instantiate#ied)). Given a report and decisions, a group waiting for a decision left out is refused
 (`DECISION_REQUIRED`) before anything is written. Without them, it writes everything the revision brings, a change to

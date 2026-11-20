@@ -21,6 +21,7 @@ import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import {
 	bindConnections,
@@ -36,7 +37,11 @@ import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/re
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { ReconcileIedParams, UpdateIedParams } from './ied.types'
+import type {
+	ReconcileFileCommunicationParams,
+	ReconcileIedParams,
+	UpdateIedParams,
+} from './ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AppliedInstance } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
@@ -52,7 +57,7 @@ async function connectAccessPoints(
 	tx: Core.Transaction<Config>,
 	params: ReconcileIedParams & { instanceRef: Scl.Ref<'IED'>; matchKey: MatchKey },
 ): Promise<Scl.CloneMapping[]> {
-	const { instance, instanceRef, matchKey } = params
+	const { instance, instanceRef, matchKey, policy } = params
 	// what the IED holds now, the access points it gained included: a connection to one names it
 	const redirectMappings = await readInstanceRedirects(tx, { instance, matchKey })
 	const communication = await placeIedCommunication(tx, {
@@ -62,16 +67,45 @@ async function connectAccessPoints(
 		matchKey,
 		placeholderLineages: params.placeholderLineages,
 		redirectMappings,
-		keepsSubNetworkSettings: true,
+		keepsSubNetworkSettings: policy.subNetworkSettings === 'project',
 	})
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: communication.cloneMappings,
-		mode: scenarioPolicy({ scenario: 'template' }).placementIdentity,
+		mode: policy.placementIdentity,
 		redirectMappings: communication.redirectMappings,
 	})
 	await bindConnections(tx, { ied: instanceRef, cloneMappings: communication.cloneMappings })
 	await nameConnections(tx, { ied: instanceRef, cloneMappings: communication.cloneMappings })
 	return communication.cloneMappings
+}
+
+/**
+ * The open ISD's Communication reconciled with the other version's, as the groups of its own report instance decide
+ * (everything the other version brings without decisions): paired by uuid, names and values following, an element
+ * only in the open ISD kept unless its removal is accepted. Returns the clone mappings of what it added.
+ */
+async function reconcileFileCommunication(
+	tx: Core.Transaction<Config>,
+	params: ReconcileFileCommunicationParams,
+): Promise<Scl.CloneMapping[]> {
+	const { communications, policy, report, decisions } = params
+	const groups = groupsForInstance(report, communications.target.id ?? '')
+	const { cloneMappings } = await reconcile(tx, {
+		sourceQuery: params.sourceQuery,
+		sourceRootRef: communications.source,
+		instanceRootRef: communications.target,
+		accepted: decisions ? acceptedRefIds({ groups, decisions }) : undefined,
+		overrides: decisions ? collisionOverrides({ groups, decisions }) : undefined,
+		matchKey: policy.matchKey,
+		identityMode: policy.identityMode,
+		bumpsCollisions: policy.bumpsCollisions,
+		removalBase: params.removalBase,
+		namesFollow: policy.namesFollow,
+		placeholderLineages: params.placeholderLineages,
+	})
+	const reportInstance = reportInstanceById(report, communications.target.id ?? '')
+	if (reportInstance) annotateInstance({ reportInstance, added: sourceToTargetMap(cloneMappings) })
+	return cloneMappings
 }
 
 /**
@@ -89,11 +123,12 @@ export async function ied(
 	tx: Core.Transaction<Config>,
 	params: UpdateIedParams,
 ): Promise<AppliedInstance<'IED'>[]> {
-	const { sourceQuery, iedRef, anchor, fileType } = params
+	const { sourceQuery, iedRef, anchor, fileType, scenario = 'template' } = params
+	const policy = scenarioPolicy({ scenario })
 	const instance = await resolveIedInstance(tx, {
 		sourceQuery,
 		iedRef,
-		scenario: 'template',
+		scenario,
 		fileType,
 		targetInstance: params.targetInstance,
 		operation: 'apply (ied)',
@@ -104,7 +139,7 @@ export async function ied(
 			iedRef,
 			anchor,
 			fileType,
-			scenario: 'template',
+			scenario,
 			keepNameTypesFrom: params.keepNameTypesFrom,
 		})
 		return [{ ref: placed.iedRef, placement: 'placed' }]
@@ -115,11 +150,14 @@ export async function ied(
 		assertRequiredDecisionsTaken({ groups, decisions: params.decisions })
 		assertDecisionsCoherent({ groups, decisions: params.decisions })
 	}
-	const removalBase = await resolveRemovalBase({
-		policy: scenarioPolicy({ scenario: 'template' }),
-		sourceQuery,
+	const removalBase = await resolveRemovalBase({ policy, sourceQuery })
+	return reconcileIed(tx, {
+		...params,
+		instance,
+		policy,
+		removalBase,
+		placeholderLineages: new Set(),
 	})
-	return reconcileIed(tx, { ...params, instance, removalBase, placeholderLineages: new Set() })
 }
 
 /**
@@ -139,17 +177,20 @@ export async function reconcileIed(
 	tx: Core.Transaction<Config>,
 	params: ReconcileIedParams,
 ): Promise<AppliedInstance<'IED'>[]> {
-	const { sourceQuery, iedRef, instance, report, decisions } = params
-	const policy = scenarioPolicy({ scenario: 'template' })
+	const { sourceQuery, iedRef, instance, report, decisions, policy } = params
 	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const groups = groupsForInstance(report, instance.id)
 	const instanceRef = toRef(instance) as Scl.Ref<'IED'>
 	// the specification beside the IED, told by what binds to it before the update changes the IED
-	const specification = await readIedSpecification(tx, {
-		sourceQuery,
-		fileType: params.fileType,
-		iedRef: instanceRef,
-	})
+	// a fork's specification pairs by uuid, not by lineage: not updated with its IED yet
+	const specification =
+		policy.matchKey === 'templateUuid'
+			? await readIedSpecification(tx, {
+					sourceQuery,
+					fileType: params.fileType,
+					iedRef: instanceRef,
+				})
+			: undefined
 	// the inputs of other IEDs subscribed to what the IED's data sets send, read before the update changes them
 	const before = await tx.any.getTree(instanceRef)
 	const subscriptions = before ? await readSubscriptionsTo(tx, { instance: before }) : []
@@ -169,8 +210,16 @@ export async function reconcileIed(
 		placeholderLineages: params.placeholderLineages,
 		takeOver: params.takeOver,
 	})
-	// what its access points gained connects to the project's subnetworks
-	const connections = await connectAccessPoints(tx, { ...params, instanceRef, matchKey })
+	// a fork on an open ISD: the file's Communication follows the other version as its own groups decide; otherwise what
+	// its access points gained connects to the project's subnetworks
+	const fileCommunications = await readFileCommunications(tx, {
+		sourceQuery,
+		anchor: params.anchor,
+		policy,
+	})
+	const connections = fileCommunications
+		? await reconcileFileCommunication(tx, { ...params, communications: fileCommunications })
+		: await connectAccessPoints(tx, { ...params, instanceRef, matchKey })
 	const added = [...cloneMappings, ...connections]
 	// a reference the update added may name an element the IED already holds, or one it added: it names the project's
 	await repointAddedReferences(tx, { cloneMappings: added, instanceRootRef: instance, matchKey })
@@ -185,7 +234,10 @@ export async function reconcileIed(
 
 	// the IED now holds this revision of its template, when anything of the file is written (its specification
 	// included): its own reference names it
-	if (followsSource({ groups: report ? allGroups(report) : groups, decisions })) {
+	if (
+		policy.writesProvenance &&
+		followsSource({ groups: report ? allGroups(report) : groups, decisions })
+	) {
 		await writeProvenance(tx, {
 			sourceQuery,
 			target: { anchor: 'ied', root: instanceRef, fileType: params.fileType },

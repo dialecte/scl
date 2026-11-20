@@ -53,6 +53,12 @@ export type ScenarioPolicy = {
 	 * sits, the template's renames do not reach it), or the source's (`source` — a revision's renames are the file's).
 	 */
 	namesFollow: NamesFollow
+	/**
+	 * Whose a subnetwork's own settings (its bit rate, text, private data) are when an IED's connections land on one the
+	 * target holds: the target's (`project`, an update of a template's instance) or the source's (`source`: a first
+	 * placement brings them, a fork takes the other version's).
+	 */
+	subNetworkSettings: 'project' | 'source'
 }
 
 /** Whose names a matched element keeps: see {@link ScenarioPolicy.namesFollow}. */

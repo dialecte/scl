@@ -33,20 +33,17 @@ const laterRevision = /* xml */ `
 `
 
 type TestCase = SclTest.BaseXmlTestCase & {
-	expected: { refused: { key: string; meta: Record<string, unknown> } }
+	expected: { reported: true } | { refused: { key: string; meta: Record<string, unknown> } }
 }
 
-// A version of the open ISD passes the version check: the fork goes on, and is refused as a first placement finding
-// the IED until its update is offered.
+// A version of the open ISD passes the version check: the fork goes on, reported as the update of its IED.
 describe('query.lifecycle.report - a fork on an open ISD of a version of it passes the version check', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'a version of the open ISD (same Header uuid, same IED uuid) -> not refused as NOT_A_VERSION_OF_FILE, the fork goes on to its first-placement refusal':
+		'a version of the open ISD (same Header uuid, same IED uuid) -> not refused as NOT_A_VERSION_OF_FILE, reported as the update of its IED':
 			{
 				sourceXml: laterRevision,
 				targetXml: openIsd,
-				expected: {
-					refused: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'scenario', value: 'fork' } },
-				},
+				expected: { reported: true },
 			},
 	}
 

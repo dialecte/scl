@@ -5,7 +5,9 @@ import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/eng
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
 import type { PlacedIedFileType } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import type { FileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -20,6 +22,11 @@ export type UpdateIedParams = {
 	fileType: PlacedIedFileType
 	/** The IED of the project the update starts from: required when the project holds several instances. */
 	targetInstance?: Scl.Ref<'IED'>
+	/**
+	 * `template` (the default): a newer revision of the template the IED was placed from. `fork`: another version of the
+	 * open ISD, whose IED it updates by uuid, following the other version.
+	 */
+	scenario?: 'template' | 'fork'
 	/** The report the decisions answer. Absent: everything the revision brings is written. */
 	report?: DiffReport
 	decisions?: DecisionMap
@@ -35,6 +42,13 @@ export type ReconcileIedParams = Omit<UpdateIedParams, 'fileType' | 'targetInsta
 	fileType: SclFileType
 	/** The IED of the project the update starts from (see `resolveIedInstance`). */
 	instance: AnyTrackedRecord
+	/** The scenario's policy, read once at the verb's entry. */
+	policy: ScenarioPolicy
 	removalBase: RemovalBase
 	placeholderLineages: PlaceholderLineages
+}
+
+/** An IED update's parameters and the Communication of both versions of the file. */
+export type ReconcileFileCommunicationParams = ReconcileIedParams & {
+	communications: FileCommunications
 }

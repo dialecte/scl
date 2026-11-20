@@ -21,6 +21,7 @@ const testCases: Record<string, TestCase> = {
 			writesProvenance: true,
 			removalBase: 'none',
 			namesFollow: 'project',
+			subNetworkSettings: 'source',
 		},
 	},
 	'template: the instances matched by their lineage': {
@@ -35,6 +36,7 @@ const testCases: Record<string, TestCase> = {
 			writesProvenance: true,
 			removalBase: 'lineage',
 			namesFollow: 'project',
+			subNetworkSettings: 'project',
 		},
 	},
 	'fork: the previous revision matched by the uuids both share, kept, on what it places too, its names followed':
@@ -50,6 +52,7 @@ const testCases: Record<string, TestCase> = {
 				writesProvenance: false,
 				removalBase: 'revision',
 				namesFollow: 'source',
+				subNetworkSettings: 'source',
 			},
 		},
 	'no scenario asked: template': {
@@ -69,6 +72,7 @@ const testCases: Record<string, TestCase> = {
 				writesProvenance: false,
 				removalBase: 'revision',
 				namesFollow: 'source',
+				subNetworkSettings: 'source',
 			},
 		},
 	'placed afresh within a template update: the template identity, matched to no instance, its references its own':

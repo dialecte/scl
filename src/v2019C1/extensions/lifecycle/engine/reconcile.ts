@@ -244,6 +244,7 @@ export async function reconcile(
 		instanceTree,
 		matchKey,
 		takeOver: params.takeOver,
+		namesFollow: params.namesFollow ?? 'project',
 	})
 
 	// root + descendants: update matched in place, add new
