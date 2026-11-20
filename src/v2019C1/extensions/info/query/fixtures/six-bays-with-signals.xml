@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation name="Grid" dev:db-id="s1">
+		<VoltageLevel name="V0" dev:db-id="vl0">
+			<Bay name="Bay0" dev:db-id="bay0">
+				<Function name="F0" dev:db-id="f0">
+					<LNode lnClass="PTRC" lnInst="1" iedName="None" dev:db-id="lnode0">
+						<Private type="eIEC61850-6-100" dev:db-id="private0">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr0-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr0-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr0-3"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="Bay1" dev:db-id="bay1">
+				<Function name="F1" dev:db-id="f1">
+					<LNode lnClass="PTRC" lnInst="2" iedName="None" dev:db-id="lnode1">
+						<Private type="eIEC61850-6-100" dev:db-id="private1">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr1-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr1-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr1-3"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="Bay2" dev:db-id="bay2">
+				<Function name="F2" dev:db-id="f2">
+					<LNode lnClass="PTRC" lnInst="3" iedName="None" dev:db-id="lnode2">
+						<Private type="eIEC61850-6-100" dev:db-id="private2">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr2-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr2-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr2-3"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+		<VoltageLevel name="V1" dev:db-id="vl1">
+			<Bay name="Bay3" dev:db-id="bay3">
+				<Function name="F3" dev:db-id="f3">
+					<LNode lnClass="PTRC" lnInst="4" iedName="None" dev:db-id="lnode3">
+						<Private type="eIEC61850-6-100" dev:db-id="private3">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr3-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr3-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr3-3"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="Bay4" dev:db-id="bay4">
+				<Function name="F4" dev:db-id="f4">
+					<LNode lnClass="PTRC" lnInst="5" iedName="None" dev:db-id="lnode4">
+						<Private type="eIEC61850-6-100" dev:db-id="private4">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr4-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr4-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr4-3"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="Bay5" dev:db-id="bay5">
+				<Function name="F5" dev:db-id="f5">
+					<LNode lnClass="PTRC" lnInst="6" iedName="None" dev:db-id="lnode5">
+						<Private type="eIEC61850-6-100" dev:db-id="private5">
+							<eIEC61850-6-100:SourceRef input="In" inputInst="1" dev:db-id="sr5-1"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="2" dev:db-id="sr5-2"/>
+							<eIEC61850-6-100:SourceRef input="In" inputInst="3" dev:db-id="sr5-3"/>
+							<eIEC61850-6-100:SourceRef input="Close" inputInst="1" dev:db-id="sr5-close"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+</SCL>

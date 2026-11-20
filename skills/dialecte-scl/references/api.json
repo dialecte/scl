@@ -485,6 +485,19 @@
 			"declaredAt": "src/v2019C1/extensions/info/query/of-each.ts:33"
 		},
 		{
+			"path": "doc.query.info.search",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: SearchParams) => Promise<SearchHit[]>",
+			"summary": "The elements of the tags given whose title holds the term, each with the ids of its ancestors from the root down, so a tree that has not loaded an element can open the path to it. The titles are the ones `ofEach` gives (in the `mode` asked, `compact` by default), so a hit reads in a tree as the text searched. The term is trimmed and matched case aside, anywhere in the title; an empty term finds nothing and reads nothing. The ancestors leave out the element itself and the transparent elements (`Private`), as a tree read unwrapping them shows none. An element of an omitted tag, or below one, is no hit. Inside a transaction the staged state is searched.",
+			"intents": [
+				"find elements by the title a tree shows",
+				"search a tree that loads lazily",
+				"reveal a search hit by its ancestor ids"
+			],
+			"declaredAt": "src/v2019C1/extensions/info/query/search.ts:30"
+		},
+		{
 			"path": "doc.query.lifecycle.checkTemplateUuids",
 			"root": "q",
 			"otherRoutes": [],
