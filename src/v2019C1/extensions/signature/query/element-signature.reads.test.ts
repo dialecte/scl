@@ -1,4 +1,6 @@
 import { elementSignature } from './element-signature'
+import mixedReferencesSignature from './fixtures/mixed-references.signature.txt?raw'
+import mixedReferencesXml from './fixtures/mixed-references.xml?raw'
 
 import { describe, expect } from 'vitest'
 
@@ -110,6 +112,21 @@ describe('elementSignature - one lookup per target tag and level', () => {
 			`,
 				ref: { tagName: 'FunctionCategory', id: 'cat1' },
 				lookups: { Function: 1, SubFunction: 1 },
+			},
+		'a function category reference naming a function → one Function lookup, the next tag never asked':
+			{
+				sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="S1" ${id}="s1">
+						<Function name="F1" uuid="00000000-0000-4000-8000-0000000000f1" ${id}="f1"/>
+						<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+							<eIEC61850-6-100:FunctionCatRef functionUuid="00000000-0000-4000-8000-0000000000f1" function="S1/F1" ${id}="ref-1"/>
+						</eIEC61850-6-100:FunctionCategory>
+					</Substation>
+				</SCL>
+			`,
+				ref: { tagName: 'FunctionCategory', id: 'cat1' },
+				lookups: { Function: 1 },
 			},
 	}
 
@@ -279,6 +296,39 @@ describe('elementSignature - one uuid under two pairs of different target tags',
 					'"functionUuid":"@sig:@missing:00000000-0000-4000-8000-0000000000e1"',
 				],
 			},
+		'the function reference walked first and the category reference last → the same folds': {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="scl-1">
+					<Substation name="S1" ${id}="s1">
+						<Private type="eIEC61850-6-100" ${id}="s1-private">
+							<eIEC61850-6-100:Application name="App" ${id}="app">
+								<eIEC61850-6-100:FunctionRole name="ROLE" ${id}="role">
+									<eIEC61850-6-100:FunctionRoleContent ${id}="role-content">
+										<eIEC61850-6-100:FunctionRef functionUuid="00000000-0000-4000-8000-0000000000e1" ${id}="function-ref"/>
+									</eIEC61850-6-100:FunctionRoleContent>
+								</eIEC61850-6-100:FunctionRole>
+							</eIEC61850-6-100:Application>
+						</Private>
+						<VoltageLevel name="VL1" ${id}="vl1">
+							<Bay name="B1" ${id}="b1">
+								<ConductingEquipment name="QA1" type="CBR" ${id}="qa1">
+									<EqFunction name="EQF" uuid="00000000-0000-4000-8000-0000000000e1" ${id}="eqf"/>
+								</ConductingEquipment>
+								<eIEC61850-6-100:FunctionCategory name="Cat1" ${id}="cat1">
+									<eIEC61850-6-100:FunctionCatRef functionUuid="00000000-0000-4000-8000-0000000000e1" ${id}="cat-ref"/>
+								</eIEC61850-6-100:FunctionCategory>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			allowIncoherentReferences:
+				'a function category reference names an equipment function on purpose',
+			contains: [
+				'"functionUuid":"@sig:{tag:\\"EqFunction\\"',
+				'"functionUuid":"@sig:@missing:00000000-0000-4000-8000-0000000000e1"',
+			],
+		},
 	}
 
 	runSclTestCases.withoutExport({
@@ -289,6 +339,31 @@ describe('elementSignature - one uuid under two pairs of different target tags',
 				resolveReferences: true,
 			})
 			for (const text of testCase.contains) expect(signature).toContain(text)
+		},
+	})
+})
+
+/**
+ * Contract: the whole signature text of a tree holding an id reference, uuid references (one naming nothing), a DO naming
+ * no DOType and a DAType naming itself is, byte for byte, the one a lookup per reference gives (recorded from it).
+ */
+describe('elementSignature - the whole text as one lookup per reference gives it', () => {
+	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
+		// the fixture: an LNode typed by id, two category references by uuid (one naming nothing), a missing DOType, a cycle
+		'a mixed tree signed from its substation → the recorded text': {
+			sourceXml: mixedReferencesXml,
+			allowIncoherentReferences: 'references naming nothing on purpose',
+		},
+	}
+
+	runSclTestCases.withoutExport({
+		testCases,
+		act: async ({ source }) => {
+			const signature = await elementSignature(source.query, {
+				ref: { tagName: 'Substation', id: 's1' },
+				resolveReferences: true,
+			})
+			expect(signature).toBe(mixedReferencesSignature)
 		},
 	})
 })

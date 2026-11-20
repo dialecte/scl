@@ -49,18 +49,20 @@ export async function followAncestry(
 ): Promise<Scl.Operation[]> {
 	query.perf.start(FOLLOW_ANCESTRY_PERF_SPAN)
 	try {
-		return await followAncestryOf(query, params)
+		return await followAncestryOf({ query, ...params })
 	} finally {
 		query.perf.stop(FOLLOW_ANCESTRY_PERF_SPAN)
 	}
 }
 
 /** {@link followAncestry}, inside its span. */
-async function followAncestryOf(
-	query: Core.Query<Config>,
-	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
-): Promise<Scl.Operation[]> {
-	const { elements, held } = await readFollowedElements(query, params)
+async function followAncestryOf(params: {
+	query: Core.Query<Config>
+	roots: readonly FollowedRoot[]
+	read?: FollowRead
+}): Promise<Scl.Operation[]> {
+	const { query, ...followed } = params
+	const { elements, held } = await readFollowedElements(query, followed)
 	if (elements.length === 0) return []
 	const referrers = await readReferrers(query, { elements })
 	const referred = new Set(referrers.map((found) => found.target))

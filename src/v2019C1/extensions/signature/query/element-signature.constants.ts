@@ -5,4 +5,4 @@ export const DEFAULT_IGNORED_ATTRIBUTES: readonly string[] = ['id', 'uuid']
 export const NO_SKIP: ReadonlySet<string> = new Set()
 
 /** The perf span (`dev.perf`) around the lookups of the references of one tree a signature folds in. */
-export const RESOLVE_REFERENCES_PERF_SPAN = 'scl::elementSignature.resolveReferences'
+export const RESOLVE_REFERENCES_PERF_SPAN = 'scl::elementSignature::resolveReferences'

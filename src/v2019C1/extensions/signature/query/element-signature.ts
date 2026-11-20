@@ -4,6 +4,8 @@ import {
 	RESOLVE_REFERENCES_PERF_SPAN,
 } from './element-signature.constants'
 
+import { throwDialecteError } from '@dialecte/core'
+
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { DEFINITION } from '@/v2019C1/definition'
 import { TYPE_ID_REFERENCE_PAIRS } from '@/v2019C1/extensions/reference'
@@ -114,11 +116,6 @@ async function serialize(
 	// run in order. Concurrent siblings would let one fold a type's real signature while a
 	// second, suspended mid-await, sees the key in `seen` and emits a spurious `@cycle`
 	// (order-dependent, so the same type hashes differently in source vs target and forks).
-	// Serialize children sequentially, not via Promise.all: a shared `seen` set only
-	// distinguishes a genuine back-reference from a plain shared reference when children
-	// run in order. Concurrent siblings would let one fold a type's real signature while a
-	// second, suspended mid-await, sees the key in `seen` and emits a spurious `@cycle`
-	// (order-dependent, so the same type hashes differently in source vs target and forks).
 	const childParts: string[] = []
 	for (const child of node.tree ?? []) {
 		const part = await serialize(child, context)
@@ -143,15 +140,16 @@ async function foldReference(
 ): Promise<string | null> {
 	const typePair = typeIdPair(node, attributeName)
 	if (typePair) {
-		const target = context.referenceCache.get(
-			referenceKey({ target: typePair.target, attribute: 'id', value }),
-		)
+		const target = askedAnswerOf({
+			cache: context.referenceCache,
+			key: referenceKey({ target: typePair.target, attribute: 'id', value }),
+		})
 		return target ? computeSignature(target, context) : `@missing:${value}`
 	}
 
 	const uuidPair = uuidPairForUuidAttribute(node.tagName, attributeName)
 	if (uuidPair) {
-		const target = uuidTargetOf({
+		const target = askedUuidTargetOf({
 			cache: context.referenceCache,
 			targets: uuidPair.target,
 			uuid: value,
@@ -324,6 +322,43 @@ function uuidTargetOf(params: {
 }): Scl.Ref<Scl.ElementsOf> | null {
 	for (const target of params.targets) {
 		const found = params.cache.get(referenceKey({ target, attribute: 'uuid', value: params.uuid }))
+		if (found) return found
+	}
+	return null
+}
+
+/**
+ * What the cache answers for a reference value folded into a signature: the ref found, or `null` when its tag holds none.
+ * A value never asked means the lookups before the fold missed it (`askedReferencesOf` and `serialize` disagree): that
+ * refuses, never folds a silent `@missing`.
+ */
+function askedAnswerOf(params: {
+	cache: ReferenceCache
+	key: string
+}): Scl.Ref<Scl.ElementsOf> | null {
+	const answer = params.cache.get(params.key)
+	if (answer === undefined) {
+		return throwDialecteError('ASSERTION_FAILED', {
+			detail: `elementSignature: a reference folded before it was looked up (${params.key.replaceAll('\u0000', ' ')})`,
+		})
+	}
+	return answer
+}
+
+/**
+ * The element a uuid names among `targets`, the first tag first, as the lookups before the fold answered it: each tag up
+ * to the first that holds it was asked (`askedAnswerOf` refuses one that was not).
+ */
+function askedUuidTargetOf(params: {
+	cache: ReferenceCache
+	targets: readonly string[]
+	uuid: string
+}): Scl.Ref<Scl.ElementsOf> | null {
+	for (const target of params.targets) {
+		const found = askedAnswerOf({
+			cache: params.cache,
+			key: referenceKey({ target, attribute: 'uuid', value: params.uuid }),
+		})
 		if (found) return found
 	}
 	return null
