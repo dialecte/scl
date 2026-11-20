@@ -144,7 +144,11 @@ type `OtherIedImpact`), once per group bringing it:
   subscribed through a control block of the updated IED to data no entry of it sends any more (each entry sending it
   removed, or the project's own whose removal is offered), its control block cleared and its data source kept, listed
   under each group removing one of those entries and cleared once all are accepted;
-- `renamed`: a reference whose names follow an element the update renames.
+- `renamed`: a reference whose names follow an element the update renames, or moves. A function or an application of
+  the IED's specification the update moves to another level counts too: an input or an output of the substation
+  (`SourceRef`, `ControlRef`, ...) naming it, or what it holds, by a full path is listed under the IED its `LNode` is
+  bound to, else the one it is specified on (`LNodeSpecNaming`); one of the updated IED's own specification is not
+  another IED's, and is not listed.
 
 The group bringing it waits for a decision (`requiresDecision: 'changes-another-ied'`, a reference to deleted data
 keeping `names-deleted-data`), suggested `skip`, and the report needs decisions. Accepted, the change is written with

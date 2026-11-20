@@ -1,6 +1,11 @@
 import type { Config } from '@/v2019C1/config'
-import type { OtherIedImpact } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	OtherIedImpact,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
+import type { AnyRawRecord } from '@dialecte/core'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 /** An element of another IED the update may change, with the group bringing it, before its IED is known. */
 export type Candidate = Omit<OtherIedImpact, 'ied'>
@@ -28,4 +33,16 @@ export type OtherIedImpacts = {
 export type Subscription = {
 	input: { tagName: string; id: string }
 	entryIds: string[]
+}
+
+/** The groups of an IED update, and the records of the IED's tree by id: what is outside it is the specification's. */
+export type MovedOutsideParams = {
+	groups: readonly DecisionGroup[]
+	nodesById: ReadonlyMap<string, AnyTreeRecord>
+}
+
+/** The records whose IED is read, and the name of the IED the update changes. */
+export type OwningIedsParams = {
+	records: readonly AnyRawRecord[]
+	updated: string
 }
