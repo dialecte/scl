@@ -12,7 +12,7 @@ import {
 	leftOutRefIds,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
-import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
+import { resolveIedScenario } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { reconcileIed } from '@/v2019C1/extensions/lifecycle/update/transaction/ied'
 
@@ -82,7 +82,8 @@ async function applyIedUpdate(
 ): Promise<AppliedInstance<'IED'>[] | undefined> {
 	const { target, report, decisions } = params
 	const fileType = report.target?.fileType
-	const instance = await resolveIedInstance(tx, {
+	// the decision `query.lifecycle.scenarioOf` reads too: the IED updated, or a placement offered
+	const instance = await resolveIedScenario(tx, {
 		sourceQuery: target.sourceQuery,
 		iedRef: target.ref,
 		scenario: target.scenario ?? 'template',

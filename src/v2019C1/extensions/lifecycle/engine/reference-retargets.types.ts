@@ -3,17 +3,14 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
-/** The newer revision, and the open document (read, or written in a transaction). */
-export type IsSameFileParams = {
+/**
+ * The newer revision, the open document (read, or written in a transaction), the update's source root (what it brings
+ * sits under it; absent: the whole revision, an IED's update), and what of the revision it leaves out (source record
+ * ids).
+ */
+export type ReadUpdateHoldsParams = {
 	sourceQuery: Core.Query<Config>
 	target: Core.Query<Config> | Core.Transaction<Config>
-}
-
-/**
- * The newer revision, the open document, the update's source root (what it brings sits under it; absent: the whole
- * revision, an IED's update), and what of the revision it leaves out (source record ids).
- */
-export type ReadUpdateHoldsParams = IsSameFileParams & {
 	within?: Scl.Ref<Scl.ElementsOf>
 	leftOut?: ReadonlySet<string>
 }

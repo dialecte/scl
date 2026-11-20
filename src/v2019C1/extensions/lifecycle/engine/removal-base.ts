@@ -4,7 +4,7 @@ import { readUpdateHolds } from './reference-retargets'
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import { readFileUuid } from '@/v2019C1/extensions/lifecycle/read-file-uuid'
+import { compareFileIdentity } from '@/v2019C1/extensions/lifecycle/file-identity'
 import { BARE_TUPLE_REFERRER_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
@@ -131,9 +131,9 @@ async function assertSameFile(params: {
 	baseQuery: Core.Query<Config>
 }): Promise<void> {
 	const { sourceQuery, baseQuery } = params
-	const fileUuid = await readFileUuid(sourceQuery)
-	const baseFileUuid = await readFileUuid(baseQuery)
-	if (!fileUuid || !baseFileUuid || fileUuid === baseFileUuid) return
+	const identity = await compareFileIdentity({ query: sourceQuery, otherQuery: baseQuery })
+	const { fileUuid, otherFileUuid: baseFileUuid, sameFile } = identity
+	if (!fileUuid || !baseFileUuid || sameFile) return
 	throwDialecteError(SCL_ERRORS.REVISION_BASE_OTHER_FILE, {
 		meta: { fileUuid, baseFileUuid },
 		detail: `the previous revision given names the file "${baseFileUuid}", the newer revision "${fileUuid}"`,

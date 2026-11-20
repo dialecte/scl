@@ -280,7 +280,7 @@ type DiffNode = {
 
 ### Scenario — instantiate vs template vs fork
 
-The scenarios are **distinct operations**, chosen explicitly by the consumer — dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe). `template` and `fork` are the two modes of the **Update** action, distinguished by how the source relates to the target:
+The scenarios are **distinct operations**, chosen by the consumer. For an IED, [`scenarioOf`](#which-scenario-applies-scenarioof) tells the scenario from the documents once the consumer says whether it places or updates; for an FSD, an ASD or an SSD dialecte does not infer one from the other (a same-version re-upload is a valid duplicate, so inference is unsafe). `template` and `fork` are the two modes of the **Update** action, distinguished by how the source relates to the target:
 
 - **`instantiate`** — place a **new** instance of the template. Duplicates are allowed: re-applying the same template yields **another** instance (never a silent no-op), with a sibling name collision auto-resolved (e.g. `HMI` → `HMI_1`, and its composed functions `Prot` → `Prot_1`). The placed `name` is an editable field so the user can override the auto-resolved value.
 - **`template`** — source is a **template**; reconcile it **onto** its existing instance(s). Elements match by `templateUuid` (= the source `uuid`); added elements are stamped with instance lineage. Names stay the project's: an instance is named where it sits, a template's rename does not reach it. If none exists yet it is the first-time case (instantiate); with existing instances it reconciles in place and never duplicates. _(Was `update`.)_
@@ -290,6 +290,51 @@ The scenarios are **distinct operations**, chosen explicitly by the consumer —
 
 - **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`): it writes what the report lists, each group at its suggested action — an element the project added is kept, a reference the report kept stays. Decisions supplied anyway are honored, user value edits included;
 - **full** (`true`) — the instance exists and something changed → `apply` needs `decisions`. Without them it writes **nothing** and returns the report so the caller can drive the review; with them it applies only the accepted groups (across both layers for an ASD).
+
+### Which scenario applies — `scenarioOf`
+
+`doc.query.lifecycle.scenarioOf.<verb>(...)` tells the scenario before anything is reported, from the documents
+themselves. It only reads, and a refusal is returned as data, never thrown.
+
+**An IED** — `scenarioOf.ied({ sourceQuery, ref, targetInstance? })`: `ref` is the source file's IED (see
+`sourceRoot.ied()`), `targetInstance` the IED of the open document the consumer updates; absent, the consumer places
+the source IED.
+
+| The consumer      | The source                                                | Scenario      |
+| ----------------- | --------------------------------------------------------- | ------------- |
+| places the IED    | the IED of an ISD instance file                           | `fork`        |
+| places the IED    | any other: a template ISD, an ICD                         | `instantiate` |
+| updates on an ISD | another version of its file, or another ISD instance file | `fork`        |
+| updates           | any other: the template the IED was placed from           | `template`    |
+
+The answer is `{ scenario, sameFile }` — `sameFile` when both `Header`s name the same file (a fork of the file itself,
+which re-targets references) — or `{ refused: { code, reason, meta, detail } }`: the error `report`, `apply` and
+`update.ied` throw for that scenario, with the same key and `meta`, as they read the same checks (a source extension no
+IED is read from is the report's to refuse: `apply` and `update.ied` are given the file type). `reason` is one word per
+situation. Placing an ISD instance on an open ISD of the same file holding its IED is a fork that updates it, as the
+verbs run it.
+
+| `code`                     | `reason`                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `NOT_A_VERSION_OF_FILE`    | `other-file`, `other-ied`                                                                                  |
+| `OPTION_NOT_AVAILABLE`     | `source-extension`, `source-not-read`, `isd-instance-not-fork`, `already-in-project`, `source-not-updated` |
+| `TARGET_INSTANCE_REQUIRED` | `no-instance`, `not-an-instance`, `several-instances`                                                      |
+
+```ts
+const answer = await project.query.lifecycle.scenarioOf.ied({ sourceQuery, ref, targetInstance })
+if ('refused' in answer) return explain(answer.refused) // code, reason, meta
+const report = await project.query.lifecycle.report({
+	verb: 'ied',
+	sourceQuery,
+	ref,
+	anchor,
+	scenario: answer.scenario,
+	targetInstance,
+})
+```
+
+**An FSD, an ASD, an SSD** — `scenarioOf.fsd` / `.asd` / `.ssd({ sourceQuery })` answer `{ sameFile }` only: these
+verbs take every scenario, so the consumer states it.
 
 ### Decision groups (full track)
 

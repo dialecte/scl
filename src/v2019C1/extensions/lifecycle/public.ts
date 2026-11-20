@@ -80,6 +80,19 @@ export type {
 	SourceRootVerb,
 } from './source-root'
 
+export type {
+	IedScenario,
+	IedScenarioOfParams,
+	LayerScenario,
+	LayerScenarioOfParams,
+} from './scenario-of'
+export type {
+	LifecycleRefusal,
+	LifecycleRefusalCode,
+	LifecycleRefusalReason,
+	Refused as LifecycleRefused,
+} from './refusal.types'
+
 export { TEMPLATE_UUID_WARNING_INFO } from './validate'
 export type {
 	TemplateUuidWarning,
