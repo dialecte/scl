@@ -156,6 +156,11 @@ export async function reconcile(
 		placeholderLineages?: PlaceholderLineages
 		/** The source is the project itself (a copy): a uuid both name is one element, never a reference this walk wrote. */
 		sourceIsProject?: boolean
+		/**
+		 * Run once the walk has added and moved what it writes, before the removals: what a later pass moves out of a
+		 * removed element (a primary of a process section) goes first, given what the walk added (a level it lands in).
+		 */
+		beforeRemovals?: (params: { added: readonly Scl.CloneMapping[] }) => Promise<void>
 		/** The values the project keeps that the consumer takes the template's for: see `Resolution.takeOver`. */
 		takeOver?: TakeOvers
 	} & ReconcileAdditions,
@@ -304,6 +309,8 @@ export async function reconcile(
 	})
 	// the moves, once what the walk adds is there to move into, before the removals: a removed parent never takes them
 	await writeMoves(tx, { moves })
+	// what a later pass moves out of what is removed, before the removals take it
+	if (params.beforeRemovals) await params.beforeRemovals({ added })
 
 	// removed from the template: delete instance elements whose lineage is gone. In a project-owned
 	// element, an identified child the source does not know is another template's or the project's.

@@ -23,7 +23,10 @@ import {
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 
-import type { FrameReconciliation } from './reconcile-topology-frame.types'
+import type {
+	FrameBeforeRemovalsParams,
+	FrameReconciliation,
+} from './reconcile-topology-frame.types'
 import type { InstanceLevels } from './resolve-instance-levels.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
@@ -75,6 +78,11 @@ export async function reconcileTopologyFrame(
 		decisionMappings?: DecisionMappings
 		/** The template's elements the scope leaves out (record ids): never matched to what the project holds, nor written. */
 		leftOut?: ReadonlySet<string>
+		/**
+		 * Run in each instance once the frame's additions are written and before its removals, given the instance and
+		 * where each level of the unit now stands (a level the template gained, the one just created).
+		 */
+		beforeRemovals?: (params: FrameBeforeRemovalsParams) => Promise<void>
 	},
 ): Promise<FrameReconciliation> {
 	const { sourceQuery, scopeRef, matchKey, identityMode, bumpsCollisions, report } = params
@@ -145,6 +153,20 @@ export async function reconcileTopologyFrame(
 				leftOut: params.leftOut,
 			}),
 			notSelected: params.leftOut,
+			...(params.beforeRemovals
+				? {
+						beforeRemovals: async function beforeFrameRemovals({ added }) {
+							await params.beforeRemovals?.({
+								instanceRootRef: instance,
+								instanceLevels: levelsStanding({
+									instanceLevels,
+									created: sourceToTargetMap([...added]),
+								}),
+								added,
+							})
+						},
+					}
+				: {}),
 		})
 		// carry the report->applied correlation onto this frame instance's report nodes (fn/app tags
 		// are a boundary here — their instances are annotated by the fn/app cascade)
@@ -154,16 +176,25 @@ export async function reconcileTopologyFrame(
 		if (reportInstance) annotateInstance({ reportInstance, added: created })
 
 		// where each level now stands: a level new to the instance stands on the one just created
-		const reconciledLevels = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
-		for (const [sourceId, level] of instanceLevels) {
-			const createdLevel = created.get(sourceId)
-			reconciledLevels.set(
-				sourceId,
-				level ?? (createdLevel ? (toRef(createdLevel) as Scl.Ref<Scl.ElementsOf>) : undefined),
-			)
-		}
-		instanceLevelsList.push(reconciledLevels)
+		instanceLevelsList.push(levelsStanding({ instanceLevels, created }))
 	}
 
 	return { additions, instanceLevelsList }
+}
+
+/** Where each level of the unit stands in an instance: as held, or, for a level the template gained, the one created. */
+function levelsStanding(params: {
+	instanceLevels: InstanceLevels
+	created: ReturnType<typeof sourceToTargetMap>
+}): InstanceLevels {
+	const { instanceLevels, created } = params
+	const standing = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
+	for (const [sourceId, level] of instanceLevels) {
+		const createdLevel = created.get(sourceId)
+		standing.set(
+			sourceId,
+			level ?? (createdLevel ? (toRef(createdLevel) as Scl.Ref<Scl.ElementsOf>) : undefined),
+		)
+	}
+	return standing
 }

@@ -296,6 +296,17 @@ what the update moves out of the removed element: neither the report (its remova
 data waiting for a decision) nor the apply reads the moved element as removed. The report's `summary` counts each move
 in `moved`.
 
+A function or an application of the process section (the primary a template places in a level) that the source holds in
+another level than the instance does is moved the same way: one `moved` change on the primary's own node, `movedFrom` the
+level it sits in and `movedTo` the level of the instance the source level stands on (or the source level itself when the
+update adds it, the move then depending on that level's group). The level comes from where the instance's frame stands,
+never from a name. A level the source gains is never read as another level of the same template: a project level
+carrying the lineage of one of them is that level's instance, so a primary moving into a gained level does not make the
+gained level stand where the primary still sits; a level the consumer maps it onto, or a project level carrying no
+lineage of the template, still can. Accepted, the primary is moved with `tx.move` after what the frame adds and before
+what it removes, keeping its record; skipped, it stays where it is. An instance holding the primary in two levels is not
+moved.
+
 An IED's data-flow reference the newer template lacks (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`,
 `ServerAt`) is listed the same way, whether the project added it or the template dropped it: nothing tells the two
 apart, so it stays unless its removal is accepted. Any other reference without a uuid of its own the template lacks

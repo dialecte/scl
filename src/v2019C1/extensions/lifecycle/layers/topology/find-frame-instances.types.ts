@@ -12,6 +12,11 @@ export type FindFrameInstancesParams = {
 	within?: Scl.Ref<Scl.ElementsOf>
 	/** The template's elements the scope leaves out (record ids): no evidence of an instance, no level of it. */
 	leftOut?: ReadonlySet<string>
+	/**
+	 * The lineages of the unit's levels: a level of the project carrying the lineage of another of them is that level's
+	 * instance, never one this level was mapped onto (a primary moving into a level the template gained still sits there).
+	 */
+	unitLineages?: ReadonlySet<string>
 }
 
 /** A level of the project an instance of a template's unit sits on. */

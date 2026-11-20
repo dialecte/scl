@@ -1,5 +1,7 @@
 import type { InstanceLevels } from './resolve-instance-levels.types'
+import type { Scl } from '@/v2019C1/config'
 import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
+import type { AnyRefOrRecord } from '@dialecte/core'
 
 /** What reconciling the frame of each instance of a unit wrote, and where its levels now stand. */
 export type FrameReconciliation = {
@@ -10,4 +12,11 @@ export type FrameReconciliation = {
 	 * included: where the primaries the template gained are placed.
 	 */
 	instanceLevelsList: InstanceLevels[]
+}
+
+/** One instance of the unit, once the frame's additions are written: where its levels stand, what was added. */
+export type FrameBeforeRemovalsParams = {
+	instanceRootRef: AnyRefOrRecord
+	instanceLevels: InstanceLevels
+	added: readonly Scl.CloneMapping[]
 }

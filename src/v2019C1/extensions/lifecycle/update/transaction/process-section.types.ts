@@ -1,6 +1,9 @@
 import type { UpdateSsdParams } from './ssd.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { InstanceAdditions } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references.types'
+import type { PrimaryMove } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type {
 	SsdScope,
 	TopologyReconcilables,
@@ -31,4 +34,14 @@ export type UpdateProcessSectionParams = Omit<
 	gainedIn?: Scl.Ref<Scl.ElementsOf>
 	/** What the template's elements outside a primary stand for in the project: see `UpdateFsdParams`. */
 	redirectMappings?: readonly RedirectMapping[]
+}
+
+/** The moves of a primary's held instances, the report and decisions gating them, the levels the frame added. */
+export type WritePrimaryMovesParams = {
+	moves: readonly PrimaryMove[]
+	/** None for a headless update: every move is written. */
+	report: DiffReport | undefined
+	decisions: DecisionMap | undefined
+	/** What the frame reconcile added in each instance of the unit: a gained level a move lands in is among it. */
+	frameAdditions: readonly InstanceAdditions[]
 }

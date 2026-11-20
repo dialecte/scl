@@ -63,6 +63,7 @@ export type {
 } from './resolve-instance-levels.types'
 export type {
 	PrimaryParents,
+	PrimaryMove,
 	PrimaryPlace,
 	ResolvePrimaryParentsParams,
 } from './resolve-primary-parents.types'

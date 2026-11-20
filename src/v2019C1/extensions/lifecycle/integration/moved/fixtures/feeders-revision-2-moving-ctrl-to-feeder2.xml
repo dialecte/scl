@@ -1,0 +1,53 @@
+<!-- The feeder file, revision 2: Ctrl moved from Feeder to Feeder2, gaining CILO1 (c…013); Prot's SourceRef naming CSWI1 there -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+	<Header fileType="SSD" id="feeders" revision="2" toolID="TOOL" uuid="c0000000-0000-4000-8000-000000000001" version="0"/>
+	<Substation name="TEMPLATE">
+		<VoltageLevel name="E1" uuid="c0000000-0000-4000-8000-000000000002">
+			<Bay name="Feeder" uuid="c0000000-0000-4000-8000-000000000003"/>
+			<Bay name="Feeder2" uuid="c0000000-0000-4000-8000-000000000004">
+				<Function name="Ctrl" uuid="c0000000-0000-4000-8000-000000000011">
+					<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_T" prefix="" uuid="c0000000-0000-4000-8000-000000000012">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="None" sLnClass="CSWI" sLnInst="1"/>
+						</Private>
+					</LNode>
+					<LNode iedName="None" lnClass="CILO" lnInst="1" lnType="CILO_T" prefix="" uuid="c0000000-0000-4000-8000-000000000013">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="None" sLnClass="CILO" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+				<Function name="Prot" uuid="c0000000-0000-4000-8000-000000000021">
+					<LNode iedName="None" lnClass="PTRC" lnInst="1" lnType="PTRC_T" prefix="" uuid="c0000000-0000-4000-8000-000000000022">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="None" sLnClass="PTRC" sLnInst="1"/>
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef input="Pos" inputInst="1" pLN="CSWI" pDO="Pos" pDA="stVal" service="GOOSE" source="TEMPLATE/E1/Feeder2/Ctrl/CSWI1.Pos.stVal" sourceLNodeUuid="c0000000-0000-4000-8000-000000000012" sourceDoName="Pos" sourceDaName="stVal" uuid="c0000000-0000-4000-8000-000000000023"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<DataTypeTemplates>
+		<LNodeType id="CSWI_T" lnClass="CSWI">
+			<DO name="Pos" type="DPC_T"/>
+		</LNodeType>
+		<LNodeType id="CILO_T" lnClass="CILO">
+			<DO name="EnaOpn" type="SPS_T"/>
+		</LNodeType>
+		<LNodeType id="PTRC_T" lnClass="PTRC">
+			<DO name="Tr" type="ACT_T"/>
+		</LNodeType>
+		<DOType cdc="DPC" id="DPC_T">
+			<DA bType="Dbpos" fc="ST" name="stVal"/>
+		</DOType>
+		<DOType cdc="SPS" id="SPS_T">
+			<DA bType="BOOLEAN" fc="ST" name="stVal"/>
+		</DOType>
+		<DOType cdc="ACT" id="ACT_T">
+			<DA bType="BOOLEAN" fc="ST" name="general"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>
