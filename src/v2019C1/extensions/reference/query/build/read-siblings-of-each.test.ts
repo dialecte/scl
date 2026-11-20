@@ -158,6 +158,15 @@ describe('readSignalChildrenOfEach', () => {
 				],
 				expected: [['a-cr-0', 'a-cr-1'], ['b-sr-0'], [], ['a-sr-0', 'a-sr-1']],
 			},
+		'one parent named twice among others → its signals at each of its places': {
+			sourceXml: TWO_LNODES_XML,
+			parents: [
+				{ tagName: 'LNodeInputs', id: 'a-inputs' },
+				{ tagName: 'LNodeInputs', id: 'b-inputs' },
+				{ tagName: 'LNodeInputs', id: 'a-inputs' },
+			],
+			expected: [['a-sr-0', 'a-sr-1'], ['b-sr-0'], ['a-sr-0', 'a-sr-1']],
+		},
 		'a Private holding both signal tags → every signal in its order, its other children left out': {
 			sourceXml: MIXED_PRIVATE_XML,
 			parents: [{ tagName: 'Private', id: 'signals' }],
@@ -237,6 +246,103 @@ describe('readSiblingsOfEach - the store reads', () => {
 			expect({ storeReads, listed: siblings.filter((list) => list.length > 1).length }).toEqual(
 				testCase.expected,
 			)
+		},
+	})
+})
+
+/**
+ * For each list, the position of the first list that is the same object, and whether it is frozen: what tells a list
+ * shared by the signals of one parent (counted once by the naming) from a copy per signal.
+ */
+function sharingOf(lists: readonly (readonly Core.AnyRawRecord[])[]): {
+	sameAs: number[]
+	frozen: boolean[]
+} {
+	return {
+		sameAs: lists.map((list) => lists.indexOf(list)),
+		frozen: lists.map((list) => Object.isFrozen(list)),
+	}
+}
+
+/** The signals of one parent share one frozen list; each parent its own; a signal alone its own list, not frozen. */
+describe('readSiblingsOfEach - one list per parent', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		signals: { tagName: string; id: string }[]
+		expected: { sameAs: number[]; frozen: boolean[] }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'signals of three parents, interleaved → one same frozen list per parent': {
+			sourceXml: TWO_LNODES_XML,
+			signals: [
+				{ tagName: 'SourceRef', id: 'a-sr-0' },
+				{ tagName: 'SourceRef', id: 'a-sr-1' },
+				{ tagName: 'SourceRef', id: 'b-sr-0' },
+				{ tagName: 'ControlRef', id: 'a-cr-0' },
+				{ tagName: 'ControlRef', id: 'a-cr-1' },
+				{ tagName: 'SourceRef', id: 'a-sr-1' },
+			],
+			expected: { sameAs: [0, 0, 2, 3, 3, 0], frozen: [true, true, true, true, true, true] },
+		},
+		'signals of both tags held by one Private → one same frozen list': {
+			sourceXml: MIXED_PRIVATE_XML,
+			signals: [
+				{ tagName: 'SourceRef', id: 'sr1' },
+				{ tagName: 'ControlRef', id: 'cr1' },
+				{ tagName: 'SourceRef', id: 'sr2' },
+			],
+			expected: { sameAs: [0, 0, 0], frozen: [true, true, true] },
+		},
+		'the root and a signal whose parent names no element → each its own list, not frozen': {
+			sourceXml: TWO_LNODES_XML,
+			signals: [
+				{ tagName: 'SCL', id: 'scl-1' },
+				{ tagName: 'SourceRef', id: 'not-stored' },
+			],
+			expected: { sameAs: [0, 1], frozen: [false, false] },
+		},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const query = source.query
+			const records = await readRawRecords({ query, refs: testCase.signals.map(signalRef) })
+			const siblings = await readSiblingsOfEach({ query, records })
+			expect(sharingOf(siblings)).toEqual(testCase.expected)
+		},
+	})
+})
+
+/** One parent asked twice in one call answers the same frozen list at both places. */
+describe('readSignalChildrenOfEach - one list per parent', () => {
+	type TestCase = SclTest.BaseXmlTestCase & {
+		parents: { tagName: string; id: string }[]
+		expected: { sameAs: number[]; frozen: boolean[] }
+	}
+
+	const testCases: SclTest.TestCases<TestCase> = {
+		'a parent asked twice among others → the same frozen list at both places, a parent gone its own list':
+			{
+				sourceXml: TWO_LNODES_XML,
+				parents: [
+					{ tagName: 'LNodeInputs', id: 'a-inputs' },
+					{ tagName: 'LNodeInputs', id: 'b-inputs' },
+					{ tagName: 'LNodeInputs', id: 'a-inputs' },
+					{ tagName: 'LNodeInputs', id: 'gone' },
+				],
+				expected: { sameAs: [0, 1, 0, 3], frozen: [true, true, true, false] },
+			},
+	}
+
+	runSclTestCases.withoutExport<TestCase>({
+		testCases,
+		act: async ({ source, testCase }) => {
+			const children = await readSignalChildrenOfEach({
+				query: source.query,
+				parents: testCase.parents.map(signalRef),
+			})
+			expect(sharingOf(children)).toEqual(testCase.expected)
 		},
 	})
 })

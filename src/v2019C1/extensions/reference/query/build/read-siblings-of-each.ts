@@ -11,6 +11,10 @@ import type * as Core from '@dialecte/core'
  * holds no signal of its own. A transparent element (`Private`) below the parent is never looked into: a signal is a
  * child of the element that holds it.
  *
+ * One list per parent, frozen, answered at every place the parent is named in the call: the naming counts the names of a
+ * frozen list once (`namesAmong`), so the signals of one parent are counted once, not once per signal. Built per call:
+ * a later call (after a staged change) reads the parent again into a new list.
+ *
  * Perf: the distinct parents in one `getRecords`, then one `getChildrenOfEach` per signal tag some parent holds, the
  * parents given as read: at most 3 store reads whatever the number of parents.
  */
@@ -36,20 +40,24 @@ export async function readSignalChildrenOfEach(params: {
 	)
 	const signalById = new Map(signalsByTag.flatMap((signals) => [...signals]))
 
-	return parents.map((ref) => {
-		const parent = ref.id ? parentById.get(ref.id) : undefined
-		if (!parent) return []
-		return parent.children.flatMap((link) => {
-			const signal = SIGNAL_TAG_NAMES.has(link.tagName) ? signalById.get(link.id) : undefined
-			return signal ? [signal] : []
-		})
-	})
+	const signalsByParentId = new Map(
+		[...parentById.values()].map(function listSignalsOf(parent) {
+			const signals = parent.children.flatMap((link) => {
+				const signal = SIGNAL_TAG_NAMES.has(link.tagName) ? signalById.get(link.id) : undefined
+				return signal ? [signal] : []
+			})
+			// frozen, typed as the callers read it: a caller never writes to it
+			return [parent.id, Object.freeze(signals) as Core.AnyRawRecord[]] as const
+		}),
+	)
+	return parents.map((ref) => (ref.id ? signalsByParentId.get(ref.id) : undefined) ?? [])
 }
 
 /**
  * The siblings of each signal (SourceRef, ControlRef): the signals among its parent's children, of either tag, the
  * signal included, in the order of the parent's children. A record with no parent, or whose parent names no element
- * or holds no signal, answers itself alone. Signals of one parent share one list.
+ * or holds no signal, answers itself alone, in a list of its own. Signals of one parent share one frozen list (that of
+ * `readSignalChildrenOfEach`).
  *
  * Perf: as `readSignalChildrenOfEach`, at most 3 store reads whatever the number of signals.
  */
