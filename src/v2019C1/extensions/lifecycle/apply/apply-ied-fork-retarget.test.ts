@@ -2,6 +2,7 @@ import openSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specifica
 import otherSpecificationXml from '../integration/ied/fixtures/isd-bcu1-specification-version-2.xml?raw'
 import openWithInputXml from '../integration/ied/fixtures/isd-bcu1-version-1-with-an-input.xml?raw'
 import openIsdXml from '../integration/ied/fixtures/isd-bcu1-version-1.xml?raw'
+import inputFromGainedXml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-a-gained-lnode.xml?raw'
 import inputFromMissingXml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-a-missing-lnode.xml?raw'
 import inputFromCilo1Xml from '../integration/ied/fixtures/isd-bcu1-version-2-input-from-cilo1.xml?raw'
 
@@ -36,6 +37,18 @@ describe('tx.lifecycle.apply - a fork re-targeting a reference', () => {
 				decide: (groups) => decideAll({ groups, action: () => 'accept' }),
 				expectedQueries: [
 					'//v2019C1:SourceRef[@uuid="b0000000-0000-4000-8000-000000000050"][@sourceLNodeUuid="b0000000-0000-4000-8000-000000000012"][starts-with(@source, "North/E1/Q01/BayControl/CILO1")]',
+				],
+			},
+		// the new target is added by the same reconcile, after the input is compared
+		'the input fed by an LNode LineProtection gains in revision 2, accepted → its source names that LNode':
+			{
+				sourceXml: openIsdXml,
+				openXml: openWithInputXml,
+				otherXml: inputFromGainedXml,
+				decide: (groups) => decideAll({ groups, action: () => 'accept' }),
+				expectedQueries: [
+					'//default:Function[@name="LineProtection"]/default:LNode[@uuid="b0000000-0000-4000-8000-000000000060"]',
+					'//v2019C1:SourceRef[@uuid="b0000000-0000-4000-8000-000000000050"][@sourceLNodeUuid="b0000000-0000-4000-8000-000000000060"][starts-with(@source, "North/E1/Q01/LineProtection/GGIO1")]',
 				],
 			},
 		'the input fed by CILO1 in revision 2, skipped → still fed by CSWI1': {

@@ -249,8 +249,10 @@ export async function reconcile(
 	})
 	// a fork: the references the newer revision re-targets onto an element the document now holds
 	const retargets = await retargetsIn({ namesFollow: params.namesFollow, sourceQuery, target: tx })
+	// held as the report holds them: the open document, or the revision (what the update adds lands before the commit
+	// names the reference; a re-target waits for the group adding its target, so a skipped one is refused)
 	const retargetUuids = retargets
-		? await readRetargetUuids({ sourceTree, holders: [tx] })
+		? await readRetargetUuids({ sourceTree, holders: [tx, sourceQuery] })
 		: undefined
 
 	// root + descendants: update matched in place, add new

@@ -38,6 +38,7 @@ export async function linkRetargets(
 	const warnings: ReportWarning[] = []
 	for (const retarget of pending) {
 		const adding = addedBy.get(retarget.uuid)
+		if (adding === retarget.group.id) continue
 		if (adding) {
 			dependsOn.set(retarget.group.id, [...(dependsOn.get(retarget.group.id) ?? []), adding])
 		} else if (retarget.reference) {

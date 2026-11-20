@@ -2,6 +2,7 @@ import {
 	BOUND_INPUT_OWNED_ATTRIBUTES,
 	CONF_REV_ONLY_RISES,
 	BOUND_LNODE_KEEPING_ITS_TYPE,
+	BOUND_LNODE_FOLLOWING_ITS_UUID,
 	BOUND_LNODE_TYPE_KEPT_IN_A_FORK,
 	BOUND_LNODE_OWNED_ATTRIBUTES,
 	INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES,
@@ -61,7 +62,7 @@ export function projectOwnedAttributes(params: {
 		const keepsType = keepsItsType(params.boundLogicalNodeTypes ?? 'follow')
 		// a fork of the file itself: the binding is the file's own, the newer revision re-targets it (`retargetsIn`)
 		if (params.bindingFollows)
-			return keepsType ? BOUND_LNODE_TYPE_KEPT_IN_A_FORK : NO_PROJECT_OWNED_ATTRIBUTES
+			return keepsType ? BOUND_LNODE_TYPE_KEPT_IN_A_FORK : BOUND_LNODE_FOLLOWING_ITS_UUID
 		return keepsType ? BOUND_LNODE_KEEPING_ITS_TYPE : BOUND_LNODE_OWNED_ATTRIBUTES
 	}
 	if (
