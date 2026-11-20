@@ -21,6 +21,7 @@ export const SCENARIO_POLICIES = {
 		writesProvenance: true,
 		removalBase: 'none',
 		namesFollow: 'project',
+		subNetworkSettings: 'source',
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -32,6 +33,7 @@ export const SCENARIO_POLICIES = {
 		writesProvenance: true,
 		removalBase: 'lineage',
 		namesFollow: 'project',
+		subNetworkSettings: 'project',
 	},
 	fork: {
 		matchKey: 'uuid',
@@ -43,5 +45,6 @@ export const SCENARIO_POLICIES = {
 		writesProvenance: false,
 		removalBase: 'revision',
 		namesFollow: 'source',
+		subNetworkSettings: 'source',
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

@@ -13,6 +13,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { reconcileIed } from '@/v2019C1/extensions/lifecycle/update/transaction/ied'
 
 import type { ApplyIedParams } from './apply-ied.types'
@@ -98,6 +99,7 @@ async function applyIedUpdate(
 		})
 	}
 	return reconcileIed(tx, {
+		policy: scenarioPolicy({ scenario: target.scenario ?? 'template' }),
 		sourceQuery: target.sourceQuery,
 		iedRef: target.ref,
 		anchor: target.anchor,

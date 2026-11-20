@@ -239,6 +239,7 @@ export async function diff(params: {
 		instanceTree,
 		matchKey,
 		takeOver: diffPolicy.takeOver,
+		namesFollow,
 	})
 	const walked = await diffMatched({
 		sourceQuery,

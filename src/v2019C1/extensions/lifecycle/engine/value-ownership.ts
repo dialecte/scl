@@ -33,7 +33,7 @@ import type {
 } from './value-ownership.types'
 import type { Config } from '@/v2019C1/config'
 import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
+import type { MatchKey, NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -51,6 +51,8 @@ export async function readValueOwnership(
 		instanceTree: AnyTreeRecord
 		matchKey: MatchKey
 		takeOver: TakeOvers | undefined
+		/** Whose names and values: `'source'` (a fork) keeps none of the project's values. */
+		namesFollow: NamesFollow
 	},
 ): Promise<ValueOwnership> {
 	const { sourceTree, instanceTree, matchKey } = params
@@ -59,8 +61,12 @@ export async function readValueOwnership(
 		return { settableValues: new Map(), lostData: new Set(), takeOver }
 	}
 	const types = await readValueTypes(query)
+	// a fork follows the other version's values: none is the project's to keep
+	const keepsValues = params.namesFollow === 'project'
 	return {
-		settableValues: new Map(settableValuesUnder({ node: sourceTree, context: undefined, types })),
+		settableValues: keepsValues
+			? new Map(settableValuesUnder({ node: sourceTree, context: undefined, types }))
+			: new Map(),
 		lostData: readLostDataInstances({ sourceTree, instanceTree, matchKey, types }),
 		takeOver,
 	}

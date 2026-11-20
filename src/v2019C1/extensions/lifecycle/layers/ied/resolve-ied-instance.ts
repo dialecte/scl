@@ -8,17 +8,20 @@ import { toRef } from '@dialecte/core/helpers'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
+import { readDocumentFileType } from '@/v2019C1/extensions/lifecycle/source-file-type'
 import { IED_ROOT_TAG } from '@/v2019C1/extensions/lifecycle/source-root/source-root.constants'
 
-import type { ResolveIedInstanceParams } from './resolve-ied-instance.types'
+import type { ForkedIedParams, ResolveIedInstanceParams } from './resolve-ied-instance.types'
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * The IED of the project a `template` update of a source IED reconciles: the one `targetInstance` names among those
- * carrying the source IED's uuid as their lineage; the only one when `targetInstance` names none. `undefined` when the
- * project holds none, or for another scenario (a first placement, see `assertIedPlacementOffered`).
+ * carrying the source IED's uuid as their lineage; the only one when `targetInstance` names none. For a `fork` on an open
+ * ISD, the IED of the source IED's uuid (another version of the file updates it; `targetInstance` is not read).
+ * `undefined` when the project holds none, for `instantiate`, or for a fork into a project (a first placement, see
+ * `assertIedPlacementOffered`).
  *
  * Refused before anything is read further:
  *  - a source an IED is not read from (`assertIedSourceOffered`);
@@ -43,8 +46,11 @@ export async function resolveIedInstance(
 			operation,
 		})
 	const { matchesInstances, matchKey, placementIdentity } = scenarioPolicy({ scenario })
-	// a new IED is placed whatever the project holds; a fork keeps its identity and is a first placement only yet
-	if (!matchesInstances || placementIdentity === 'keep') return undefined
+	// a new IED is placed whatever the project holds
+	if (!matchesInstances) return undefined
+	// a fork keeps the file's identity: on an open ISD, another version of it updates its IED (found by uuid, the
+	// version check above proved it is there); into a project, a fork is a first placement
+	if (placementIdentity === 'keep') return forkedIed(reader, { uuid, matchKey })
 	const instances = await findInstancesByTemplateUuid(reader, {
 		tagName: IED_ROOT_TAG,
 		sourceUuid: uuid,
@@ -77,4 +83,18 @@ export async function resolveIedInstance(
 		},
 		detail: `${operation}: the project holds ${instances.length} instance(s) of the IED, the update starts from one of them`,
 	})
+}
+
+/** The IED of an open ISD a fork of another version of it updates: the one carrying the source IED's uuid. */
+async function forkedIed(
+	reader: Core.Query<Config> | Core.Transaction<Config>,
+	params: ForkedIedParams,
+): Promise<AnyTrackedRecord | undefined> {
+	if ((await readDocumentFileType(reader)) !== 'ISD') return undefined
+	const [instance] = await findInstancesByTemplateUuid(reader, {
+		tagName: IED_ROOT_TAG,
+		sourceUuid: params.uuid,
+		matchKey: params.matchKey,
+	})
+	return instance
 }

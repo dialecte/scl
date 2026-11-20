@@ -4,7 +4,9 @@ import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-poli
 import type { InstanceDiff } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
+import type { FileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication.types'
 import type { DecisionMappings, ReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -33,4 +35,10 @@ export type WithCompanionParams = {
 	iedRef: Scl.Ref<'IED'>
 	/** What the IED's Communication part adds to the project's, when the source holds one for it. */
 	companion: InstanceDiff | undefined
+}
+
+/** An IED update's parameters, its policy, and the Communication of both versions of the file. */
+export type ReportFileCommunicationParams = ReportIedParams & {
+	policy: ScenarioPolicy
+	communications: FileCommunications
 }

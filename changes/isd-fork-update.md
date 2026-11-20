@@ -1,0 +1,3 @@
+### Added
+
+- A fork of another version of an open ISD updates its IED instead of being refused: `report` and `apply` with `verb: 'ied'`, `scenario: 'fork'` on an ISD document holding the source IED's `uuid`, and `tx.lifecycle.update.ied` with the new `scenario` option (`UpdateIedParams['scenario']`: `'template'`, the default, or `'fork'`). Elements pair by `uuid` (a rename is one change), names and values follow the other version, an element only in the open ISD is `target-only` and kept by default, and nothing is written in the `Header` or `IEDSourceFiles`. The `Communication` section is reported as an instance of its own and written as its groups decide. The specification beside the IED is not part of a fork yet. A fork into a project holding the IED is still refused.

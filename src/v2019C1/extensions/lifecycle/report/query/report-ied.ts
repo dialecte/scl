@@ -5,6 +5,7 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
+import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import { linkSpecificationBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/link-specification-bindings'
 import { markOtherIedBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/mark-other-ied-bindings'
@@ -13,7 +14,11 @@ import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/
 import { resolveIedInstance } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 
-import type { ReportIedParams, WithCompanionParams } from './report-ied.types'
+import type {
+	ReportFileCommunicationParams,
+	ReportIedParams,
+	WithCompanionParams,
+} from './report-ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
@@ -22,6 +27,7 @@ import type {
 	ReportInstance,
 	ReportWarning,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
 
@@ -55,7 +61,8 @@ export async function reportIed(
 		targetInstance: params.targetInstance,
 		operation: 'report (ied)',
 	})
-	if (instance) return reportIedUpdate(query, { ...params, instance })
+	if (instance)
+		return reportIedUpdate(query, { ...params, instance, policy: scenarioPolicy({ scenario }) })
 	return reportIedPlacement(query, { ...params, scenario })
 }
 
@@ -143,10 +150,10 @@ function withSpecification(params: {
  */
 async function reportIedUpdate(
 	query: Core.Query<Config>,
-	params: ReportIedParams & { instance: AnyTrackedRecord },
+	params: ReportIedParams & { instance: AnyTrackedRecord; policy: ScenarioPolicy },
 ): Promise<DiffReport> {
-	const { sourceQuery, iedRef, instance } = params
-	const { matchKey, namesFollow } = scenarioPolicy({ scenario: 'template' })
+	const { sourceQuery, iedRef, instance, policy } = params
+	const { matchKey, namesFollow } = policy
 	const iedDiff = await diff({
 		sourceQuery,
 		targetQuery: query,
@@ -158,18 +165,29 @@ async function reportIedUpdate(
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 	})
-	// a connection of an access point the IED holds is the project's: the template's lands on it
-	const redirectMappings = await readInstanceRedirects(query, { instance, matchKey })
-	const communication = await describeIedCommunication(query, {
+	// a fork on an open ISD: the Communication is the file's own, reported as an instance of its own
+	const fileCommunications = await readFileCommunications(query, {
 		sourceQuery,
-		iedRef,
 		anchor: params.anchor,
-		matchKey,
-		diffPolicy: params.diffPolicy,
-		placeholderLineages: params.placeholderLineages,
-		redirectMappings,
-		keepsSubNetworkSettings: true,
+		policy,
 	})
+	// a connection of an access point the IED holds is the project's: the template's lands on it (read only when the
+	// IED's connections are described, not for a fork's own Communication)
+	const redirectMappings = fileCommunications
+		? []
+		: await readInstanceRedirects(query, { instance, matchKey })
+	const communication = fileCommunications
+		? undefined
+		: await describeIedCommunication(query, {
+				sourceQuery,
+				iedRef,
+				anchor: params.anchor,
+				matchKey,
+				diffPolicy: params.diffPolicy,
+				placeholderLineages: params.placeholderLineages,
+				redirectMappings,
+				keepsSubNetworkSettings: policy.subNetworkSettings === 'project',
+			})
 	const instanceDiff = withCompanion({ instanceDiff: iedDiff, iedRef, companion: communication })
 	const reportInstance = await buildReportInstance(query, {
 		instanceDiff,
@@ -177,9 +195,15 @@ async function reportIedUpdate(
 		sourceQuery,
 		sourceRef: iedRef,
 	})
+	const communicationInstances = fileCommunications
+		? [await reportFileCommunication(query, { ...params, communications: fileCommunications })]
+		: []
 	const specification = await reportSpecificationUpdate(query, params)
 	if (!specification) {
-		return assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+		return assembleReport({
+			instances: [reportInstance, ...communicationInstances],
+			templateRoots: [reportInstance, ...communicationInstances],
+		})
 	}
 	// an LNode the specification gains goes with the logical node the IED gains for it
 	await linkSpecificationBindings(sourceQuery, {
@@ -187,6 +211,34 @@ async function reportIedUpdate(
 		specificationGroups: specification.instances.flatMap((instance) => instance.groups),
 	})
 	return withSpecification({ reportInstance, specification })
+}
+
+/**
+ * The Communication of the open ISD compared with the other version's, as an instance of its own: paired by uuid, names
+ * and values following the other version, an element only in the open ISD its own (`target-only`, kept by default).
+ */
+async function reportFileCommunication(
+	query: Core.Query<Config>,
+	params: ReportFileCommunicationParams,
+): Promise<ReportInstance> {
+	const { sourceQuery, communications, policy } = params
+	const instanceDiff = await diff({
+		sourceQuery,
+		targetQuery: query,
+		sourceRootRef: communications.source,
+		instanceRootRef: communications.target,
+		matchKey: policy.matchKey,
+		namesFollow: policy.namesFollow,
+		removalBase: params.removalBase,
+		diffPolicy: params.diffPolicy,
+		placeholderLineages: params.placeholderLineages,
+	})
+	return buildReportInstance(query, {
+		instanceDiff,
+		instance: communications.target,
+		sourceQuery,
+		sourceRef: communications.source,
+	})
 }
 
 /**
@@ -198,9 +250,11 @@ async function reportIedUpdate(
  */
 async function reportSpecificationUpdate(
 	query: Core.Query<Config>,
-	params: ReportIedParams & { instance: AnyTrackedRecord },
+	params: ReportIedParams & { instance: AnyTrackedRecord; policy: ScenarioPolicy },
 ): Promise<DiffReport | undefined> {
-	const { sourceQuery, instance } = params
+	const { sourceQuery, instance, policy } = params
+	// a fork's specification pairs by uuid, not by lineage: not reported with its IED yet
+	if (policy.matchKey !== 'templateUuid') return undefined
 	const specification = await readIedSpecification(query, {
 		sourceQuery,
 		fileType: params.fileType,
