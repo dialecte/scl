@@ -70,7 +70,13 @@ export async function ssd(
 	const { matchKey } = policy
 	const removalBase =
 		params.removalBase ??
-		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery, target: tx }))
+		(await resolveRemovalBase({
+			policy,
+			sourceQuery,
+			baseQuery: params.baseQuery,
+			target: tx,
+			within: scope.root,
+		}))
 	const firstTime =
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(tx, {

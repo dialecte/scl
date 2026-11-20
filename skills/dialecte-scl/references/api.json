@@ -537,7 +537,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:58"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:59"
 		},
 		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",

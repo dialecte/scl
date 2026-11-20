@@ -11,7 +11,7 @@ import type {
 	ReadUpdateHoldsParams,
 	UnresolvedRetargetsParams,
 	WithUpdateHoldsParams,
-	WithoutLeftOutParams,
+	BroughtByParams,
 } from './reference-retargets.types'
 import type { RemovalBase } from './removal-base.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -32,8 +32,9 @@ export async function isSameFile(params: IsSameFileParams): Promise<boolean> {
 
 /**
  * What a fork of the file itself holds (see `ForkHolds`): the uuids the newer revision's references name (both
- * registries, an LNode's binding included) that the open document holds, or the newer revision does outside what the
- * update leaves out (`leftOut`: source primaries, and what sits under them). `undefined` for another file: nothing is
+ * registries, an LNode's binding included) that the open document holds, or the newer revision brings: what sits under
+ * the update's source root (`within`, the verb's own: a unit, an application, a function), but what it leaves out
+ * (`leftOut`: source primaries, and what sits under them). `undefined` for another file: nothing is
  * re-targeted. Reads: the two Headers, each reference tag of the newer revision once, each target tag of both documents
  * once, and the ancestors of the revision's targets once when something is left out.
  */
@@ -56,9 +57,11 @@ export async function readUpdateHolds(
 		findNamedRecords(target, { named }),
 		findNamedRecords(sourceQuery, { named }),
 	])
-	const brought = params.leftOut?.size
-		? await withoutLeftOut(sourceQuery, { found: inSource, leftOut: params.leftOut })
-		: [...inSource.keys()]
+	const leftOut = params.leftOut ?? new Set<string>()
+	const brought =
+		leftOut.size > 0 || params.within
+			? await broughtBy(sourceQuery, { found: inSource, leftOut, within: params.within })
+			: [...inSource.keys()]
 	return new Set([...inTarget.keys(), ...brought])
 }
 
@@ -88,10 +91,13 @@ export function unresolvedRetargets(params: UnresolvedRetargetsParams): Retarget
 	)
 }
 
-/** The uuids of the revision's named targets the update brings: none of them, nor an ancestor, left out. */
-async function withoutLeftOut(
+/**
+ * The uuids of the revision's named targets the update brings: within the update's source root when it names one,
+ * none of them nor an ancestor left out.
+ */
+async function broughtBy(
 	sourceQuery: Core.Query<Config>,
-	params: WithoutLeftOutParams,
+	params: BroughtByParams,
 ): Promise<string[]> {
 	const entries = [...params.found].flatMap(([uuid, records]) =>
 		records.map((record): [string, AnyTrackedRecord] => [uuid, record]),
@@ -102,6 +108,7 @@ async function withoutLeftOut(
 	)
 	return entries.flatMap(function broughtUuid([uuid, record], position): string[] {
 		const chain = [record, ...(ancestries[position] ?? [])]
-		return chain.some((element) => params.leftOut.has(element.id)) ? [] : [uuid]
+		const within = !params.within || chain.some((element) => element.id === params.within?.id)
+		return within && !chain.some((element) => params.leftOut.has(element.id)) ? [uuid] : []
 	})
 }

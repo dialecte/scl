@@ -94,7 +94,8 @@ export async function reportFsd(
 	const templateLevels = await readTemplateLevels(sourceQuery)
 	const { matchKey, namesFollow } = policy
 	const removalBase =
-		params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery, target: query }))
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, target: query, within: functionRef }))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesUnder(query, {

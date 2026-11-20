@@ -36,7 +36,7 @@ export async function resolveRemovalBase(params: ResolveRemovalBaseParams): Prom
 		case 'revision': {
 			// a fork of the file itself: what the update holds, the scope of its re-targets
 			const holds = params.target
-				? await readUpdateHolds({ sourceQuery, target: params.target })
+				? await readUpdateHolds({ sourceQuery, target: params.target, within: params.within })
 				: undefined
 			const forkHolds = holds ? { holds } : {}
 			if (!baseQuery) return { kind: 'no-revision', ...forkHolds }

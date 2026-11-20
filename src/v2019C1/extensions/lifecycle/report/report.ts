@@ -71,7 +71,9 @@ export async function report(
 		policy: scenarioPolicy({ scenario: target.scenario }),
 		sourceQuery: target.sourceQuery,
 		baseQuery: target.baseQuery,
-		...(target.verb === 'ied' ? {} : { target: query }),
+		...(target.verb === 'ied'
+			? {}
+			: { target: query, within: target.ref as Scl.Ref<Scl.ElementsOf> }),
 	})
 	// the lineages a reference may pair by name on, read once for the whole report
 	const placeholderLineages = await resolvePlaceholderLineages(query, {

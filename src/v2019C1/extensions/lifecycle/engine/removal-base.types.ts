@@ -1,4 +1,4 @@
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
@@ -49,6 +49,8 @@ export type ResolveRemovalBaseParams = {
 	 * the verb records it itself (an IED's, which leaves out part of its specification).
 	 */
 	target?: Core.Query<Config> | Core.Transaction<Config>
+	/** The update's source root: what the update brings of the newer revision sits under it (see `readUpdateHolds`). */
+	within?: Scl.Ref<Scl.ElementsOf>
 }
 
 export type ClassifyUnmatchedParams = {

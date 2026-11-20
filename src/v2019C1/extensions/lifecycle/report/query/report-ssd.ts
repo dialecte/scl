@@ -125,7 +125,8 @@ export async function reportSsd(
 	const policy = scenarioPolicy({ scenario })
 	const { matchKey, namesFollow } = policy
 	const removalBase =
-		params.removalBase ?? (await resolveRemovalBase({ policy, sourceQuery, target: query }))
+		params.removalBase ??
+		(await resolveRemovalBase({ policy, sourceQuery, target: query, within: scope.root }))
 	const firstPlacement =
 		!policy.matchesInstances ||
 		!(await hasScopeInstance(query, {

@@ -42,7 +42,7 @@ export function projectOwnedAttributes(params: {
 	/** The template element's attributes: a revision the template gives lower than the project's is not written. */
 	sourceAttributes?: Readonly<Record<string, string | undefined>>
 	namesFollow: NamesFollow
-	/** A fork of the file itself (see `retargetsIn`): a bound LNode's binding follows the newer revision's. */
+	/** A fork of the file itself (see `readUpdateHolds`): a bound LNode's binding follows the newer revision's. */
 	bindingFollows?: boolean
 	/** Whether a bound LNode takes the type the template gives it. Default: `follow`. */
 	boundLogicalNodeTypes?: BoundLogicalNodeTypes
@@ -60,7 +60,7 @@ export function projectOwnedAttributes(params: {
 		if (!isAssignedToIed({ iedName: instanceAttributes.iedName }))
 			return NO_PROJECT_OWNED_ATTRIBUTES
 		const keepsType = keepsItsType(params.boundLogicalNodeTypes ?? 'follow')
-		// a fork of the file itself: the binding is the file's own, the newer revision re-targets it (`retargetsIn`)
+		// a fork of the file itself: the binding is the file's own, the newer revision re-targets it (`readUpdateHolds`)
 		if (params.bindingFollows)
 			return keepsType ? BOUND_LNODE_TYPE_KEPT_IN_A_FORK : BOUND_LNODE_FOLLOWING_ITS_UUID
 		return keepsType ? BOUND_LNODE_KEEPING_ITS_TYPE : BOUND_LNODE_OWNED_ATTRIBUTES

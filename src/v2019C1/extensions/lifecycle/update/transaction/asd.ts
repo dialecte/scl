@@ -114,7 +114,13 @@ export async function asd(
 	const { matchKey, identityMode, bumpsCollisions, namesFollow } = policy
 	const removalBase =
 		params.removalBase ??
-		(await resolveRemovalBase({ policy, sourceQuery, baseQuery: params.baseQuery, target: tx }))
+		(await resolveRemovalBase({
+			policy,
+			sourceQuery,
+			baseQuery: params.baseQuery,
+			target: tx,
+			within: params.applicationRef,
+		}))
 	// a new instance is placed whatever the project holds: no existing one is matched
 	const matched = policy.matchesInstances
 		? await findInstancesByTemplateUuid(tx, { tagName: 'Application', sourceUuid, matchKey })

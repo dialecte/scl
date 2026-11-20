@@ -151,6 +151,47 @@ describe('query.lifecycle.report - a fork re-targeting a reference', () => {
 	runSclTestCases.withoutExport({ testCases, act })
 })
 
+// The update verb given no report holds the same scope: the input re-targeted onto an LNode of a function the update
+// leaves out keeps its source, and the commit goes through.
+describe('tx.lifecycle.update.ied - a fork re-targeting a reference, no report', () => {
+	const testCases: SclTest.TestCases<Omit<RetargetCase, 'decide'>> = {
+		'the input fed by an LNode added to a function the update leaves out → still fed by CSWI1': {
+			sourceXml: openIsdXml,
+			openXml: openBayControlOnBcu9Xml,
+			otherXml: inputFromBcu9Xml,
+			expectedQueries: [
+				'//v2019C1:SourceRef[@sourceLNodeUuid="b0000000-0000-4000-8000-000000000011"][@source="North/E1/Q01/BayControl/CSWI1.Pos.stVal"]',
+			],
+			unexpectedQueries: ['//default:LNode[@uuid="b0000000-0000-4000-8000-000000000061"]'],
+		},
+	}
+
+	async function act({
+		project,
+		testCase,
+	}: SclTest.ActParams<Omit<RetargetCase, 'decide'>>): Promise<SclTest.ActResult> {
+		const { open, lifecycle } = await openFork({ project, ...testCase })
+		const refused = await open
+			.transaction(async function updateWithoutReport(tx) {
+				await tx.lifecycle.update.ied({
+					sourceQuery: lifecycle.sourceQuery,
+					iedRef: lifecycle.ref,
+					anchor: lifecycle.anchor,
+					fileType: 'ISD',
+					scenario: 'fork',
+				})
+			})
+			.then(
+				() => undefined,
+				(error: unknown) => toDialecteError(error)?.key ?? String(error),
+			)
+		expect(refused).toBeUndefined()
+		return { assertOn: 'custom', xmlString: await open.query.getSnapshot({ as: 'xml' }) }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
 type Project = SclTest.ActParams<RetargetCase>['project']
 type OpenDocument = Awaited<ReturnType<typeof importIsd>>
 type ForkLifecycle = Awaited<ReturnType<typeof openFork>>['lifecycle']
