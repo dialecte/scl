@@ -1,5 +1,11 @@
 import { isInMovedSubtree } from './moved-roots'
 import {
+	carriedAddressWrites,
+	isMovedWithinItsIed,
+	logControlWrites,
+	unconnectedAddressOf,
+} from './moved-within-an-ied'
+import {
 	PLACE_DEPENDENT_PAIRS_BY_TAG,
 	PLACE_DEPENDENT_TARGET_TAGS,
 	IED_TAG,
@@ -32,14 +38,25 @@ import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
 /**
- * Refuse a commit moving a subtree that holds what a move does not follow yet (`UNFOLLOWED_MOVE_TAGS`: what tuple
- * references name or are, what sits only below a logical node): `SCL_ERRORS.MOVE_NOT_FOLLOWED`, for the moved element
- * holding the first one. Read from the document read once.
+ * The one judge of the commit's moves: refuse a commit moving a subtree that holds what a move does not follow
+ * (`UNFOLLOWED_MOVE_TAGS`: what tuple references name or are, what sits only below a logical node), unless the move is a
+ * logical node or a logical device moved within its IED ({@link isMovedWithinItsIed}), whose tuple references follow; and
+ * refuse such a logical device moved to an access point with no connection on the subnetwork of an address it sends
+ * ({@link unconnectedAddressOf}). `SCL_ERRORS.MOVE_NOT_FOLLOWED`, for the moved element. Read from the document read once.
  */
 export function assertMovesFollowed(places: MovePlaces): void {
+	for (const move of places.moved.values()) {
+		const unconnected = unconnectedAddressOf({ places, move })
+		if (!unconnected) continue
+		throwDialecteError(SCL_ERRORS.MOVE_NOT_FOLLOWED, {
+			meta: { moved: move.ref, parent: move.to },
+			detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" sends ${unconnected.address.tagName} "${unconnected.address.id}" on ${unconnected.subNetwork.tagName} "${unconnected.subNetwork.id}", where its new access point has no connection`,
+		})
+	}
 	for (const record of places.document.records) {
 		const move = places.movedBy.get(record.id)
-		if (!move || !isUnfollowed({ places, record })) continue
+		if (!move || isMovedWithinItsIed({ places, move }) || !isUnfollowed({ places, record }))
+			continue
 		throwDialecteError(SCL_ERRORS.MOVE_NOT_FOLLOWED, {
 			meta: { moved: move.ref, parent: move.to },
 			detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" holds ${record.tagName} "${record.id}", which references name by its place: a move does not follow it yet`,
@@ -68,7 +85,9 @@ function isUnfollowed(params: { places: MovePlaces; record: AnyRawRecord }): boo
  * extension namespace moved under an element of the default one is wrapped as on create; the references whose path is
  * read from their own place and can no longer name their target are unbound as on a delete of that target (cleared
  * when they hold content of their own, else deleted); the terminals left naming a node their container may not name
- * are removed with what they hold; the paths of the moved subtrees and of what names them are rebuilt. One operation
+ * are removed with what they hold; the paths of the moved subtrees and of what names them are rebuilt; a logical device
+ * moved to another access point of its IED carries the addresses of its control blocks to that access point's
+ * connection, and a log control naming its log by its own device keeps naming the old one. One operation
  * per record, each written over what the commit's earlier steps wrote (`pending`).
  */
 export async function followMovesAtCommit(
@@ -99,7 +118,12 @@ export async function followMovesAtCommit(
 	})
 	const written = writtenOver({
 		pending,
-		writes: [...wrapped.writes, ...writesOf({ operations: follows })],
+		writes: [
+			...wrapped.writes,
+			...writesOf({ operations: follows }),
+			...carriedAddressWrites({ places }),
+			...logControlWrites({ places }),
+		],
 	})
 	// a wrapper the moves need is created as on create
 	const merged = new Map<string, AnyRawRecord>(pending)

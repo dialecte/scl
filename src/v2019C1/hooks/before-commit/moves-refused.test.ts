@@ -16,23 +16,6 @@ describe('the commit refuses a move whose subtree references name by its place, 
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// PTRC1 is in LD1; tuple references name a logical node by its logical device
-		'a logical node moved to another logical device → refused, the IED unchanged': {
-			sourceXml: anIedAndABay,
-			element: { tagName: 'LN', id: 'ptrc1' },
-			parent: { tagName: 'LDevice', id: 'ld2' },
-			expected: {
-				key: 'MOVE_NOT_FOLLOWED',
-				meta: {
-					moved: { tagName: 'LN', id: 'ptrc1' },
-					parent: { tagName: 'LDevice', id: 'ld2' },
-				},
-			},
-			expectedQueries: [
-				'//default:LDevice[@inst="LD1"]/default:LN[@lnClass="PTRC"][@inst="1"]/default:DOI[@name="Op"]',
-			],
-			unexpectedQueries: ['//default:LDevice[@inst="LD2"]/default:LN[@lnClass="PTRC"]'],
-		},
 		// Op is a data instance of PTRC1
 		'a data instance moved to another logical node → refused': {
 			sourceXml: anIedAndABay,

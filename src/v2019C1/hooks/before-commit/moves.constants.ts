@@ -111,3 +111,52 @@ function placeReadingReferrers(): Map<string, PlaceReadingRole> {
 
 /** The tag of the element an `ancestor` IED role reads. */
 export const IED_TAG = 'IED'
+
+/**
+ * The tuple targets a move within their own IED is followed for: what a tuple pair names by its logical node (`lnClass`)
+ * or by its logical device alone (`lDevice`), never by a control block or an access point. Anything else moved within
+ * the IED (a data instance, a data set, a control block) is named relative to its own logical node, not by a tuple, and
+ * stays unfollowed.
+ */
+export const FOLLOWED_WITHIN_IED_TAGS: ReadonlySet<string> = followedWithinIedTags()
+
+function followedWithinIedTags(): Set<string> {
+	const tags = new Set<string>()
+	for (const pairs of Object.values(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) {
+			const parts = Object.keys(pair.tuple)
+			if (parts.includes('controlBlock') || parts.includes('accessPoint')) continue
+			if (!parts.includes('lnClass') && !parts.includes('lDevice')) continue
+			for (const tagName of pair.target) tags.add(tagName)
+		}
+	}
+	return tags
+}
+
+/**
+ * The address elements of each control block kind, by the control block's tag: the tuple references reading their IED
+ * from their parent (a `GSE` / `SMV` under its connected access point) and naming a control block.
+ */
+export const ADDRESS_TAGS_BY_CONTROL_BLOCK: ReadonlyMap<string, readonly string[]> =
+	addressTagsByControlBlock()
+
+function addressTagsByControlBlock(): Map<string, string[]> {
+	const byControlBlock = new Map<string, string[]>()
+	for (const [tagName, pairs] of Object.entries(TUPLE_PAIRS_BY_TAG)) {
+		for (const pair of pairs) {
+			if (!('parentAttribute' in pair.tuple.ied) || !('controlBlock' in pair.tuple)) continue
+			for (const target of pair.target) {
+				byControlBlock.set(target, [...(byControlBlock.get(target) ?? []), tagName])
+			}
+		}
+	}
+	return byControlBlock
+}
+
+/** The tag of an access point, and of the connection naming one on a subnetwork. */
+export const ACCESS_POINT_TAG = 'AccessPoint'
+export const CONNECTED_ACCESS_POINT_TAG = 'ConnectedAP'
+
+/** A log control naming its log by its own device when it carries no `ldInst`. */
+export const LOG_CONTROL_TAG = 'LogControl'
+export const LOG_DEVICE_ATTRIBUTE = 'ldInst'

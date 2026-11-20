@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BCU1 holds AP1 (CTRL, sending PositionGoose, its GSE under AP1's connection on StationBus) and AP2 (SUP), both connected on StationBus; BCU2 holds AP1 (LD0) -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <Communication dev:db-id="communication">
+        <SubNetwork name="StationBus" dev:db-id="station-bus">
+            <ConnectedAP iedName="BCU1" apName="AP1" apUuid="bcu1-ap1-uuid" dev:db-id="connected-ap1">
+                <GSE ldInst="CTRL" cbName="PositionGoose" cbUuid="position-goose-uuid" dev:db-id="gse">
+                    <Address dev:db-id="gse-address">
+                        <P type="MAC-Address" dev:db-id="gse-mac">01-0C-CD-01-00-01</P>
+                        <P type="APPID" dev:db-id="gse-appid">0001</P>
+                    </Address>
+                </GSE>
+            </ConnectedAP>
+            <ConnectedAP iedName="BCU1" apName="AP2" apUuid="bcu1-ap2-uuid" dev:db-id="connected-ap2"/>
+        </SubNetwork>
+    </Communication>
+    <IED name="BCU1" uuid="bcu1-uuid" dev:db-id="bcu1">
+        <AccessPoint name="AP1" uuid="bcu1-ap1-uuid" dev:db-id="bcu1-ap1">
+            <Server dev:db-id="bcu1-server1">
+                <Authentication dev:db-id="bcu1-authentication1"/>
+                <LDevice inst="CTRL" uuid="ctrl-uuid" dev:db-id="ctrl">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ctrl-lln0-uuid" dev:db-id="ctrl-lln0">
+                        <GSEControl name="PositionGoose" appID="POS" confRev="1" uuid="position-goose-uuid" dev:db-id="position-goose"/>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+        <AccessPoint name="AP2" uuid="bcu1-ap2-uuid" dev:db-id="bcu1-ap2">
+            <Server dev:db-id="bcu1-server2">
+                <Authentication dev:db-id="bcu1-authentication2"/>
+                <LDevice inst="SUP" uuid="sup-uuid" dev:db-id="sup">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="sup-lln0-uuid" dev:db-id="sup-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="BCU2" uuid="bcu2-uuid" dev:db-id="bcu2">
+        <AccessPoint name="AP1" uuid="bcu2-ap1-uuid" dev:db-id="bcu2-ap1">
+            <Server dev:db-id="bcu2-server">
+                <Authentication dev:db-id="bcu2-authentication"/>
+                <LDevice inst="LD0" uuid="bcu2-ld0-uuid" dev:db-id="bcu2-ld0">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="bcu2-lln0-uuid" dev:db-id="bcu2-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="types">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="lln0-beh"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="INT32" fc="ST" dev:db-id="ens-stval"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

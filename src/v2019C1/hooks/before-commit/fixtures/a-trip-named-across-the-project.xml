@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BCU1 holds CTRL (LLN0 whose data set DS1 names PTRC1 of PROT; CSWI1) and PROT (LLN0 holding the log TripLog; PTRC1,
+     its report TripReport, its log control naming TripLog with no device, its input Trip). SUB1 subscribes to PTRC1: an
+     ExtRef by its uuid, one by its report's uuid, and one names CTRL/PTRC1 by names only (nothing there yet); its report
+     has PTRC1 as client and its GOOSE names PTRC1 as subscriber. The bay's function binds an LNode to PTRC1 and one to
+     CSWI1 (its DOS mapped to PTRC1's Tr, its SourceRef reading PTRC1's input Trip by address). -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project">
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="VL1" dev:db-id="vl1">
+            <Bay name="B1" dev:db-id="b1">
+                <Function name="F1" uuid="f1" dev:db-id="f1">
+                    <LNode iedName="BCU1" ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" lnUuid="ptrc1-uuid" uuid="lnode-ptrc-uuid" dev:db-id="lnode-ptrc">
+                        <Private type="eIEC61850-6-100" dev:db-id="lnode-ptrc-private">
+                            <eIEC61850-6-100:LNodeSpecNaming sIedName="BCU1" sLdInst="PROT" sLnClass="PTRC" sLnInst="1" dev:db-id="lnode-ptrc-naming"/>
+                        </Private>
+                    </LNode>
+                    <LNode iedName="BCU1" ldInst="CTRL" prefix="" lnClass="CSWI" lnInst="1" lnUuid="cswi1-uuid" uuid="lnode-cswi-uuid" dev:db-id="lnode-cswi">
+                        <Private type="eIEC61850-6-100" dev:db-id="lnode-cswi-private">
+                            <eIEC61850-6-100:DOS name="Tr" mappedLnUuid="ptrc1-uuid" mappedDoName="Tr" dev:db-id="dos-tr"/>
+                            <eIEC61850-6-100:LNodeInputs dev:db-id="lnode-cswi-inputs">
+                                <eIEC61850-6-100:SourceRef input="Trip" extRefUuid="trip-input-uuid" extRefAddr="PROT/PTRC1.Trip" dev:db-id="source-ref"/>
+                            </eIEC61850-6-100:LNodeInputs>
+                        </Private>
+                    </LNode>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+    <IED name="BCU1" uuid="bcu1-uuid" dev:db-id="bcu1">
+        <AccessPoint name="AP1" uuid="bcu1-ap1-uuid" dev:db-id="bcu1-ap1">
+            <Server dev:db-id="bcu1-server">
+                <Authentication dev:db-id="bcu1-authentication"/>
+                <LDevice inst="CTRL" uuid="ctrl-uuid" dev:db-id="ctrl">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ctrl-lln0-uuid" dev:db-id="ctrl-lln0">
+                        <DataSet name="DS1" dev:db-id="ds1">
+                            <FCDA ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" doName="Tr" daName="general" fc="ST" lnUuid="ptrc1-uuid" dev:db-id="fcda-tr"/>
+                        </DataSet>
+                    </LN0>
+                    <LN lnClass="CSWI" inst="1" prefix="" lnType="CSWI_T" uuid="cswi1-uuid" dev:db-id="cswi1"/>
+                </LDevice>
+                <LDevice inst="PROT" uuid="prot-uuid" dev:db-id="prot">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="prot-lln0-uuid" dev:db-id="prot-lln0">
+                        <Log name="TripLog" dev:db-id="trip-log"/>
+                    </LN0>
+                    <LN lnClass="PTRC" inst="1" prefix="" lnType="PTRC_T" uuid="ptrc1-uuid" dev:db-id="ptrc1">
+                        <ReportControl name="TripReport" confRev="1" uuid="trip-report-uuid" dev:db-id="trip-report"/>
+                        <LogControl name="TripLogging" logName="TripLog" dev:db-id="trip-logging"/>
+                        <Inputs dev:db-id="ptrc1-inputs">
+                            <ExtRef intAddr="Trip" uuid="trip-input-uuid" dev:db-id="trip-input"/>
+                        </Inputs>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="SUB1" uuid="sub1-uuid" dev:db-id="sub1">
+        <AccessPoint name="AP1" uuid="sub1-ap1-uuid" dev:db-id="sub1-ap1">
+            <Server dev:db-id="sub1-server">
+                <Authentication dev:db-id="sub1-authentication"/>
+                <LDevice inst="LD0" uuid="sub1-ld0-uuid" dev:db-id="sub1-ld0">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="sub1-lln0-uuid" dev:db-id="sub1-lln0">
+                        <GSEControl name="SubGoose" appID="SUB" confRev="1" uuid="sub-goose-uuid" dev:db-id="sub-goose">
+                            <IEDName ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" lnUuid="ptrc1-uuid" dev:db-id="iedname-ptrc">BCU1</IEDName>
+                        </GSEControl>
+                        <ReportControl name="SubReport" confRev="1" uuid="sub-report-uuid" dev:db-id="sub-report">
+                            <RptEnabled max="1" dev:db-id="sub-report-enabled">
+                                <ClientLN iedName="BCU1" ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" lnUuid="ptrc1-uuid" dev:db-id="client-ln"/>
+                            </RptEnabled>
+                        </ReportControl>
+                    </LN0>
+                    <LN lnClass="GGIO" inst="1" prefix="" lnType="GGIO_T" uuid="ggio1-uuid" dev:db-id="ggio1">
+                        <Inputs dev:db-id="ggio1-inputs">
+                            <ExtRef iedName="BCU1" ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" doName="Tr" daName="general" lnUuid="ptrc1-uuid" dev:db-id="ext-ref-by-uuid"/>
+                            <ExtRef iedName="BCU1" serviceType="Report" srcLDInst="PROT" srcPrefix="" srcLNClass="PTRC" srcLNInst="1" srcCBName="TripReport" srcCBUuid="trip-report-uuid" dev:db-id="ext-ref-by-report"/>
+                            <ExtRef iedName="BCU1" ldInst="CTRL" prefix="" lnClass="PTRC" lnInst="1" doName="Op" daName="general" dev:db-id="ext-ref-by-names"/>
+                        </Inputs>
+                    </LN>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="types">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="lln0-beh"/>
+        </LNodeType>
+        <LNodeType id="PTRC_T" lnClass="PTRC" dev:db-id="ptrc-type">
+            <DO name="Tr" type="ACT_T" dev:db-id="ptrc-tr"/>
+            <DO name="Op" type="ACT_T" dev:db-id="ptrc-op"/>
+        </LNodeType>
+        <LNodeType id="CSWI_T" lnClass="CSWI" dev:db-id="cswi-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="cswi-beh"/>
+        </LNodeType>
+        <LNodeType id="GGIO_T" lnClass="GGIO" dev:db-id="ggio-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="ggio-beh"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="INT32" fc="ST" dev:db-id="ens-stval"/>
+        </DOType>
+        <DOType id="ACT_T" cdc="ACT" dev:db-id="act-type">
+            <DA name="general" bType="BOOLEAN" fc="ST" dev:db-id="act-general"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>

@@ -2,6 +2,7 @@ import { readBoundLNodes } from './bound-logical-nodes'
 import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { readMovePlaces, topmostMovedRoots } from './moved-roots'
+import { movedTargetNameOperations } from './moved-within-an-ied'
 import { assertMovesFollowed, followMovesAtCommit } from './moves'
 import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
@@ -69,7 +70,8 @@ export async function lnodeNamings({ plan }: CommitStepParams): Promise<CommitSt
 
 /**
  * The names of the tuple references naming a target the transaction created by its uuid, and of each LNode created or
- * rebound, those of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}).
+ * rebound, those of the logical node its `lnUuid` names ({@link writeTupleNamesAtCommit}); then those naming a target
+ * moved within its IED, at its new place ({@link movedTargetNameOperations}).
  */
 export async function tupleNames({ plan, writes }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query, state } = plan
@@ -84,7 +86,11 @@ export async function tupleNames({ plan, writes }: CommitStepParams): Promise<Co
 		bound: state.bound,
 		pending: writes.pending,
 	})
-	return { operations: written }
+	// the targets moved within their IED, named from the document the move step read: nothing read again
+	const moved = state.movePlaces
+		? movedTargetNameOperations({ places: state.movePlaces, pending: writes.pending })
+		: []
+	return { operations: [...written, ...moved] }
 }
 
 /** The tuple references' uuid and names in agreement ({@link writeTupleReferencesAtCommit}). */
@@ -92,9 +98,15 @@ export async function tupleReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
+	const { operations, query, state } = plan
 	return {
-		operations: await writeTupleReferencesAtCommit({ operations, query, pending: writes.pending }),
+		operations: await writeTupleReferencesAtCommit({
+			operations,
+			query,
+			pending: writes.pending,
+			// the document a move step read: the elements above the targets a move touched are not read again
+			held: state.movePlaces?.read,
+		}),
 	}
 }
 
