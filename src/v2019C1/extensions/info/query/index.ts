@@ -1,3 +1,5 @@
 export { of } from './of'
 export { ofEach } from './of-each'
+export { search } from './search'
 export type { ElementInfo, InfoOptions } from './of.types'
+export type { SearchHit, SearchParams } from './search.types'

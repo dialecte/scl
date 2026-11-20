@@ -55,6 +55,37 @@ type InfoOptions = {
 const display = info.labels?.[currentLang]?.[''] ?? info.labels?.en?.[''] ?? info.title
 ```
 
+### `search`
+
+```ts
+const hits = await doc.query.info.search({ term: 'feeder', tagNames: ['Bay', 'Function', 'LNode'] })
+// SearchHit[]: { tagName, id, title, ancestorIds }[]
+const inTheTree = await doc.query.info.search({
+	term,
+	tagNames,
+	omit: ['Header', 'DataTypeTemplates', 'IED'],
+})
+```
+
+The elements of the tags given whose title holds the term, so a tree that loads lazily can search what it has not read
+yet. The title is the one `ofEach` gives (`compact` by default, `mode: 'full'` on request), so a hit reads in the tree
+as the text searched; the name or the labels are not matched. The term is trimmed and matched case aside
+(`toLocaleLowerCase`), anywhere in the title; an empty term finds nothing and reads nothing.
+
+- `ancestorIds` -- the ids of the hit's ancestors from the root down, the hit itself and the transparent `Private`
+  left out, as a tree read with `unwrap: ['Private']` shows its rows: the path to open to reveal the hit.
+- `omit` -- tags whose elements, and everything below them, are no hit (the subtrees a view hides).
+- `limit` -- at most that many hits; there is no cap by default, and a limit of 0 or less finds nothing and reads
+  nothing.
+- A transparent element (`Private`) given among `tagNames` is searched too, but a tree read with
+  `unwrap: ['Private']` has no row for it, so a view that unwraps it should leave it out of `tagNames`.
+- Order -- the order of `tagNames` (a tag given twice counts once), then the store's order within a tag.
+- Inside a transaction the staged state is searched: a staged create is found, a deleted element is not, and an update
+  or a rename is matched on its staged title.
+
+Reads: one per tag, the titles of all the elements in one batch (as `ofEach`), then one ancestor read per level of the
+deepest hit, whatever the number of hits. `SearchParams` and `SearchHit` are exported from `@dialecte/scl/v2019C1`.
+
 ### State
 
 | Tag                       | State                                                                                                                                                                            | Rule                                                                                                                                                                                                                                                                                                                        |
