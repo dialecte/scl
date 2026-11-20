@@ -1,17 +1,24 @@
+import { chainOf } from './moved-roots'
 import {
 	ACCESS_POINT_TAG,
+	ADDRESS_NAMING_BY_TAG,
 	ADDRESS_TAGS_BY_CONTROL_BLOCK,
 	CONNECTED_ACCESS_POINT_TAG,
+	CONNECTION_NAMING,
+	DEVICE_INST_ATTRIBUTE,
 	FOLLOWED_WITHIN_IED_TAGS,
 	IED_TAG,
 	LOG_CONTROL_TAG,
 	LOG_DEVICE_ATTRIBUTE,
+	LOGICAL_DEVICE_TAG,
+	NAME_ATTRIBUTE,
 	UUID_ATTRIBUTE,
 } from './moves.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { CHILDREN } from '@/v2019C1/definition/constants.generated'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { ownIedName } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
 import { targetTupleParts } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
@@ -100,10 +107,11 @@ export function logControlWrites(params: { places: MovePlaces }): MoveWrite[] {
 		if (record.tagName !== LOG_CONTROL_TAG) continue
 		if (readAttribute({ record, name: LOG_DEVICE_ATTRIBUTE, defaults: 'none' })) continue
 		const move = places.movedBy.get(record.id)
-		if (!move || move.ref.tagName === 'LDevice' || !isMovedWithinItsIed({ places, move })) continue
+		if (!move || move.ref.tagName === LOGICAL_DEVICE_TAG || !isMovedWithinItsIed({ places, move }))
+			continue
 		const device = deviceAt({ places, id: move.from.id })
 		const inst = device
-			? readAttribute({ record: device, name: 'inst', defaults: 'none' })
+			? readAttribute({ record: device, name: DEVICE_INST_ATTRIBUTE, defaults: 'none' })
 			: undefined
 		if (!inst) continue
 		writes.push({
@@ -165,43 +173,63 @@ export function movedTargetNameOperations(params: MovedTargetNamesParams): Scl.O
 /** The addresses of the control blocks a logical device moved to another access point of its IED sends, each with where it goes. */
 function addressesCarriedBy(params: MoveJudgedParams): CarriedAddress[] {
 	const { places, move } = params
-	if (move.ref.tagName !== 'LDevice' || !isMovedWithinItsIed(params)) return []
+	if (move.ref.tagName !== LOGICAL_DEVICE_TAG || !isMovedWithinItsIed(params)) return []
 	const oldAccessPoint = accessPointAt({ places, id: move.from.id })
 	const newAccessPoint = accessPointAt({ places, id: move.to.id })
 	if (!oldAccessPoint || !newAccessPoint || oldAccessPoint.id === newAccessPoint.id) return []
+	const sent = sentControlBlocks(params)
+	if (sent.length === 0) return []
 	const iedId = iedAt({ places, id: move.to.id })
 	const ied = iedId ? places.read.get(iedId) : undefined
-	const iedName = ied ? readAttribute({ record: ied, name: 'name', defaults: 'none' }) : undefined
-	const oldName = readAttribute({ record: oldAccessPoint, name: 'name', defaults: 'none' })
-	const newName = readAttribute({ record: newAccessPoint, name: 'name', defaults: 'none' })
 	const device = places.read.get(move.ref.id)
 	const ldInst = device
-		? readAttribute({ record: device, name: 'inst', defaults: 'none' })
+		? beforeAttribute({ places, record: device, name: DEVICE_INST_ATTRIBUTE })
 		: undefined
-	const sent = sentControlBlocks({ places, move })
-	if (sent.length === 0) return []
 	const carried: CarriedAddress[] = []
 	for (const record of places.document.records) {
-		if (record.tagName !== CONNECTED_ACCESS_POINT_TAG) continue
-		if (readAttribute({ record, name: 'iedName', defaults: 'none' }) !== iedName) continue
-		if (readAttribute({ record, name: 'apName', defaults: 'none' }) !== oldName) continue
+		if (!connects({ places, connection: record, accessPoint: oldAccessPoint, ied })) continue
 		const subNetwork = record.parent ? places.read.get(record.parent.id) : undefined
 		if (!subNetwork) continue
-		const connection = (places.childrenOf.get(subNetwork.id) ?? []).find(
-			(sibling) =>
-				sibling.tagName === CONNECTED_ACCESS_POINT_TAG &&
-				readAttribute({ record: sibling, name: 'iedName', defaults: 'none' }) === iedName &&
-				readAttribute({ record: sibling, name: 'apName', defaults: 'none' }) === newName,
+		const connection = (places.childrenOf.get(subNetwork.id) ?? []).find((sibling) =>
+			connects({ places, connection: sibling, accessPoint: newAccessPoint, ied }),
 		)
 		for (const address of places.childrenOf.get(record.id) ?? []) {
-			if (!sendsOneOf({ address, sent, ldInst })) continue
+			if (!sendsOneOf({ places, address, sent, ldInst })) continue
 			carried.push({ address, from: record, subNetwork, connection })
 		}
 	}
 	return carried
 }
 
-/** The control blocks with an address kind in a moved subtree, by their tag, with their uuid and name. */
+/**
+ * Whether a connection names an access point: by its uuid (`ConnectedAP.apUuid`), else by the IED and access point names
+ * it carries, read as they were before the transaction (a rename in the same transaction reaches the connection later).
+ */
+function connects(params: {
+	places: MovePlaces
+	connection: AnyRawRecord
+	accessPoint: AnyRawRecord
+	ied: AnyRawRecord | undefined
+}): boolean {
+	const { places, connection, accessPoint, ied } = params
+	if (connection.tagName !== CONNECTED_ACCESS_POINT_TAG) return false
+	const apUuid = readAttribute({
+		record: connection,
+		name: CONNECTION_NAMING.uuid,
+		defaults: 'none',
+	})
+	if (apUuid)
+		return apUuid === readAttribute({ record: accessPoint, name: UUID_ATTRIBUTE, defaults: 'none' })
+	const iedName = ied ? beforeAttribute({ places, record: ied, name: NAME_ATTRIBUTE }) : undefined
+	return (
+		readAttribute({ record: connection, name: CONNECTION_NAMING.ied, defaults: 'none' }) ===
+			iedName &&
+		readAttribute({ record: connection, name: CONNECTION_NAMING.accessPoint, defaults: 'none' }) ===
+			beforeAttribute({ places, record: accessPoint, name: NAME_ATTRIBUTE })
+	)
+}
+
+/** The control blocks with an address kind in a moved subtree whose nearest move is this one. */
 function sentControlBlocks(params: MoveJudgedParams): AnyRawRecord[] {
 	const { places, move } = params
 	return places.document.records.filter(
@@ -210,45 +238,55 @@ function sentControlBlocks(params: MoveJudgedParams): AnyRawRecord[] {
 	)
 }
 
-/** Whether an address names one of the control blocks: by its uuid, else by its device and name. */
+/** Whether an address names one of the control blocks: by its uuid, else by its device and name before the transaction. */
 function sendsOneOf(params: {
+	places: MovePlaces
 	address: AnyRawRecord
 	sent: readonly AnyRawRecord[]
 	ldInst: string | undefined
 }): boolean {
-	const { address, sent, ldInst } = params
-	const cbUuid = readAttribute({ record: address, name: 'cbUuid', defaults: 'none' })
-	const cbName = readAttribute({ record: address, name: 'cbName', defaults: 'none' })
-	const addressLdInst = readAttribute({ record: address, name: 'ldInst', defaults: 'none' })
+	const { places, address, sent, ldInst } = params
+	const naming = ADDRESS_NAMING_BY_TAG.get(address.tagName)
+	if (!naming) return false
+	const cbUuid = readAttribute({ record: address, name: naming.uuid, defaults: 'none' })
+	const cbName = readAttribute({ record: address, name: naming.controlBlock, defaults: 'none' })
+	const addressLdInst = readAttribute({ record: address, name: naming.lDevice, defaults: 'none' })
 	return sent.some(function named(controlBlock) {
 		if (!(ADDRESS_TAGS_BY_CONTROL_BLOCK.get(controlBlock.tagName) ?? []).includes(address.tagName))
 			return false
-		const uuid = readAttribute({ record: controlBlock, name: UUID_ATTRIBUTE, defaults: 'none' })
-		if (cbUuid) return cbUuid === uuid
+		if (cbUuid)
+			return (
+				cbUuid === readAttribute({ record: controlBlock, name: UUID_ATTRIBUTE, defaults: 'none' })
+			)
 		return (
 			addressLdInst === ldInst &&
-			cbName === readAttribute({ record: controlBlock, name: 'name', defaults: 'none' })
+			cbName === beforeAttribute({ places, record: controlBlock, name: NAME_ATTRIBUTE })
 		)
 	})
 }
 
-/** The children of a connection with an address placed after the last child of its tag, else where its kind goes. */
+/** The children of a connection with an address placed where the definition orders its tag among them. */
 function withChildInOrder(params: {
 	children: AnyRawRecord['children']
 	child: AnyRawRecord
 }): AnyRawRecord['children'] {
 	const { children, child } = params
+	const order =
+		(CHILDREN as Readonly<Record<string, readonly string[]>>)[CONNECTED_ACCESS_POINT_TAG] ?? []
+	const rank = order.indexOf(child.tagName)
 	const ref = { tagName: child.tagName, id: child.id } as AnyRawRecord['children'][number]
-	const lastOfTag = children.map((held) => held.tagName).lastIndexOf(child.tagName)
-	if (lastOfTag >= 0)
-		return [...children.slice(0, lastOfTag + 1), ref, ...children.slice(lastOfTag + 1)]
-	// GSE before SMV before what follows the addresses of a connection
-	const firstAfter = children.findIndex(
-		(held) => held.tagName === 'SMV' || held.tagName === 'PhysConn',
-	)
-	const at =
-		child.tagName === 'SMV' ? children.findIndex((held) => held.tagName === 'PhysConn') : firstAfter
+	const at = children.findIndex((held) => order.indexOf(held.tagName) > rank)
 	return at < 0 ? [...children, ref] : [...children.slice(0, at), ref, ...children.slice(at)]
+}
+
+/** An attribute of a record as it stood before the transaction's first update of it (as it stands when none). */
+function beforeAttribute(params: {
+	places: MovePlaces
+	record: AnyRawRecord
+	name: string
+}): string | undefined {
+	const { places, record, name } = params
+	return readAttribute({ record: places.before.get(record.id) ?? record, name, defaults: 'none' })
 }
 
 /** The id of the IED an element is, or sits in. */
@@ -263,17 +301,18 @@ function accessPointAt(params: { places: MovePlaces; id: string }): AnyRawRecord
 
 /** The logical device an element is, or sits in. */
 function deviceAt(params: { places: MovePlaces; id: string }): AnyRawRecord | undefined {
-	return nearestAt({ ...params, tagName: 'LDevice' })
+	return nearestAt({ ...params, tagName: LOGICAL_DEVICE_TAG })
 }
 
-/** The element of a tag an element is, or the nearest one above it, from the document read once. */
+/**
+ * The element of a tag an element is, or the nearest one above it, from the document read once; an element the
+ * transaction deleted (a moved element's old parent) found through its last written parents.
+ */
 function nearestAt(params: {
 	places: MovePlaces
 	id: string
 	tagName: string
 }): AnyRawRecord | undefined {
 	const { places, id, tagName } = params
-	const record = places.read.get(id) ?? places.written.get(id)
-	if (record?.tagName === tagName) return record
-	return places.document.ancestryOf(id).findLast((above) => above.tagName === tagName)
+	return chainOf({ places, id }).findLast((record) => record.tagName === tagName)
 }

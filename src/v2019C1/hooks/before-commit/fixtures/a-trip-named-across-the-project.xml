@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- BCU1 holds CTRL (LLN0 whose data set DS1 names PTRC1 of PROT; CSWI1) and PROT (LLN0 holding the log TripLog; PTRC1,
-     its report TripReport, its log control naming TripLog with no device, its input Trip). SUB1 subscribes to PTRC1: an
+     its report TripReport, its log control naming TripLog with no device and one naming CTRL's CtrlLog, its input Trip). SUB1 subscribes to PTRC1: an
      ExtRef by its uuid, one by its report's uuid, and one names CTRL/PTRC1 by names only (nothing there yet); its report
      has PTRC1 as client and its GOOSE names PTRC1 as subscriber. The bay's function binds an LNode to PTRC1 and one to
      CSWI1 (its DOS mapped to PTRC1's Tr, its SourceRef reading PTRC1's input Trip by address). -->
@@ -35,6 +35,7 @@
                         <DataSet name="DS1" dev:db-id="ds1">
                             <FCDA ldInst="PROT" prefix="" lnClass="PTRC" lnInst="1" doName="Tr" daName="general" fc="ST" lnUuid="ptrc1-uuid" dev:db-id="fcda-tr"/>
                         </DataSet>
+                        <Log name="CtrlLog" dev:db-id="ctrl-log"/>
                     </LN0>
                     <LN lnClass="CSWI" inst="1" prefix="" lnType="CSWI_T" uuid="cswi1-uuid" dev:db-id="cswi1"/>
                 </LDevice>
@@ -45,6 +46,7 @@
                     <LN lnClass="PTRC" inst="1" prefix="" lnType="PTRC_T" uuid="ptrc1-uuid" dev:db-id="ptrc1">
                         <ReportControl name="TripReport" confRev="1" uuid="trip-report-uuid" dev:db-id="trip-report"/>
                         <LogControl name="TripLogging" logName="TripLog" dev:db-id="trip-logging"/>
+                        <LogControl name="CtrlLogging" logName="CtrlLog" ldInst="CTRL" dev:db-id="ctrl-logging"/>
                         <Inputs dev:db-id="ptrc1-inputs">
                             <ExtRef intAddr="Trip" uuid="trip-input-uuid" dev:db-id="trip-input"/>
                         </Inputs>

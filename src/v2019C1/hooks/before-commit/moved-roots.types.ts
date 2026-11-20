@@ -23,6 +23,8 @@ export type MovePlaces = {
 	/** The children of each element of `document`, by its id and through the transparent wrappers it goes through. */
 	childrenOf: ReadonlyMap<string, readonly AnyRawRecord[]>
 	written: ReadonlyMap<string, AnyRawRecord>
+	/** Each record the transaction updated, as it stood before its first update: the names it carried before. */
+	before: ReadonlyMap<string, AnyRawRecord>
 	/** Each element of a moved subtree, by id, with the nearest move holding it. */
 	movedBy: ReadonlyMap<string, MovedRecord>
 }

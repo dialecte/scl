@@ -19,6 +19,14 @@ type MoveCase = SclTest.BaseXmlTestCase & {
 	}[]
 	/** Attributes the same transaction writes after the moves. */
 	updates?: { element: Scl.Ref<Scl.ElementsOf>; attributes: Record<string, string> }[]
+	/** Elements the same transaction creates first, before the moves, in order. */
+	creates?: {
+		parent: Scl.Ref<Scl.ElementsOf>
+		tagName: string
+		attributes: Record<string, string>
+	}[]
+	/** Elements the same transaction deletes last. */
+	deletes?: Scl.Ref<Scl.ElementsOf>[]
 }
 
 type RefusedCase = MoveCase & {
@@ -44,7 +52,7 @@ describe('the commit follows a logical node moved to another logical device of i
 					'//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"][@uuid="ptrc1-uuid"]',
 					'//default:LNode[@lnUuid="ptrc1-uuid"][@iedName="BCU1"][@ldInst="CTRL"][@lnClass="PTRC"][@lnInst="1"]',
 					'//default:ExtRef[@lnUuid="ptrc1-uuid"][@iedName="BCU1"][@ldInst="CTRL"][@doName="Tr"]',
-					'//default:ExtRef[@srcCBUuid="trip-report-uuid"][@srcLDInst="CTRL"][@srcCBName="TripReport"]',
+					'//default:ExtRef[@srcCBUuid="trip-report-uuid"][not(@srcLDInst) or @srcLDInst="CTRL"][@srcCBName="TripReport"]',
 					'//default:FCDA[@lnUuid="ptrc1-uuid"][@ldInst="CTRL"][@doName="Tr"]',
 					'//default:ClientLN[@lnUuid="ptrc1-uuid"][@iedName="BCU1"][@ldInst="CTRL"]',
 					'//default:IEDName[@lnUuid="ptrc1-uuid"][@ldInst="CTRL"][text()="BCU1"]',
@@ -74,19 +82,56 @@ describe('the commit follows a logical node moved to another logical device of i
 			unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr="PROT/PTRC1.Trip"]'],
 		},
 		// TripLogging names its log by its own device: moved, it names PROT's TripLog outright
-		'PTRC1 moved from PROT to CTRL → its log control names PROT, still logging to TripLog': {
-			sourceXml: aTripNamedAcrossTheProject,
-			moves: [{ element: ptrc1, parent: ctrl }],
-			expectedQueries: [
-				'//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"]/default:LogControl[@name="TripLogging"][@ldInst="PROT"][@logName="TripLog"]',
-			],
-		},
+		'PTRC1 moved from PROT to CTRL → its log control names PROT, still logging to TripLog; one naming CTRL unchanged':
+			{
+				sourceXml: aTripNamedAcrossTheProject,
+				moves: [{ element: ptrc1, parent: ctrl }],
+				expectedQueries: [
+					'//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"]/default:LogControl[@name="TripLogging"][@ldInst="PROT"][@logName="TripLog"]',
+					'//default:LogControl[@name="CtrlLogging"][@ldInst="CTRL"][@logName="CtrlLog"]',
+				],
+			},
 		// SUB1's third ExtRef names CTRL/PTRC1 by its names only, where nothing stood: as after a rename, it now names PTRC1
 		"PTRC1 moved from PROT to CTRL → the ExtRef naming CTRL/PTRC1 by names only takes PTRC1's uuid":
 			{
 				sourceXml: aTripNamedAcrossTheProject,
 				moves: [{ element: ptrc1, parent: ctrl }],
 				expectedQueries: ['//default:ExtRef[@doName="Op"][@ldInst="CTRL"][@lnUuid="ptrc1-uuid"]'],
+			},
+		// one transaction creates, in SUB1's GGIO1, an ExtRef naming PTRC1's report and GGIO2 (not there yet) by their uuids,
+		// then GGIO2 in CTRL, then moves PTRC1: the commit writes GGIO2's names and the report's new device on the one ExtRef
+		// (its device named by the data's when they are the same)
+		'PTRC1 moved and GGIO2 created in CTRL, an ExtRef naming both → both names written on the one ExtRef':
+			{
+				sourceXml: aTripNamedAcrossTheProject,
+				moves: [{ element: ptrc1, parent: ctrl }],
+				creates: [
+					{
+						parent: { tagName: 'Inputs', id: 'ggio1-inputs' },
+						tagName: 'ExtRef',
+						attributes: {
+							lnUuid: 'ggio2-uuid',
+							doName: 'Beh',
+							daName: 'stVal',
+							serviceType: 'Report',
+							srcCBUuid: 'trip-report-uuid',
+						},
+					},
+					{
+						parent: ctrl,
+						tagName: 'LN',
+						attributes: {
+							lnClass: 'GGIO',
+							inst: '2',
+							prefix: '',
+							lnType: 'GGIO_T',
+							uuid: 'ggio2-uuid',
+						},
+					},
+				],
+				expectedQueries: [
+					'//default:ExtRef[@lnUuid="ggio2-uuid"][@ldInst="CTRL"][@lnClass="GGIO"][@lnInst="2"][@srcCBUuid="trip-report-uuid"][not(@srcLDInst) or @srcLDInst="CTRL"]',
+				],
 			},
 		// moved to CTRL, then back to PROT, in one transaction: no move
 		'PTRC1 moved to CTRL and back to PROT → nothing written': {
@@ -120,6 +165,27 @@ describe('the commit follows a logical device moved to another access point of i
 			],
 			unexpectedQueries: ['//default:ConnectedAP[@apName="AP1"]/default:GSE'],
 		},
+		// Samples sends sampled values: its address goes with the GSE; GGIO1's log control names its own device, moved too
+		"CTRL moved from AP1 to AP2 → its SMV under AP2's connection, its log control naming no device":
+			{
+				sourceXml: twoAccessPointsOnOneBus,
+				moves: [{ element: ctrl, parent: { tagName: 'Server', id: 'bcu1-server2' } }],
+				expectedQueries: [
+					'//default:ConnectedAP[@apName="AP2"]/default:SMV[@cbName="Samples"][@cbUuid="samples-uuid"]',
+					'//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="GGIO"]/default:LogControl[@name="Logging"][not(@ldInst)]',
+				],
+				unexpectedQueries: ['//default:ConnectedAP[@apName="AP1"]/default:SMV'],
+			},
+		// BCU1 renamed BCU9 in the same transaction: its connections still read BCU1 until the commit renames them
+		"BCU1 renamed BCU9 and CTRL moved from AP1 to AP2 → its GSE under AP2's connection": {
+			sourceXml: twoAccessPointsOnOneBus,
+			moves: [{ element: ctrl, parent: { tagName: 'Server', id: 'bcu1-server2' } }],
+			updates: [{ element: { tagName: 'IED', id: 'bcu1' }, attributes: { name: 'BCU9' } }],
+			expectedQueries: [
+				'//default:ConnectedAP[@iedName="BCU9"][@apName="AP2"]/default:GSE[@cbName="PositionGoose"]',
+			],
+			unexpectedQueries: ['//default:ConnectedAP[@apName="AP1"]/default:GSE'],
+		},
 		// AP2 placed before AP1 in BCU1: a reorder, no move
 		'AP2 placed before AP1 in BCU1 → reordered, nothing else written': {
 			sourceXml: twoAccessPointsOnOneBus,
@@ -138,6 +204,41 @@ describe('the commit follows a logical device moved to another access point of i
 	}
 
 	runSclTestCases.withExport({ testCases, act: moveInOneTransaction })
+})
+
+// A move whose old parent the same transaction deletes is still a move within the IED: it commits and is followed.
+describe('the commit follows a move within an IED whose old parent the transaction deletes', () => {
+	const testCases: SclTest.TestCases<MoveCase> = {
+		// PTRC1 goes to CTRL, then PROT, left with its LLN0, is deleted
+		'PTRC1 moved from PROT to CTRL, PROT deleted → committed, the references naming PTRC1 name CTRL':
+			{
+				sourceXml: aTripNamedAcrossTheProject,
+				moves: [{ element: ptrc1, parent: ctrl }],
+				deletes: [prot],
+				expectedQueries: [
+					'//default:LDevice[@inst="CTRL"]/default:LN[@lnClass="PTRC"][@uuid="ptrc1-uuid"]',
+					'//default:ExtRef[@lnUuid="ptrc1-uuid"][@ldInst="CTRL"][@doName="Tr"]',
+				],
+				unexpectedQueries: ['//default:LDevice[@inst="PROT"]'],
+			},
+	}
+
+	async function act({
+		testCase,
+		source,
+	}: SclTest.ActParams<MoveCase>): Promise<SclTest.ActResult> {
+		const refused = await moveInOneTransaction({ testCase, source })
+			.then(function committed() {
+				return undefined
+			})
+			.catch(function refusal(error: unknown) {
+				return toDialecteError(error)?.key ?? String(error)
+			})
+		expect(refused).toBeUndefined()
+		return { assertOn: 'source' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
 })
 
 // What a move within an IED cannot follow, and every move across IEDs, is refused: nothing committed.
@@ -232,19 +333,23 @@ describe('core refuses an LN0 moved into another logical device', () => {
 	runSclTestCases.withExport({ testCases, act })
 })
 
-/** The case's moves, then its updates, in one transaction. */
+/** The case's creations, moves, updates and deletions, in that order, in one transaction. */
 async function moveInOneTransaction(params: {
 	testCase: MoveCase
 	source: SclTest.ActParams<MoveCase>['source']
 }): Promise<SclTest.ActResult> {
 	const { testCase, source } = params
 	await source.transaction(async function moveThenUpdate(tx) {
+		for (const { parent, tagName, attributes } of testCase.creates ?? []) {
+			await tx.any.addChild(parent, { tagName: tagName as Scl.ElementsOf, attributes })
+		}
 		for (const { element, parent, before } of testCase.moves) {
 			await tx.any.move(element, { parent, ...(before ? { before } : {}) })
 		}
 		for (const { element, attributes } of testCase.updates ?? []) {
 			await tx.any.update(element, { attributes })
 		}
+		for (const element of testCase.deletes ?? []) await tx.any.delete(element)
 	})
 	return { assertOn: 'source' }
 }

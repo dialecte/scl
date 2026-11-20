@@ -1,9 +1,11 @@
+import { throwDialecteError } from '@dialecte/core'
+
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { PARENTS } from '@/v2019C1/definition/constants.generated'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
 
-import type { PlaceReadingRole } from './moves.types'
+import type { AddressNaming, ConnectionNaming, PlaceReadingRole } from './moves.types'
 import type { TupleReferencePair } from '@/v2019C1/constants'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 
@@ -153,9 +155,53 @@ function addressTagsByControlBlock(): Map<string, string[]> {
 	return byControlBlock
 }
 
-/** The tag of an access point, and of the connection naming one on a subnetwork. */
+/** The tag of an access point, a logical device, and of the connection naming an access point on a subnetwork. */
 export const ACCESS_POINT_TAG = 'AccessPoint'
+export const LOGICAL_DEVICE_TAG = 'LDevice'
 export const CONNECTED_ACCESS_POINT_TAG = 'ConnectedAP'
+
+/** The attribute naming an element among its siblings: an access point, a control block, an IED. */
+export const NAME_ATTRIBUTE = 'name'
+
+/** The attribute naming a logical device in its IED. */
+export const DEVICE_INST_ATTRIBUTE = 'inst'
+
+/**
+ * How a connection names its access point, read from the tuple registry: the uuid attribute, the attribute naming the
+ * IED, the one naming the access point.
+ */
+export const CONNECTION_NAMING: ConnectionNaming = connectionNaming()
+
+function connectionNaming(): ConnectionNaming {
+	const [pair] = TUPLE_PAIRS_BY_TAG[CONNECTED_ACCESS_POINT_TAG] ?? []
+	const { ied, accessPoint } = pair?.tuple ?? {}
+	if (!pair || !ied || !('attribute' in ied) || !accessPoint) {
+		return throwDialecteError('ASSERTION_FAILED', {
+			detail: 'the tuple registry names no connected access point by IED and access point',
+		})
+	}
+	return { uuid: pair.attribute.uuid, ied: ied.attribute, accessPoint }
+}
+
+/**
+ * How each address tag names its control block, read from the tuple registry: the uuid attribute, the attribute naming
+ * the logical device, the one naming the control block.
+ */
+export const ADDRESS_NAMING_BY_TAG: ReadonlyMap<string, AddressNaming> = addressNamingByTag()
+
+function addressNamingByTag(): Map<string, AddressNaming> {
+	const byTag = new Map<string, AddressNaming>()
+	for (const tags of ADDRESS_TAGS_BY_CONTROL_BLOCK.values()) {
+		for (const tagName of tags) {
+			const [pair] = TUPLE_PAIRS_BY_TAG[tagName] ?? []
+			const { lDevice, controlBlock } = pair?.tuple ?? {}
+			if (pair && lDevice && controlBlock) {
+				byTag.set(tagName, { uuid: pair.attribute.uuid, lDevice, controlBlock })
+			}
+		}
+	}
+	return byTag
+}
 
 /** A log control naming its log by its own device when it carries no `ldInst`. */
 export const LOG_CONTROL_TAG = 'LogControl'
