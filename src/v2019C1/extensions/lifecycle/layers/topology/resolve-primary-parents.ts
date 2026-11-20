@@ -80,8 +80,10 @@ async function findPrimaryMoves(
 	params: FindPrimaryMovesParams,
 ): Promise<PrimaryMove[]> {
 	const { held, sourceAncestors, unitId, instanceLevelsList } = params
-	const refs = held.map((instance) => toRef(instance) as Scl.Ref<Scl.ElementsOf>)
-	const ancestries = await query.findAncestorsOfEach(refs, { stopAtTagName: 'Substation' })
+	// the held records as they are: no read to resolve them
+	const ancestries = await query.findAncestorsOfEach(held as readonly Scl.Ref<Scl.ElementsOf>[], {
+		stopAtTagName: 'Substation',
+	})
 	const candidates = held.flatMap(function candidateOf(instance, position): PrimaryMove[] {
 		const ancestry = ancestries[position] ?? []
 		const heldLevel = ancestry.find((ancestor) => isTopologyLevel(ancestor.tagName))

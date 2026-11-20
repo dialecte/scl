@@ -304,8 +304,8 @@ never from a name. A level the source gains is never read as another level of th
 carrying the lineage of one of them is that level's instance, so a primary moving into a gained level does not make the
 gained level stand where the primary still sits; a level the consumer maps it onto, or a project level carrying no
 lineage of the template, still can. Accepted, the primary is moved with `tx.move` after what the frame adds and before
-what it removes, keeping its record; skipped, it stays where it is. An instance holding the primary in two levels is not
-moved.
+what it removes, keeping its record; skipped, it stays where it is. An instance of the template holding the primary
+twice is not moved.
 
 An IED's data-flow reference the newer template lacks (`FCDA`, `ClientLN`, `IEDName`, `Association`, `KDC`,
 `ServerAt`) is listed the same way, whether the project added it or the template dropped it: nothing tells the two

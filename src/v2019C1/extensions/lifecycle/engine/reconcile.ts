@@ -40,6 +40,7 @@ import type { AcceptedIds, CollisionOverrides } from './decide.types'
 import type { ChildMatch, PinnedMatches } from './match-child.types'
 import type { PendingMove } from './moved.types'
 import type { PlaceholderLineages } from './placeholder-lineages.types'
+import type { ReconcileBeforeRemovals } from './reconcile.types'
 import type { ReconcileAdditions, ReconcileResult } from './reconcile.types'
 import type { RedirectedSourceUuids } from './reference-match.types'
 import type { RemovalBase } from './removal-base.types'
@@ -160,7 +161,7 @@ export async function reconcile(
 		 * Run once the walk has added and moved what it writes, before the removals: what a later pass moves out of a
 		 * removed element (a primary of a process section) goes first, given what the walk added (a level it lands in).
 		 */
-		beforeRemovals?: (params: { added: readonly Scl.CloneMapping[] }) => Promise<void>
+		beforeRemovals?: ReconcileBeforeRemovals
 		/** The values the project keeps that the consumer takes the template's for: see `Resolution.takeOver`. */
 		takeOver?: TakeOvers
 	} & ReconcileAdditions,
@@ -190,6 +191,7 @@ export async function reconcile(
 
 	const sourceTree = await sourceQuery.any.getTree(sourceRootRef)
 	const instanceTree = await tx.any.getTree(instanceRootRef)
+	// nothing to reconcile on either side: nothing added, so `beforeRemovals` has nothing to place either
 	if (!sourceTree || !instanceTree) return { cloneMappings: added, landedOn }
 	// a terminal naming a node no file of the template holds is never added: the report left it out the same way
 	const { notSelected } = leaveOutUndeclaredNodes({

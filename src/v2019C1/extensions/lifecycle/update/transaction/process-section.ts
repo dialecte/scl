@@ -212,12 +212,14 @@ async function writePrimaryMoves(
 	const { moves, report, decisions, frameAdditions } = params
 	for (const move of moves) {
 		const instanceId = move.instance.id ?? ''
-		// the move is the root's group of the primary's report instance: its decision, else its suggested action
+		// the move is the root's group of the primary's report instance: its decision, else its suggested action;
+		// with decisions, a move the report never listed is not written (nobody decided it)
 		const group = report
 			? groupsForInstance(report, instanceId).find((candidate) => candidate.change === 'moved')
 			: undefined
-		const accepted =
-			!decisions || !group || (decisions.get(group.id) ?? group.suggestedAction) === 'accept'
+		const accepted = decisions
+			? group !== undefined && (decisions.get(group.id) ?? group.suggestedAction) === 'accept'
+			: true
 		if (!accepted) continue
 		const added = frameAdditions
 			.find((addition) => addition.instanceRootRef.id === move.placedFor.id)

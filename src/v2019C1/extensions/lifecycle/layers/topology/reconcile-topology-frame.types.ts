@@ -20,3 +20,9 @@ export type FrameBeforeRemovalsParams = {
 	instanceLevels: InstanceLevels
 	added: readonly Scl.CloneMapping[]
 }
+
+/** The levels of one instance, and the levels the frame's additions created there, by source id. */
+export type LevelsStandingParams = {
+	instanceLevels: InstanceLevels
+	created: ReadonlyMap<string, AnyRefOrRecord>
+}

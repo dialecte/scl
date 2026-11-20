@@ -5,8 +5,10 @@ import movingBayControl from './fixtures/level-template-revision-2-moving-baycon
 import movingDisplayBesideAlarm from './fixtures/level-template-revision-2-moving-display-beside-alarm.xml?raw'
 import movingDisplay from './fixtures/level-template-revision-2-moving-display-to-q02.xml?raw'
 
+import { toRef } from '@dialecte/core/helpers'
 import { describe, expect } from 'vitest'
 
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	ALL_XMLNS_NAMESPACES,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
@@ -16,7 +18,11 @@ import {
 
 import type { Scl } from '@/v2019C1/config'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	DecisionMap,
+	DiffNode,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -66,6 +72,8 @@ type TemplateMoveCase = SclTest.BaseXmlTestCase & {
 	expectedGroups?: string[]
 	/** How many moved groups, each listed for its own instance (`placedFor`, distinct). */
 	expectedMovesPerInstance?: number
+	/** Each move as `<tag> from <level> to <level>`, the levels by name, sorted. */
+	expectedMoves?: string[]
 	decide?: (groups: readonly DecisionGroup[]) => DecisionMap
 	/** The primary the revision moves, by its tag and its template's uuid: its records kept through the update. */
 	moved?: { tagName: 'Application' | 'Function'; templateUuid: string }
@@ -84,6 +92,7 @@ describe('query.lifecycle.report - a template update moving a primary to another
 				placements: 2,
 				expectedGroups: ['moved Function', 'moved Function'],
 				expectedMovesPerInstance: 2,
+				expectedMoves: ['Function from Q01 to Q02', 'Function from Q01 to Q02'],
 			},
 		// the application Display (d…021) sits in Q01's Private
 		'Display moved from Q01 to Q02 → one moved Application': {
@@ -93,6 +102,7 @@ describe('query.lifecycle.report - a template update moving a primary to another
 			placements: 1,
 			expectedGroups: ['moved Application'],
 			expectedMovesPerInstance: 1,
+			expectedMoves: ['Application from Q01 to Q02'],
 		},
 		// two holds of BayControl in one instance: nothing tells which one the revision moved
 		'a hand copy of BayControl in Q02, BayControl moved to Q02 → no moved group': {
@@ -103,6 +113,7 @@ describe('query.lifecycle.report - a template update moving a primary to another
 			handCopyInQ02: true,
 			expectedGroups: [],
 			expectedMovesPerInstance: 0,
+			expectedMoves: [],
 		},
 	}
 
@@ -119,10 +130,16 @@ describe('query.lifecycle.report - a template update moving a primary to another
 		expect(listGroups(report).filter((group) => group.startsWith('moved'))).toEqual(
 			testCase.expectedGroups,
 		)
-		const movedFor = report.instances
-			.filter((instance) => instance.groups.some((group) => group.change === 'moved'))
-			.map((instance) => instance.placedFor?.id ?? instance.rootRef?.id)
+		const movedInstances = report.instances.filter((instance) =>
+			instance.groups.some((group) => group.change === 'moved'),
+		)
+		const movedFor = movedInstances.map((instance) => instance.placedFor?.id)
+		expect(movedFor.every((placedFor) => placedFor !== undefined)).toBe(true)
 		expect(new Set(movedFor).size).toBe(testCase.expectedMovesPerInstance)
+		const moves = await Promise.all(
+			movedInstances.map((instance) => moveOf({ query: target.query, tree: instance.tree })),
+		)
+		expect(moves.sort()).toEqual(testCase.expectedMoves)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -157,6 +174,18 @@ describe('tx.lifecycle.apply - a template update moving a primary to another bay
 			],
 		},
 		// the first placement mapped Q02 (d…004) onto the project's Bay_X
+		'a hand copy of BayControl in Q02, BayControl moved to Q02, accepted → both where they were': {
+			sourceXml: levelRevision1,
+			targetXml: projectXml,
+			nextXml: movingBayControl,
+			placements: 1,
+			handCopyInQ02: true,
+			decide: acceptEvery,
+			expectedQueries: [
+				`//default:Bay[@name="Q01"]/default:Function[@templateUuid="${BAY_CONTROL_UUID}"]`,
+				`//default:Bay[@name="Q02"]/default:Function[@templateUuid="${BAY_CONTROL_UUID}"]`,
+			],
+		},
 		'Q02 mapped onto Bay_X, BayControl moved to Q02, accepted → BayControl under Bay_X': {
 			sourceXml: levelRevision1,
 			targetXml: projectWithBayXml,
@@ -178,7 +207,7 @@ describe('tx.lifecycle.apply - a template update moving a primary to another bay
 			decide: acceptEvery,
 			moved: { tagName: 'Application', templateUuid: DISPLAY_UUID },
 			expectedQueries: [
-				`//default:Bay[@name="Q02"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:Application[@templateUuid="${DISPLAY_UUID}"]`,
+				`//default:Bay[@name="Q02"]/default:Private[@type="eIEC61850-6-100"]/v2019C1:Application[@templateUuid="${DISPLAY_UUID}"]/v2019C1:FunctionRole[@name="Operator"]`,
 			],
 			unexpectedQueries: [
 				`//default:Bay[@name="Q01"]//v2019C1:Application`,
@@ -356,4 +385,15 @@ async function updateTarget(params: { sourceQuery: Scl.Query }): Promise<Lifecyc
 		anchor: projectSubstation,
 		scenario: 'template',
 	}
+}
+
+/** A moved primary as `<tag> from <level> to <level>`, the levels by their names in the project. */
+async function moveOf(params: { query: Scl.Query; tree: DiffNode }): Promise<string> {
+	const { query, tree } = params
+	const levels = [tree.movedFrom, tree.movedTo].flatMap((ref) => (ref ? [toRef(ref)] : []))
+	const records = await query.any.getRecords(levels)
+	const [from, to] = records.map((record) =>
+		record ? readAttribute({ record, name: 'name', defaults: 'none' }) : '?',
+	)
+	return `${tree.tagName} from ${from} to ${to}`
 }

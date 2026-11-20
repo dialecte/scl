@@ -18,7 +18,6 @@ import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.ty
 import type { DecisionGroup, DecisionMap } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type { SclTest } from '@/v2019C1/test'
-import type { AnyRefOrRecord } from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -91,6 +90,7 @@ describe('tx.lifecycle.apply - a fork moving a function into a gained bay the co
 		const firstFork = await forkTarget({ sourceQuery: source.query })
 		await reportAndApply({ document: target, lifecycle: firstFork })
 		await addEmptyBayZ({ target })
+		const before = await ctrlRecordIds(target)
 		const next = await openSclDocument({ project, xml: testCase.nextXml, label: 'revision 2' })
 		const secondFork = await forkTarget({ sourceQuery: next.query, baseQuery: source.query })
 		const mappings = await feeder3Onto({ target, next, bayName: testCase.mapsFeeder3Onto })
@@ -100,6 +100,9 @@ describe('tx.lifecycle.apply - a fork moving a function into a gained bay the co
 			mappings,
 			decide: (report) => acceptEvery(report.instances.flatMap((instance) => instance.groups)),
 		})
+		// moved, never recreated: the same record
+		const after = await ctrlRecordIds(target)
+		expect(after).toEqual(before)
 		return { assertOn: 'target' }
 	}
 
@@ -187,6 +190,7 @@ describe('tx.lifecycle.apply - a fork moving a function into a gained bay, the f
 			})
 			await tx.any.move(ctrl, { parent: bayY })
 		})
+		const before = await ctrlRecordIds(target)
 		const next = await openSclDocument({ project, xml: testCase.nextXml, label: 'revision 2' })
 		const secondFork = await forkTarget({ sourceQuery: next.query, baseQuery: source.query })
 		await reportAndApply({
@@ -194,6 +198,9 @@ describe('tx.lifecycle.apply - a fork moving a function into a gained bay, the f
 			lifecycle: secondFork,
 			decide: (report) => acceptEvery(report.instances.flatMap((instance) => instance.groups)),
 		})
+		// left where it is, never recreated: the same record
+		const after = await ctrlRecordIds(target)
+		expect(after).toEqual(before)
 		return { assertOn: 'target' }
 	}
 
@@ -255,4 +262,13 @@ async function addEmptyBayZ(params: {
 			attributes: { name: 'Bay_Z', uuid: 'project-bay-z-uuid' },
 		})
 	})
+}
+
+/** The record ids of every Ctrl (by its uuid) in the project. */
+async function ctrlRecordIds(target: { query: Scl.Query }): Promise<string[]> {
+	const found = await target.query.findByAttributes({
+		tagName: 'Function',
+		attributes: { uuid: CTRL_UUID },
+	})
+	return found.map((record) => record.id).sort()
 }

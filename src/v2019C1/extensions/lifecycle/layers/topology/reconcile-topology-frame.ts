@@ -25,6 +25,7 @@ import { scopeToTargetInstance } from '@/v2019C1/extensions/lifecycle/instance'
 
 import type {
 	FrameBeforeRemovalsParams,
+	LevelsStandingParams,
 	FrameReconciliation,
 } from './reconcile-topology-frame.types'
 import type { InstanceLevels } from './resolve-instance-levels.types'
@@ -183,10 +184,7 @@ export async function reconcileTopologyFrame(
 }
 
 /** Where each level of the unit stands in an instance: as held, or, for a level the template gained, the one created. */
-function levelsStanding(params: {
-	instanceLevels: InstanceLevels
-	created: ReturnType<typeof sourceToTargetMap>
-}): InstanceLevels {
+function levelsStanding(params: LevelsStandingParams): InstanceLevels {
 	const { instanceLevels, created } = params
 	const standing = new Map<string, Scl.Ref<Scl.ElementsOf> | undefined>()
 	for (const [sourceId, level] of instanceLevels) {

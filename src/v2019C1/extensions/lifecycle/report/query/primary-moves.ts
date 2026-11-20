@@ -1,12 +1,16 @@
 import { scopedId } from '@/v2019C1/extensions/lifecycle/engine/group'
 
-import type { WithPrimaryMoves, WithPrimaryMovesParams } from './primary-moves.types'
+import type {
+	MarkedMoveParams,
+	WithDependenciesParams,
+	WithPrimaryMoves,
+	WithPrimaryMovesParams,
+} from './primary-moves.types'
 import type {
 	DecisionGroup,
 	DiffNode,
 	ReportInstance,
 } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
-import type { PrimaryMove } from '@/v2019C1/extensions/lifecycle/layers/topology/resolve-primary-parents.types'
 
 /**
  * The report instances of a process section with each primary the revision puts on another level marked as one move:
@@ -32,7 +36,11 @@ export function withPrimaryMoves(params: WithPrimaryMovesParams): WithPrimaryMov
 			? moveById.get(group.primary.instanceRef.id)
 			: undefined
 		if (!move) continue
-		const added = frameGroups.find((frameGroup) =>
+		// the addition of the level in the move's own instance: every instance adds it under the same source id
+		const ownFrame = params.frameInstances.find(
+			(instance) => instance.rootRef?.id === move.placedFor.id,
+		)
+		const added = ownFrame?.groups.find((frameGroup) =>
 			addedSourceIdsOf(frameGroup).includes(move.toSource.id ?? ''),
 		)
 		if (!move.to && added) waitsFor.set(group.id, [added.id])
@@ -53,7 +61,7 @@ export function withPrimaryMoves(params: WithPrimaryMovesParams): WithPrimaryMov
 }
 
 /** A primary's report instance with its root marked as moved, the root's group a move. */
-function markedMove(params: { instance: ReportInstance; move: PrimaryMove }): ReportInstance {
+function markedMove(params: MarkedMoveParams): ReportInstance {
 	const { instance, move } = params
 	const tree: DiffNode = {
 		...instance.tree,
@@ -79,14 +87,12 @@ function markedMove(params: { instance: ReportInstance; move: PrimaryMove }): Re
 	const groups = own
 		? instance.groups.map((group) => (group === own ? moveGroup : group))
 		: [moveGroup, ...instance.groups]
-	return { ...instance, tree, groups, upToDate: false }
+	// listed for the instance of the unit it moves in, as a placement made for each instance is
+	return { ...instance, tree, groups, placedFor: move.placedFor, upToDate: false }
 }
 
 /** An instance whose groups take the dependencies listed for them, each id once. */
-function withDependencies(params: {
-	instance: ReportInstance
-	extra: ReadonlyMap<string, readonly string[]>
-}): ReportInstance {
+function withDependencies(params: WithDependenciesParams): ReportInstance {
 	const { instance, extra } = params
 	if (!instance.groups.some((group) => extra.has(group.id))) return instance
 	return {
