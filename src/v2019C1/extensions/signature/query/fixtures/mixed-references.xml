@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- a function holding an LNode typed by id, two category references by uuid (one naming nothing), a DO naming no DOType and a DAType naming itself -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" dev:db-id="scl-1">
+	<Substation name="S1" dev:db-id="s1">
+		<Function name="F1" uuid="00000000-0000-4000-8000-0000000000f1" dev:db-id="f1">
+			<LNode iedName="None" lnClass="GGIO" lnInst="1" lnType="LN1" dev:db-id="lnode-1"/>
+		</Function>
+		<eIEC61850-6-100:FunctionCategory name="Cat1" dev:db-id="cat1">
+			<eIEC61850-6-100:FunctionCatRef functionUuid="00000000-0000-4000-8000-0000000000f1" dev:db-id="ref-hit"/>
+			<eIEC61850-6-100:FunctionCatRef functionUuid="00000000-0000-4000-8000-0000000000f9" dev:db-id="ref-missing"/>
+		</eIEC61850-6-100:FunctionCategory>
+	</Substation>
+	<DataTypeTemplates dev:db-id="dtt-1">
+		<LNodeType id="LN1" lnClass="GGIO" dev:db-id="lnt-1">
+			<DO name="Beh" type="ENS_A" dev:db-id="do-1"/>
+			<DO name="Mis" type="NOPE" dev:db-id="do-2"/>
+		</LNodeType>
+		<DOType id="ENS_A" cdc="ENS" dev:db-id="dot-a">
+			<DA name="st" bType="Struct" type="LOOP" fc="ST" dev:db-id="da-1"/>
+		</DOType>
+		<DAType id="LOOP" dev:db-id="dat-loop">
+			<BDA name="next" bType="Struct" type="LOOP" dev:db-id="bda-1"/>
+		</DAType>
+	</DataTypeTemplates>
+</SCL>

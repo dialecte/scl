@@ -1,3 +1,5 @@
+import { FOLLOW_ANCESTRY_PERF_SPAN } from './follow-ancestry.constants'
+
 import { isElementOf, toRawRecord } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
@@ -45,7 +47,22 @@ export async function followAncestry(
 	query: Core.Query<Config>,
 	params: { roots: readonly FollowedRoot[]; read?: FollowRead },
 ): Promise<Scl.Operation[]> {
-	const { elements, held } = await readFollowedElements(query, params)
+	query.perf.start(FOLLOW_ANCESTRY_PERF_SPAN)
+	try {
+		return await followAncestryOf({ query, ...params })
+	} finally {
+		query.perf.stop(FOLLOW_ANCESTRY_PERF_SPAN)
+	}
+}
+
+/** {@link followAncestry}, inside its span. */
+async function followAncestryOf(params: {
+	query: Core.Query<Config>
+	roots: readonly FollowedRoot[]
+	read?: FollowRead
+}): Promise<Scl.Operation[]> {
+	const { query, ...followed } = params
+	const { elements, held } = await readFollowedElements(query, followed)
 	if (elements.length === 0) return []
 	const referrers = await readReferrers(query, { elements })
 	const referred = new Set(referrers.map((found) => found.target))

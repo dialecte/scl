@@ -22,6 +22,7 @@ import type {
 } from './import-types.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TypeIdReferencePair, TypeIdTarget } from '@/v2019C1/extensions/reference'
+import type { ReferenceCache } from '@/v2019C1/extensions/signature/query/element-signature.types'
 import type * as Core from '@dialecte/core'
 
 /** A fork that displaced a pre-existing target type under the same id. */
@@ -308,6 +309,8 @@ async function buildPreExistingSignatureIndex(
 	// One signature cache across every pre-existing target type, same rationale as
 	// the source loop: shared descendants are signed once.
 	const signatureCache = new Map<string, string>()
+	// the elements the types' references name, looked up once for the whole index: no write runs while it is built
+	const referenceCache: ReferenceCache = new Map()
 	for (const tagName of TYPE_TAGS) {
 		const existing = await tx.getRecordsByTagName(tagName)
 		for (const record of existing) {
@@ -317,6 +320,7 @@ async function buildPreExistingSignatureIndex(
 				ref: { tagName, id: record.id },
 				resolveReferences: true,
 				signatureCache,
+				referenceCache,
 			})
 			if (!index.has(signature)) index.set(signature, id)
 		}
@@ -376,6 +380,8 @@ async function signSourceTypes(params: {
 }): Promise<SignedSourceType[]> {
 	const { sourceQuery } = params
 	const signed: SignedSourceType[] = []
+	// the elements the source types' references name, looked up once for all of them (the source is only read)
+	const referenceCache: ReferenceCache = new Map()
 	for (const source of params.sourceTypes) {
 		// dialecte-allow query-in-loop: the attribute of a record held, read as given (no store read), one per source type as before
 		const sourceId = await sourceQuery.getAttribute(source, { name: 'id' })
@@ -384,6 +390,7 @@ async function signSourceTypes(params: {
 					ref: { tagName: source.tagName, id: source.id },
 					resolveReferences: true,
 					signatureCache: params.signatureCache,
+					referenceCache,
 				})
 			: undefined
 		signed.push({ source, sourceId, signature })
