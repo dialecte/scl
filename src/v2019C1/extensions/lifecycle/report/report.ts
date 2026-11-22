@@ -13,9 +13,9 @@ import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
-import { isSameFile } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { assertTakeOversOffered } from '@/v2019C1/extensions/lifecycle/engine/value-ownership'
+import { compareFileIdentity } from '@/v2019C1/extensions/lifecycle/file-identity'
 import { readOtherIedImpacts } from '@/v2019C1/extensions/lifecycle/layers/ied/other-ied-impacts'
 import { assertMappingsCoherent, createReportPass } from '@/v2019C1/extensions/lifecycle/mapping'
 import {
@@ -95,10 +95,10 @@ export async function report(
 	report.target = reportTarget
 	// what a verb told of on its own, then what the report's nodes tell
 	// a fork: a reference re-targeted onto what the update adds waits for it; onto nothing it brings, it stays
-	// only a fork of the file itself re-targets references (see `isSameFile`)
+	// only a fork of the file itself re-targets references (see `compareFileIdentity`)
 	const retargetsReferences =
 		target.scenario === 'fork' &&
-		(await isSameFile({ sourceQuery: target.sourceQuery, target: query }))
+		(await compareFileIdentity({ query, otherQuery: target.sourceQuery })).sameFile
 	const retargets = retargetsReferences
 		? await linkRetargets(query, { report, sourceQuery: target.sourceQuery })
 		: { dependsOn: new Map<string, readonly string[]>(), warnings: [] }

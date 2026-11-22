@@ -1,4 +1,4 @@
-import { readFileUuid } from '@/v2019C1/extensions/lifecycle/read-file-uuid'
+import { compareFileIdentity } from '@/v2019C1/extensions/lifecycle/file-identity'
 import { REFERENCE_UUIDS_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import {
 	findNamedRecords,
@@ -7,7 +7,6 @@ import {
 
 import type { RetargetUnresolved } from './diff.types'
 import type {
-	IsSameFileParams,
 	ReadUpdateHoldsParams,
 	UnresolvedRetargetsParams,
 	WithUpdateHoldsParams,
@@ -17,18 +16,6 @@ import type { RemovalBase } from './removal-base.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
-
-/**
- * Whether the open document is a version of the newer revision's file: both Headers name the same file, as an open
- * ISD and its other version do. A fork into a project (another file) keeps the references the project made.
- */
-export async function isSameFile(params: IsSameFileParams): Promise<boolean> {
-	const [fileUuid, sourceFileUuid] = await Promise.all([
-		readFileUuid(params.target),
-		readFileUuid(params.sourceQuery),
-	])
-	return fileUuid !== undefined && fileUuid === sourceFileUuid
-}
 
 /**
  * What a fork of the file itself holds (see `ForkHolds`): the uuids the newer revision's references name (both
@@ -42,7 +29,9 @@ export async function readUpdateHolds(
 	params: ReadUpdateHoldsParams,
 ): Promise<ReadonlySet<string> | undefined> {
 	const { sourceQuery, target } = params
-	if (!(await isSameFile({ sourceQuery, target }))) return undefined
+	const { sameFile } = await compareFileIdentity({ query: target, otherQuery: sourceQuery })
+	// a fork into a project (another file) keeps the references the project made
+	if (!sameFile) return undefined
 	const referrers = await Promise.all(
 		[...REFERENCE_UUIDS_BY_TAG.keys()].map(function referrersOf(tagName) {
 			// dialecte-allow query-in-loop: one read per reference tag of the registry, once per update

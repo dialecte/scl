@@ -4,6 +4,7 @@ import * as extractTransaction from './extract'
 import { classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
 import { report } from './report'
+import { scenarioOf } from './scenario-of'
 import { sourceRoot } from './source-root'
 import { deep } from './transplant'
 import * as updateTransaction from './update'
@@ -35,6 +36,8 @@ import { checkTemplateUuids } from './validate'
  *                   `fork` on an open ISD), which `tx.lifecycle.apply` writes.
  * - `sourceRoot`  — read-only: what a source file holds to place, per verb
  *                   (`query.lifecycle.sourceRoot.fsd` / `.asd` / `.ssd` / `.ied`).
+ * - `scenarioOf`  — read-only: the scenario an operation runs with, or why it is refused, per verb
+ *                   (`query.lifecycle.scenarioOf.ied`; `.fsd` / `.asd` / `.ssd` tell the same file only).
  *
  * Two-track surface (verb-agnostic): `query.lifecycle.report(...)`
  * classifies, then `tx.lifecycle.apply(tx, { ..., report })` applies the fast
@@ -47,6 +50,7 @@ export const lifecycle = {
 		checkTemplateUuids,
 		classifyIeds,
 		sourceRoot,
+		scenarioOf,
 	},
 	transaction: {
 		extract: extractTransaction,

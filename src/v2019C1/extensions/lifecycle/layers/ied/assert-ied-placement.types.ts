@@ -15,7 +15,13 @@ export type AssertIedPlacementParams = {
 }
 
 /** An operation reading an IED of a source file, named in a refusal's detail. */
-export type IedOperation = 'report (ied)' | 'instantiate (ied)' | 'apply (ied)'
+export type IedOperation = 'report (ied)' | 'instantiate (ied)' | 'apply (ied)' | 'scenarioOf (ied)'
+
+/** The IED of a source file, as a placement reads it. */
+export type IedSource = {
+	name: string
+	uuid: string | undefined
+}
 
 /** The project's element holding a uuid an IED placement keeps, as a refusal tells it. */
 export type HeldElement = {

@@ -540,6 +540,38 @@
 			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:59"
 		},
 		{
+			"path": "doc.query.lifecycle.scenarioOf.fsd",
+			"root": "q",
+			"otherRoutes": [
+				"doc.query.lifecycle.scenarioOf.asd",
+				"doc.query.lifecycle.scenarioOf.ssd",
+				"tx.lifecycle.scenarioOf.asd",
+				"tx.lifecycle.scenarioOf.ssd"
+			],
+			"signature": "(params: LayerScenarioOfParams) => Promise<LayerScenario>",
+			"summary": "Whether the source of an FSD, ASD or SSD operation is a version of the open document's file: both Headers name the same file. No scenario: the verbs take every one, so the consumer states it (instantiate a new instance, update its instances from the template, or fork the file).",
+			"intents": [
+				"tell whether a template file is a version of the open file",
+				"know if an FSD",
+				"ASD or SSD is the same file"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/scenario-of/scenario-of.ts:81"
+		},
+		{
+			"path": "doc.query.lifecycle.scenarioOf.ied",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: IedScenarioOfParams) => Promise<IedScenario | Refused>",
+			"summary": "The scenario an IED operation runs with, or why it is refused, before anything is reported or written. The consumer tells what it does: it updates the IED of the open document `targetInstance` names, or, without one, places the source IED. - placed: the IED of an ISD instance file keeps its identity (`fork`), any other is a new IED (`instantiate`); - updated: on an open ISD, another version of its file or the IED of another ISD instance file is a `fork` of it, any other source is the template the IED was placed from (`template`).",
+			"intents": [
+				"tell whether an ISD places a new IED",
+				"forks or updates an IED",
+				"check an ISD is a version of the open ISD before a review",
+				"know the lifecycle scenario of an IED file"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/scenario-of/scenario-of.ts:40"
+		},
+		{
 			"path": "doc.query.lifecycle.sourceRoot.asd",
 			"root": "q",
 			"otherRoutes": [],
