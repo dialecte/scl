@@ -2,7 +2,8 @@
 
 Measured 2026-06 · TypeScript 6.0.3 · `tsc --extendedDiagnostics` (min of 3 runs, deterministic)
 · build config (`skipLibCheck:false`). Harness: `scripts/type-bench.mjs`, `scripts/type-audit.mjs`.
-Raw data: `baseline.json`, `readability-audit.md`.
+Raw data: `readability-audit.md` (the instantiation counts were then kept in a `baseline.json`, which the type bench
+no longer writes: it measures each change against its base).
 
 **Coverage of this analysis (what's comprehensive vs. sampled):**
 
