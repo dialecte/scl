@@ -29,7 +29,7 @@ coverage
 
 *.tsbuildinfo
 
-# type-benchmark throwaways (harness + committed baseline.json are kept)
+# type-benchmark throwaways (nothing of the bench is committed: it measures each change against its base)
 .bench-dts
 .bench-trace
 .bench-*.tsconfig.json
