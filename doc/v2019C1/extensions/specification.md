@@ -33,12 +33,13 @@ type RoleLNodes = {
 }
 ```
 
-- **The functions of a role** — each `FunctionRef` names its function by `functionUuid`, else by its `function` path. A
+- **The functions of a role** — each `FunctionRef` names its function by `functionUuid`, else (no uuid, or one naming
+  nothing) by its `function` path, as `reference.resolveReferencePaths` resolves it. A
   function nested in another one the role names adds nothing twice; LNodes of nested subfunctions and equipment
   functions count.
 - **A role names no IED** — the implementers are read from the LNodes: the LN their `lnUuid` or their name path names
   (as `reference.resolveMappedLNodes`). An LNode left unassigned (`iedName` "None" or absent, no `lnUuid`) whose `DOS`,
-  `SDS` or `DAS` names an LN by `mappedLnUuid` counts as implemented by that LN's IED: several LNodes implemented by one
+  `SDS` or `DAS` names an LN by `mappedLnUuid` counts as implemented by that LN's IED (a real IED's, when its data names LNs of several IEDs): several LNodes implemented by one
   logical node keep their specification and document the mapping in their data.
 - **Several IEDs, several roles** — one role may be implemented by several IEDs, and one IED may serve several roles:
   the answer lists every implementer, it never refuses.

@@ -21,7 +21,7 @@ import type { AnyTrackedRecord } from '@dialecte/core'
 /**
  * Which IED implements each LNode given, with the IED's name and kind: the LN its `lnUuid` or its name path names
  * (`resolveMappedLNodes`' rule), else, for an LNode left unassigned (`iedName` "None" or absent, no `lnUuid`), the LN
- * the `mappedLnUuid` of one of its DOS / SDS / DAS names (several LNodes implemented by one LN keep their specification
+ * the `mappedLnUuid` of one of its DOS / SDS / DAS names (a real IED's first, when they name LNs of several IEDs) (several LNodes implemented by one LN keep their specification
  * and document the mapping in their data). The kinds by `classifyIeds`' rule. A fixed number of reads, whatever the
  * number of LNodes and IEDs; nothing is kept after the call.
  *
@@ -48,8 +48,10 @@ export async function readImplementations(
 	}
 
 	const viaData = await readImplementedThroughData(query, { lnodes: unassigned, index })
-	for (const [lnodeId, iedId] of viaData) {
-		const implementation = iedById.get(iedId)
+	for (const [lnodeId, iedIds] of viaData) {
+		const implementations = iedIds.flatMap((iedId) => iedById.get(iedId) ?? [])
+		const implementation =
+			implementations.find((entry) => entry.kind === 'implemented') ?? implementations[0]
 		if (implementation) byLNode.set(lnodeId, implementation)
 	}
 	return { byLNode, ieds }
@@ -63,27 +65,26 @@ function isUnassigned(params: { lnode: Scl.TrackedRecord<'LNode'> }): boolean {
 }
 
 /**
- * The IED id implementing each LNode given through its data: the IED of the first LN a `mappedLnUuid` of its DOS /
- * SDS / DAS names, read in one walk under every LNode.
+ * The ids of the IEDs whose LNs the `mappedLnUuid`s of each LNode's DOS / SDS / DAS name, by LNode id (an LNode none
+ * names is absent), read in one walk under every LNode.
  */
 async function readImplementedThroughData(
 	query: Core.Query<Config>,
 	params: { lnodes: readonly Scl.TrackedRecord<'LNode'>[]; index: LogicalNodeIndex },
-): Promise<Map<string, string>> {
+): Promise<Map<string, string[]>> {
 	const { lnodes, index } = params
-	const implemented = new Map<string, string>()
+	const implemented = new Map<string, string[]>()
 	if (lnodes.length === 0) return implemented
 	const dataOfEach = await query.findDescendantsOfEach(lnodes, { collect: [...MAPPED_DATA_TAGS] })
 	lnodes.forEach(function noteImplementer(lnode, position) {
 		const groups = dataOfEach[position]
 		const data = MAPPED_DATA_TAGS.flatMap((tagName): AnyTrackedRecord[] => groups[tagName] ?? [])
-		for (const record of data) {
+		const iedIds = data.flatMap(function iedNamed(record) {
 			const { mappedLnUuid } = readAttributes({ record, defaults: 'none' })
 			const mapped = mappedLnUuid ? index.byUuid.get(mappedLnUuid) : undefined
-			if (!mapped) continue
-			implemented.set(lnode.id, mapped.ied.id)
-			return
-		}
+			return mapped ? [mapped.ied.id] : []
+		})
+		if (iedIds.length > 0) implemented.set(lnode.id, iedIds)
 	})
 	return implemented
 }

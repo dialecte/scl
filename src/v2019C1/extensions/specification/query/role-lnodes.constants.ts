@@ -2,6 +2,8 @@ import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { CHILDREN } from '@/v2019C1/definition/constants.generated'
 
+import type { Scl } from '@/v2019C1/config'
+
 const [FUNCTION_REF_PAIR] = UUID_REFERENCE_PAIRS.FunctionRef
 
 /** The function-like tags a `FunctionRef` names, as the reference registry declares them. */
@@ -15,22 +17,25 @@ export const FUNCTION_REF_ATTRIBUTES = FUNCTION_REF_PAIR.attribute
  * (the walk in document order goes through them). Derived from the definition; transparent elements are left out, so
  * an LNode wrapped in vendor payload is not one of the role's.
  */
-export const LNODE_PATH_TAGS: readonly string[] = tagsLeadingTo({
+export const LNODE_PATH_TAGS = tagsLeadingTo({
 	from: FUNCTION_TAGS,
 	to: 'LNode',
 })
 
 /** The tags reachable from `from` (included) from which `to` is reachable, and `to` itself. */
-function tagsLeadingTo(params: { from: readonly string[]; to: string }): string[] {
+function tagsLeadingTo(params: {
+	from: readonly Scl.ElementsOf[]
+	to: Scl.ElementsOf
+}): Scl.ElementsOf[] {
 	const children: Readonly<Record<string, readonly string[] | undefined>> = CHILDREN
 	const transparent = new Set<string>(SCL_DIALECTE_CONFIG.transparentElements)
-	const reachable = new Set<string>()
+	const reachable = new Set<Scl.ElementsOf>()
 	const pending = [...params.from]
 	while (pending.length > 0) {
-		const tagName = pending.pop() as string
+		const tagName = pending.pop() as Scl.ElementsOf
 		if (reachable.has(tagName) || transparent.has(tagName)) continue
 		reachable.add(tagName)
-		pending.push(...(children[tagName] ?? []))
+		pending.push(...((children[tagName] ?? []) as Scl.ElementsOf[]))
 	}
 	const leading = new Set<string>([params.to])
 	let grew = true

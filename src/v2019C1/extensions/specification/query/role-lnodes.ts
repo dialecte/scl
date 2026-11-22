@@ -54,8 +54,12 @@ export async function roleLNodes(
 	const { byLNode, ieds } = await readImplementations(query, { lnodes })
 
 	const lnodeRefs = lnodes.map(toLNodeRef)
+	const lnodesByIed = Map.groupBy(
+		lnodeRefs.filter((lnode) => byLNode.has(lnode.id)),
+		(lnode) => byLNode.get(lnode.id)?.ied.id ?? '',
+	)
 	const implementers = ieds.flatMap(function implementerOf(entry): RoleImplementer[] {
-		const implemented = lnodeRefs.filter((lnode) => byLNode.get(lnode.id)?.ied.id === entry.ied.id)
+		const implemented = lnodesByIed.get(entry.ied.id) ?? []
 		return implemented.length > 0 ? [{ ...entry, lnodes: implemented }] : []
 	})
 	return {
@@ -69,8 +73,9 @@ export async function roleLNodes(
 }
 
 /**
- * The function each reference names: by `functionUuid` (one lookup per function tag for every uuid), else by its
- * `function` path (one batched resolve); `undefined` when it names nothing a reference may name.
+ * The function each reference names, as the reference engine resolves it: by `functionUuid` (one lookup per function
+ * tag for every uuid), else, when there is no uuid or it names nothing, by its `function` path (one batched resolve
+ * over those references); `undefined` when neither names a function.
  */
 async function resolveFunctionRefs(
 	query: Core.Query<Config>,
@@ -87,7 +92,7 @@ async function resolveFunctionRefs(
 	})
 	const uuids = [...new Set(named.flatMap((entry) => (entry.uuid ? [entry.uuid] : [])))]
 	const byUuid = await readFunctionsByUuid(query, { uuids })
-	const byPath = named.filter((entry) => !entry.uuid && entry.path)
+	const byPath = named.filter((entry) => entry.path && !(entry.uuid && byUuid.has(entry.uuid)))
 	const resolvedPaths = await resolveReferencePaths(query, {
 		records: byPath.map(
 			(entry) => entry.functionRef as unknown as Scl.TrackedRecord<Scl.ElementsOf>,
@@ -98,11 +103,8 @@ async function resolveFunctionRefs(
 		byPath.map((entry, position) => [entry.functionRef.id, resolvedPaths[position]?.record]),
 	)
 	return named.map(function resolvedOf(entry) {
-		const found = entry.uuid ? byUuid.get(entry.uuid) : byPathRef.get(entry.functionRef.id)
-		return {
-			functionRef: entry.functionRef,
-			function: found && isFunction(found) ? found : undefined,
-		}
+		const found = (entry.uuid && byUuid.get(entry.uuid)) || byPathRef.get(entry.functionRef.id)
+		return { functionRef: entry.functionRef, function: found }
 	})
 }
 
@@ -140,6 +142,7 @@ async function readLNodesInDocumentOrder(
 	if (functions.length === 0) return []
 	const ordered = await sortInDocumentOrder(query, { records: functions })
 	const below = await query.findDescendantsOfEach(ordered as Scl.TrackedRecord<FunctionTag>[], {
+		// the tags are derived from the definition at load time, so they cannot be typed as descendants of each tag
 		collect: [...LNODE_PATH_TAGS] as never,
 	})
 	const byId = new Map<string, AnyTrackedRecord>(ordered.map((record) => [record.id, record]))
@@ -204,10 +207,6 @@ function comparePositions(params: { first: readonly number[]; second: readonly n
 		if (first[level] !== second[level]) return first[level] - second[level]
 	}
 	return first.length - second.length
-}
-
-function isFunction(record: AnyTrackedRecord): boolean {
-	return (FUNCTION_TAGS as readonly string[]).includes(record.tagName)
 }
 
 function uniqueById(records: readonly AnyTrackedRecord[]): AnyTrackedRecord[] {
