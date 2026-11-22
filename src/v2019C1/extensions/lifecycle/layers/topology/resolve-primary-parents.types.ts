@@ -26,6 +26,25 @@ export type ResolvePrimaryParentsParams = {
 	gainedIn?: Scl.Ref<Scl.ElementsOf>
 }
 
+/** A primary of the scope as the template holds it: read once per update, for every resolution of it. */
+export type TemplatePrimary = {
+	ref: Scl.Ref<'Application'> | Scl.Ref<'Function'>
+	/** Its uuid in the template: what its instances in the project carry as their lineage. */
+	uuid: string | undefined
+	/** Its ancestors in the template, nearest first, up to the Substation. */
+	ancestors: readonly AnyTrackedRecord[]
+}
+
+/** Every primary of a pass resolved at once, from the template's reads of them. */
+export type ResolvePrimaryParentsOfEachParams = Omit<
+	ResolvePrimaryParentsParams,
+	'sourceQuery' | 'primaryRef'
+> & {
+	primaries: readonly TemplatePrimary[]
+	/** Whether the held instances' moves are read (the move pass): without, `moves` is empty. */
+	withMoves: boolean
+}
+
 /** One place a primary of a topology unit is placed or reconciled under. */
 export type PrimaryPlace = {
 	/**
@@ -68,6 +87,8 @@ export type PrimaryMove = {
 /** The held instances of a primary, where the template puts it, and where each instance of the unit stands. */
 export type FindPrimaryMovesParams = {
 	held: readonly AnyTrackedRecord[]
+	/** The ancestors of each held instance, in the order of `held`, nearest first. */
+	ancestries: readonly (readonly AnyTrackedRecord[])[]
 	/** The primary's ancestors in the template, nearest first. */
 	sourceAncestors: readonly AnyTrackedRecord[]
 	unitId: string

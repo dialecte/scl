@@ -45,7 +45,11 @@ export {
 	resolveTemplateFrame,
 	toPinnedMatches,
 } from './resolve-instance-levels'
-export { resolvePrimaryParents } from './resolve-primary-parents'
+export {
+	readTemplatePrimaries,
+	resolvePrimaryParents,
+	resolvePrimaryParentsOfEach,
+} from './resolve-primary-parents'
 export { findHeldLevel, resolveHeldLevels } from './resolve-held-levels'
 export type { TopologyReconcilables, UnitPlacement } from './scope-content.types'
 export type {

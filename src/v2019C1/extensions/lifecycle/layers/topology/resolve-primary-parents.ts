@@ -1,17 +1,19 @@
 import { toRef } from '@dialecte/core/helpers'
 
-import { findInstancesByTemplateUuid } from '@/v2019C1/extensions/lifecycle/instance'
-import { isTopologyLevel } from '@/v2019C1/helpers'
+import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	FindPrimaryMovesParams,
 	PrimaryMove,
 	PrimaryParents,
 	PrimaryPlace,
+	ResolvePrimaryParentsOfEachParams,
 	ResolvePrimaryParentsParams,
+	TemplatePrimary,
 } from './resolve-primary-parents.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * Where a primary of the scope is updated, and whether the template gained it (no instance of it
@@ -23,32 +25,106 @@ import type * as Core from '@dialecte/core'
  * instance holds for the level the primary sits on in the template, in the bay the instance lives
  * in, not under the element the update was started from. With no instance of the unit to tell, it
  * falls back on that element.
+ *
+ * One primary: an update resolving several reads them once with {@link readTemplatePrimaries} and resolves them
+ * together with {@link resolvePrimaryParentsOfEach}.
  */
 export async function resolvePrimaryParents(
 	query: Core.Query<Config>,
 	params: ResolvePrimaryParentsParams,
 ): Promise<PrimaryParents> {
-	const { sourceQuery, primaryRef, anchor, unitId, instanceLevelsList, matchKey } = params
-
-	const sourceUuid = await sourceQuery.any.getAttribute(primaryRef, { name: 'uuid' })
-	const everyHeld = await findInstancesByTemplateUuid(query, {
-		tagName: primaryRef.tagName,
-		sourceUuid,
-		matchKey,
+	const { sourceQuery, primaryRef, ...rest } = params
+	const primaries = await readTemplatePrimaries(sourceQuery, { refs: [primaryRef] })
+	const [parents] = await resolvePrimaryParentsOfEach(query, {
+		...rest,
+		primaries,
+		withMoves: true,
 	})
+	return parents ?? { places: [{ parent: rest.anchor }], gained: true, moves: [] }
+}
+
+/** The primaries as the template holds them, read in one batch: their records (for their uuid) and their ancestors. */
+export async function readTemplatePrimaries(
+	query: Core.Query<Config>,
+	params: { refs: readonly TemplatePrimary['ref'][] },
+): Promise<TemplatePrimary[]> {
+	const { refs } = params
+	if (refs.length === 0) return []
+	const records = await query.getRecords([...refs])
+	const ancestries = await query.findAncestorsOfEach(refs, { stopAtTagName: 'Substation' })
+	return refs.map(function templatePrimaryOf(ref, position): TemplatePrimary {
+		const record = records[position]
+		return {
+			ref,
+			uuid: record ? readAttribute({ record, name: 'uuid', defaults: 'none' }) : undefined,
+			ancestors: ancestries[position] ?? [],
+		}
+	})
+}
+
+/**
+ * {@link resolvePrimaryParents} for every primary of a pass at once, in the order given: the project's records of each
+ * primary tag read once and matched by lineage, and, with `withMoves`, the ancestors of every held instance read in
+ * one call. What the project holds is read at the call: a pass after a write calls it again.
+ */
+export async function resolvePrimaryParentsOfEach(
+	query: Core.Query<Config>,
+	params: ResolvePrimaryParentsOfEachParams,
+): Promise<PrimaryParents[]> {
+	const { primaries, matchKey, withMoves } = params
+	// the two primary tags, each read once when a primary of it is resolved
+	const heldApplications = primaries.some((primary) => primary.ref.tagName === 'Application')
+		? await query.any.getRecordsByTagName('Application')
+		: []
+	const heldFunctions = primaries.some((primary) => primary.ref.tagName === 'Function')
+		? await query.any.getRecordsByTagName('Function')
+		: []
+	const byTag = new Map<Scl.ElementsOf, readonly AnyTrackedRecord[]>([
+		['Application', heldApplications],
+		['Function', heldFunctions],
+	])
 	const targetIds =
 		params.primaryTargets && new Set(params.primaryTargets.map((target) => target.id))
-	const held = targetIds ? everyHeld.filter((instance) => targetIds.has(instance.id)) : everyHeld
-	const sourceAncestors = await sourceQuery.findAncestors(primaryRef, {
-		stopAtTagName: 'Substation',
+	// lineage only: a primary carries a uuid, a same-name element of no lineage is never its instance
+	const heldOfEach = primaries.map(function heldOf(primary): AnyTrackedRecord[] {
+		if (!primary.uuid) return []
+		return (byTag.get(primary.ref.tagName) ?? []).filter(
+			(record) =>
+				readAttribute({ record, name: matchKey, defaults: 'none' }) === primary.uuid &&
+				(!targetIds || targetIds.has(record.id)),
+		)
 	})
+	// the held records as they are: no read to resolve them
+	const everyHeld = withMoves ? heldOfEach.flat() : []
+	const ancestries =
+		everyHeld.length > 0
+			? await query.findAncestorsOfEach(everyHeld as readonly Scl.Ref<Scl.ElementsOf>[], {
+					stopAtTagName: 'Substation',
+				})
+			: []
+	let offset = 0
+	return primaries.map(function parentsOf(primary, position): PrimaryParents {
+		const held = heldOfEach[position] ?? []
+		const heldAncestries = withMoves ? ancestries.slice(offset, offset + held.length) : []
+		if (withMoves) offset += held.length
+		return composePrimaryParents({ params, primary, held, ancestries: heldAncestries })
+	})
+}
+
+/** Where one primary goes, from what was read of it: pure. */
+function composePrimaryParents(input: {
+	params: ResolvePrimaryParentsOfEachParams
+	primary: TemplatePrimary
+	held: readonly AnyTrackedRecord[]
+	ancestries: readonly (readonly AnyTrackedRecord[])[]
+}): PrimaryParents {
+	const { params, primary, held, ancestries } = input
+	const { anchor, unitId, instanceLevelsList, withMoves } = params
+	const sourceAncestors = primary.ancestors
 	if (held.length > 0) {
-		const moves = await findPrimaryMoves(query, {
-			held,
-			sourceAncestors,
-			unitId,
-			instanceLevelsList,
-		})
+		const moves = withMoves
+			? findPrimaryMoves({ held, ancestries, sourceAncestors, unitId, instanceLevelsList })
+			: []
 		return { places: [{ parent: anchor }], gained: false, moves }
 	}
 
@@ -72,18 +148,10 @@ export async function resolvePrimaryParents(
  * instance holds for the template level the primary sits on, when it is not the level the instance is held on (a level
  * the revision removes included). Not moved: an instance held in no instance of the unit (the project placed it outside
  * the unit), and the instances of an instance of the unit holding the primary twice (nothing tells which one the
- * revision moved). The
- * ancestors of every held instance are read in one call.
+ * revision moved). Pure: the ancestors of the held instances are read by the caller, in one call.
  */
-async function findPrimaryMoves(
-	query: Core.Query<Config>,
-	params: FindPrimaryMovesParams,
-): Promise<PrimaryMove[]> {
-	const { held, sourceAncestors, unitId, instanceLevelsList } = params
-	// the held records as they are: no read to resolve them
-	const ancestries = await query.findAncestorsOfEach(held as readonly Scl.Ref<Scl.ElementsOf>[], {
-		stopAtTagName: 'Substation',
-	})
+function findPrimaryMoves(params: FindPrimaryMovesParams): PrimaryMove[] {
+	const { held, ancestries, sourceAncestors, unitId, instanceLevelsList } = params
 	const candidates = held.flatMap(function candidateOf(instance, position): PrimaryMove[] {
 		const ancestry = ancestries[position] ?? []
 		const heldLevel = ancestry.find((ancestor) => isTopologyLevel(ancestor.tagName))
