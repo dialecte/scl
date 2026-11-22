@@ -136,7 +136,12 @@ export async function updateProcessSection(
 	})
 	for (const [position, applicationRef] of applicationRefs.entries()) {
 		const placement = applicationPlacements[position]
-		if (!placement) continue
+		// one application in, one placement out
+		if (!placement) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `Application "${applicationRef.id}" was resolved to nothing`,
+			})
+		}
 		for (const { parent, placedFor } of placement.places) {
 			// its level was left out: so is it (the report made it depend on that level)
 			if (!parent) continue
@@ -175,7 +180,12 @@ export async function updateProcessSection(
 	})
 	for (const [position, functionRef] of standaloneFunctions.entries()) {
 		const placement = functionPlacements[position]
-		if (!placement) continue
+		// one function in, one placement out
+		if (!placement) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `Function "${functionRef.id}" was resolved to nothing`,
+			})
+		}
 		for (const { parent, placedFor } of placement.places) {
 			if (!parent) continue
 			const updated = await updateFsd(tx, {

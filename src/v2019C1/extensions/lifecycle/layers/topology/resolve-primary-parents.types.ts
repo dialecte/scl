@@ -35,6 +35,9 @@ export type TemplatePrimary = {
 	ancestors: readonly AnyTrackedRecord[]
 }
 
+/** The primaries of the scope to read from the template, in the order the update resolves them. */
+export type ReadTemplatePrimariesParams = { refs: readonly TemplatePrimary['ref'][] }
+
 /** Every primary of a pass resolved at once, from the template's reads of them. */
 export type ResolvePrimaryParentsOfEachParams = Omit<
 	ResolvePrimaryParentsParams,
@@ -43,6 +46,16 @@ export type ResolvePrimaryParentsOfEachParams = Omit<
 	primaries: readonly TemplatePrimary[]
 	/** Whether the held instances' moves are read (the move pass): without, `moves` is empty. */
 	withMoves: boolean
+}
+
+/** What is read of one primary in a pass, to tell where it goes. */
+export type ComposePrimaryParentsParams = {
+	params: ResolvePrimaryParentsOfEachParams
+	primary: TemplatePrimary
+	/** Its instances in the project, by lineage (and among the targets, when the operation is scoped). */
+	held: readonly AnyTrackedRecord[]
+	/** The ancestors of each held instance, in the order of `held`: empty without moves. */
+	ancestries: readonly (readonly AnyTrackedRecord[])[]
 }
 
 /** One place a primary of a topology unit is placed or reconciled under. */

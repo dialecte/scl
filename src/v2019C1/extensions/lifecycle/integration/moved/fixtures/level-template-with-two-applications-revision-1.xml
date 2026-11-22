@@ -1,0 +1,52 @@
+<!-- The voltage level template with two applications, revision 1: BayControl (d…011) and the applications Display (d…021) and Alarm (d…031) in Q01, Q02 empty -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+	<Header fileType="SSD" id="level_template" revision="1" toolID="TOOL" uuid="d0000000-0000-4000-8000-000000000001" version="0"/>
+	<Substation name="TEMPLATE">
+		<VoltageLevel name="E1" uuid="d0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="d0000000-0000-4000-8000-000000000003">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:Application name="Display" type="DCS" uuid="d0000000-0000-4000-8000-000000000021">
+						<eIEC61850-6-100:FunctionRole name="Operator">
+							<eIEC61850-6-100:FunctionRoleContent/>
+						</eIEC61850-6-100:FunctionRole>
+					</eIEC61850-6-100:Application>
+					<eIEC61850-6-100:Application name="Alarm" type="DCS" uuid="d0000000-0000-4000-8000-000000000031">
+						<eIEC61850-6-100:FunctionRole name="Operator">
+							<eIEC61850-6-100:FunctionRoleContent/>
+						</eIEC61850-6-100:FunctionRole>
+					</eIEC61850-6-100:Application>
+				</Private>
+				<Function name="BayControl" uuid="d0000000-0000-4000-8000-000000000011">
+					<LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_T" prefix="" uuid="d0000000-0000-4000-8000-000000000012">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="None" sLnClass="CSWI" sLnInst="1"/>
+						</Private>
+					</LNode>
+				</Function>
+			</Bay>
+			<Bay name="Q02" uuid="d0000000-0000-4000-8000-000000000004">
+				<ConductingEquipment name="QA1" type="CBR" uuid="d0000000-0000-4000-8000-000000000005"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<DataTypeTemplates>
+		<LNodeType id="CSWI_T" lnClass="CSWI">
+			<DO name="Pos" type="DPC_T"/>
+		</LNodeType>
+		<LNodeType id="CILO_T" lnClass="CILO">
+			<DO name="EnaOpn" type="SPS_T"/>
+		</LNodeType>
+		<LNodeType id="PTRC_T" lnClass="PTRC">
+			<DO name="Tr" type="ACT_T"/>
+		</LNodeType>
+		<DOType cdc="DPC" id="DPC_T">
+			<DA bType="Dbpos" fc="ST" name="stVal"/>
+		</DOType>
+		<DOType cdc="SPS" id="SPS_T">
+			<DA bType="BOOLEAN" fc="ST" name="stVal"/>
+		</DOType>
+		<DOType cdc="ACT" id="ACT_T">
+			<DA bType="BOOLEAN" fc="ST" name="general"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

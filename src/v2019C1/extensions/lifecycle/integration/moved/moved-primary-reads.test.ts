@@ -3,6 +3,8 @@ import feedersRevision1 from './fixtures/feeders-revision-1.xml?raw'
 import feedersMovingCtrl from './fixtures/feeders-revision-2-moving-ctrl-to-feeder2.xml?raw'
 import levelRevision1 from './fixtures/level-template-revision-1.xml?raw'
 import levelMovingBayControl from './fixtures/level-template-revision-2-moving-baycontrol-to-q02.xml?raw'
+import twoApplicationsRevision1 from './fixtures/level-template-with-two-applications-revision-1.xml?raw'
+import twoApplicationsMovingBayControl from './fixtures/level-template-with-two-applications-revision-2-moving-baycontrol-to-q02.xml?raw'
 
 import { describe, expect } from 'vitest'
 
@@ -44,13 +46,16 @@ const projectXml = /* xml */ `
 type PrimaryReads = {
 	/** Template: a primary's ancestors read one by one. */
 	templateAncestorsOneByOne: number
-	/** Template: a primary's uuid read one by one (the cascade reads its own: the resolution reads none). */
-	templateUuidsOneByOne: number
+	/** Template: the records of the primaries read in one call (their uuids), with the refs their ancestors are read by. */
+	templateRecordsBatched: number
 	/** Template: the ancestors of every primary read in one call. */
 	templateAncestorsBatched: number
 	/** Project: the ancestors of held primaries read in one call. */
 	heldAncestries: number
-	/** Project: every record of a primary tag read. */
+	/**
+	 * Project: every record of a primary tag read, by every path of the apply (the cascade reads the tags too): the
+	 * resolution adds one per primary tag per frame instance and one per later loop, whatever the primaries.
+	 */
 	tagReads: number
 }
 
@@ -74,24 +79,38 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 				nextXml: feedersMovingCtrl,
 				expected: {
 					templateAncestorsOneByOne: 0,
-					templateUuidsOneByOne: 28,
+					templateRecordsBatched: 1,
 					templateAncestorsBatched: 1,
 					heldAncestries: 2,
 					tagReads: 11,
 				},
 			},
-		// one application and one function (BayControl), BayControl moved to Q02
-		'an application and a function → the template read once, each frame instance one read per tag and one ancestry read, each loop one read of its tag':
+		// one application (Display) and one function (BayControl), BayControl moved to Q02
+		'an application and a function → the template read once, each frame instance one ancestry read, the loops none':
 			{
 				sourceXml: levelRevision1,
 				targetXml: projectXml,
 				nextXml: levelMovingBayControl,
 				expected: {
 					templateAncestorsOneByOne: 0,
-					templateUuidsOneByOne: 28,
+					templateRecordsBatched: 1,
 					templateAncestorsBatched: 1,
 					heldAncestries: 2,
 					tagReads: 15,
+				},
+			},
+		// two applications (Display, Alarm) and one function: the Application tag read once per pass, not per application
+		'two applications and a function → the Application tag read once per pass, not once per application':
+			{
+				sourceXml: twoApplicationsRevision1,
+				targetXml: projectXml,
+				nextXml: twoApplicationsMovingBayControl,
+				expected: {
+					templateAncestorsOneByOne: 0,
+					templateRecordsBatched: 1,
+					templateAncestorsBatched: 1,
+					heldAncestries: 2,
+					tagReads: 20,
 				},
 			},
 	}
@@ -135,15 +154,20 @@ function primaryReadsOf(params: {
 	project: readonly CountedQueryCall[]
 }): PrimaryReads {
 	const { template, project } = params
+	// the refs the template primaries are read by: their ancestors and their records, in one call each
+	const batched = template.find(
+		(call) => call.method === 'findAncestorsOfEach' && holdsPrimaries(call.args[0]),
+	)
+	const batchedPrimaryIds = batched ? idsOf(batched.args[0]) : undefined
 	return {
 		templateAncestorsOneByOne: template.filter(
 			(call) => call.method === 'findAncestors' && isPrimary(call.args[0]),
 		).length,
-		templateUuidsOneByOne: template.filter(
+		templateRecordsBatched: template.filter(
 			(call) =>
-				call.method === 'getAttribute' &&
-				isPrimary(call.args[0]) &&
-				(call.args[1] as { name?: string } | undefined)?.name === 'uuid',
+				call.method === 'getRecords' &&
+				batchedPrimaryIds !== undefined &&
+				idsOf(call.args[0]) === batchedPrimaryIds,
 		).length,
 		templateAncestorsBatched: template.filter(
 			(call) => call.method === 'findAncestorsOfEach' && holdsPrimaries(call.args[0]),
@@ -160,6 +184,13 @@ function primaryReadsOf(params: {
 
 function isPrimary(element: unknown): boolean {
 	return PRIMARY_TAGS.has((element as { tagName?: string } | undefined)?.tagName ?? '')
+}
+
+/** The ids of a list of elements, in order, as one key. */
+function idsOf(elements: unknown): string {
+	return Array.isArray(elements)
+		? elements.map((element) => (element as { id?: string }).id ?? '').join(',')
+		: ''
 }
 
 function holdsPrimaries(elements: unknown): boolean {

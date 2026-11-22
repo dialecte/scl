@@ -1,12 +1,15 @@
+import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
 
 import type {
+	ComposePrimaryParentsParams,
 	FindPrimaryMovesParams,
 	PrimaryMove,
 	PrimaryParents,
 	PrimaryPlace,
+	ReadTemplatePrimariesParams,
 	ResolvePrimaryParentsOfEachParams,
 	ResolvePrimaryParentsParams,
 	TemplatePrimary,
@@ -40,13 +43,19 @@ export async function resolvePrimaryParents(
 		primaries,
 		withMoves: true,
 	})
-	return parents ?? { places: [{ parent: rest.anchor }], gained: true, moves: [] }
+	// one primary in, one answer out
+	if (!parents) {
+		return throwDialecteError('ASSERTION_FAILED', {
+			detail: `${primaryRef.tagName} "${primaryRef.id}" was resolved to nothing`,
+		})
+	}
+	return parents
 }
 
 /** The primaries as the template holds them, read in one batch: their records (for their uuid) and their ancestors. */
 export async function readTemplatePrimaries(
 	query: Core.Query<Config>,
-	params: { refs: readonly TemplatePrimary['ref'][] },
+	params: ReadTemplatePrimariesParams,
 ): Promise<TemplatePrimary[]> {
 	const { refs } = params
 	if (refs.length === 0) return []
@@ -112,12 +121,7 @@ export async function resolvePrimaryParentsOfEach(
 }
 
 /** Where one primary goes, from what was read of it: pure. */
-function composePrimaryParents(input: {
-	params: ResolvePrimaryParentsOfEachParams
-	primary: TemplatePrimary
-	held: readonly AnyTrackedRecord[]
-	ancestries: readonly (readonly AnyTrackedRecord[])[]
-}): PrimaryParents {
+function composePrimaryParents(input: ComposePrimaryParentsParams): PrimaryParents {
 	const { params, primary, held, ancestries } = input
 	const { anchor, unitId, instanceLevelsList, withMoves } = params
 	const sourceAncestors = primary.ancestors
