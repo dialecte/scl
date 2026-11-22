@@ -90,10 +90,16 @@ const { specifiedAs, lnodes, otherImplementers } = await doc.query.specification
 ## Exported types
 
 ```ts
+import { TO_IMPLEMENT_REASON } from '@dialecte/scl/v2019C1'
+
 import type {
+	FunctionTag,
+	OtherImplementer,
 	RoleImplementer,
 	RoleLNodes,
 	RoleLNodesParams,
-	FunctionTag,
+	ToImplement,
+	ToImplementParams,
+	ToImplementReason,
 } from '@dialecte/scl/v2019C1'
 ```

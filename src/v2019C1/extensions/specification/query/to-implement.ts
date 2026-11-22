@@ -1,5 +1,5 @@
 import { readImplementations } from './read-implementations'
-import { TO_IMPLEMENT_REASON } from './to-implement.constants'
+import { FUNCTION_TEMPLATE_TAG, TO_IMPLEMENT_REASON } from './to-implement.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -37,7 +37,7 @@ export async function toImplement(
 	const { ied } = params
 	const section = await readProcessSection(query)
 	const lnodes = [...section.lnodes.values()]
-		.filter((node) => !node.ancestry.some((ancestor) => ancestor.tagName === 'FunctionTemplate'))
+		.filter((node) => !node.ancestry.some((ancestor) => ancestor.tagName === FUNCTION_TEMPLATE_TAG))
 		.map((node) => node.record as Scl.TrackedRecord<'LNode'>)
 	const { byLNode, ieds } = await readImplementations(query, { lnodes })
 	const asked = ieds.find((entry) => entry.ied.id === ied.id)
@@ -47,7 +47,8 @@ export async function toImplement(
 			detail: `the document holds no <IED> "${ied.id}"`,
 		})
 	}
-	if (asked.kind !== 'implemented') return emptyBecause(TO_IMPLEMENT_REASON.notImplementedIed)
+	if (asked.kind !== 'implemented')
+		return emptyBecause({ reason: TO_IMPLEMENT_REASON.notImplementedIed })
 
 	const namings = await readSpecNamings(query, { lnodes })
 	const specifiedOn = lnodes.map(function sIedNameOf(_lnode, position) {
@@ -62,7 +63,8 @@ export async function toImplement(
 			return name && byLNode.get(lnode.id)?.ied.id === ied.id ? [name] : []
 		}),
 	)
-	if (specifiedAs.size === 0) return emptyBecause(TO_IMPLEMENT_REASON.noSpecificationName)
+	if (specifiedAs.size === 0)
+		return emptyBecause({ reason: TO_IMPLEMENT_REASON.noSpecificationName })
 
 	const candidates = lnodes.filter((_lnode, position) =>
 		specifiedAs.has(specifiedOn[position] ?? ''),
@@ -84,6 +86,6 @@ export async function toImplement(
 	}
 }
 
-function emptyBecause(reason: ToImplementReason): ToImplement {
-	return { specifiedAs: [], lnodes: [], otherImplementers: [], reason }
+function emptyBecause(params: { reason: ToImplementReason }): ToImplement {
+	return { specifiedAs: [], lnodes: [], otherImplementers: [], reason: params.reason }
 }
