@@ -57,8 +57,8 @@ describe('importTypes - the target lookups and reads', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		// main: one lookup per type cloned (9); now one per type tag (3); the clones repointed from their clone mappings.
-		// The local store answers a lookup with a tag read: 17 (main 23)
-		'nine types into an empty target → 12 lookups, 9 kept as they are (main 18 lookups)': {
+		// The local store answers a lookup with a tag read: 14 (main 23)
+		'nine types into an empty target → 9 lookups, 9 kept as they are (main 18 lookups)': {
 			// the three closures, nothing in the target
 			sourceXml: threeClosuresXml,
 			targetXml: EMPTY_TARGET_XML,
@@ -81,7 +81,7 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.get': 18,
 						getMany: 21,
 						'records.getMany': 25,
-						getByAttributes: 12,
+						getByAttributes: 9,
 						'records.getByAttributes': 15,
 						getByTagName: 5,
 						'records.getByTagName': 1,
@@ -93,14 +93,14 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.getMany': 25,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 17,
+						getByTagName: 14,
 						'records.getByTagName': 28,
 					},
 				},
 			},
 		},
 		// the target's OLD renamed NEW, so the source OLD finds its id free: the lookups see the rename, as on main
-		'NEW reused and named so, then the source OLD → OLD kept, not forked (9 lookups, main 10: signature references by value list)':
+		'NEW reused and named so, then the source OLD → OLD kept, not forked (5 lookups, main 10: signature references by value list)':
 			{
 				// the target's OLD holds the source NEW's content; the source's OLD holds other content
 				sourceXml: newThenOldXml,
@@ -119,8 +119,8 @@ describe('importTypes - the target lookups and reads', () => {
 							'records.get': 5,
 							getMany: 10,
 							'records.getMany': 14,
-							getByAttributes: 9,
-							'records.getByAttributes': 7,
+							getByAttributes: 5,
+							'records.getByAttributes': 5,
 							getByTagName: 5,
 							'records.getByTagName': 2,
 						},
@@ -131,8 +131,8 @@ describe('importTypes - the target lookups and reads', () => {
 							'records.getMany': 14,
 							getByAttributes: 0,
 							'records.getByAttributes': 0,
-							getByTagName: 14,
-							'records.getByTagName': 10,
+							getByTagName: 10,
+							'records.getByTagName': 7,
 						},
 					},
 				},
@@ -151,7 +151,7 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.get': 2,
 						getMany: 1,
 						'records.getMany': 1,
-						getByAttributes: 2,
+						getByAttributes: 1,
 						'records.getByAttributes': 1,
 						getByTagName: 5,
 						'records.getByTagName': 1,
@@ -163,7 +163,7 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.getMany': 1,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 7,
+						getByTagName: 6,
 						'records.getByTagName': 2,
 					},
 				},
@@ -195,10 +195,10 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.get': 5,
 						getMany: 11,
 						'records.getMany': 15,
-						getByAttributes: 11,
-						'records.getByAttributes': 11,
-						getByTagName: 8,
-						'records.getByTagName': 5,
+						getByAttributes: 5,
+						'records.getByAttributes': 5,
+						getByTagName: 7,
+						'records.getByTagName': 3,
 					},
 					local: {
 						get: 5,
@@ -207,8 +207,8 @@ describe('importTypes - the target lookups and reads', () => {
 						'records.getMany': 15,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 19,
-						'records.getByTagName': 20,
+						getByTagName: 10,
+						'records.getByTagName': 8,
 					},
 				},
 			},
@@ -247,8 +247,8 @@ describe('importTypes - the followers read together', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		// main: 21 get, 22 lookups, 25 getMany; now the followers read in one getMany and the ids in one lookup per tag;
-		// the same 69 records moved. The local store: 32 tag reads moving 46 records (main 38, 52)
-		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 16 lookups, 26 getMany (main 21, 22, 25)':
+		// the same 69 records moved. The local store: 21 tag reads moving 36 records (main 38, 52)
+		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 9 lookups, 26 getMany (main 21, 22, 25)':
 			{
 				// the target's LNodes follow the source's; its D1 and E1 hold other content, its OLD type only they name
 				sourceXml: threeClosuresXml,
@@ -272,10 +272,10 @@ describe('importTypes - the followers read together', () => {
 							'records.get': 18,
 							getMany: 26,
 							'records.getMany': 32,
-							getByAttributes: 16,
-							'records.getByAttributes': 19,
-							getByTagName: 16,
-							'records.getByTagName': 12,
+							getByAttributes: 9,
+							'records.getByAttributes': 15,
+							getByTagName: 12,
+							'records.getByTagName': 9,
 						},
 						local: {
 							get: 18,
@@ -284,8 +284,8 @@ describe('importTypes - the followers read together', () => {
 							'records.getMany': 32,
 							getByAttributes: 0,
 							'records.getByAttributes': 0,
-							getByTagName: 32,
-							'records.getByTagName': 46,
+							getByTagName: 21,
+							'records.getByTagName': 36,
 						},
 					},
 				},
@@ -304,10 +304,10 @@ describe('importTypes - the followers read together', () => {
 						'records.get': 2,
 						getMany: 3,
 						'records.getMany': 3,
-						getByAttributes: 2,
+						getByAttributes: 1,
 						'records.getByAttributes': 1,
-						getByTagName: 9,
-						'records.getByTagName': 4,
+						getByTagName: 8,
+						'records.getByTagName': 3,
 					},
 					local: {
 						get: 2,
@@ -316,8 +316,8 @@ describe('importTypes - the followers read together', () => {
 						'records.getMany': 3,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 11,
-						'records.getByTagName': 6,
+						getByTagName: 9,
+						'records.getByTagName': 4,
 					},
 				},
 			},
