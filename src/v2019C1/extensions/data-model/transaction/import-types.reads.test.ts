@@ -137,8 +137,8 @@ describe('importTypes - the target lookups and reads', () => {
 					},
 				},
 			},
-		// n = 1: one lookup by id, as on main
-		'one type into an empty target → the reads of main, call for call': {
+		// n = 1: one lookup by id
+		'one type into an empty target → one lookup by id, the type kept': {
 			// one LNodeType, nothing in the target
 			sourceXml: oneTypeXml,
 			targetXml: EMPTY_TARGET_XML,
@@ -169,10 +169,10 @@ describe('importTypes - the target lookups and reads', () => {
 				},
 			},
 		},
-		// the first A renamed B; the second A still holds the id, so the source A is forked (then reclaims A), as on main.
-		// The lookup before the loop finds A twice and leaves it to a lookup alone: one lookup and 2 records more than
-		// main (12, 11 against 11, 9; 11, 11 since the signatures look their references up by value list), for a target no valid document is
-		'B reused and named so, the target holding A twice → A forked as on main': {
+		// the first A renamed B; the second A still holds the id, so the source A is forked (then reclaims A). The lookup
+		// before the loop finds A twice and leaves it to a lookup alone: 5 lookups moving 5 records in memory (main 11, 9),
+		// for a target no valid document is
+		'B reused and named so, the target holding A twice → A forked, then reclaimed': {
 			// the target's two DOTypes of id A hold the source B's content; the source's A holds other content
 			allowInvalidFixture: {
 				reason:
@@ -247,7 +247,7 @@ describe('importTypes - the followers read together', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		// main: 21 get, 22 lookups, 25 getMany; now the followers read in one getMany and the ids in one lookup per tag;
-		// the same 69 records moved. The local store: 21 tag reads moving 36 records (main 38, 52)
+		// 74 records moved in memory. The local store: 21 tag reads moving 36 records (main 38, 52)
 		'three followers of nine types, D1 and E1 taken by other content → 2 forked and reclaimed, 18 get, 9 lookups, 26 getMany (main 21, 22, 25)':
 			{
 				// the target's LNodes follow the source's; its D1 and E1 hold other content, its OLD type only they name
@@ -290,8 +290,8 @@ describe('importTypes - the followers read together', () => {
 					},
 				},
 			},
-		// n = 1: the follower read in one getMany instead of one get: 5 calls moving 5 records, as on main
-		'one follower of one type → the calls and records of main': {
+		// n = 1: the follower read in one getMany instead of one get
+		'one follower of one type → read in one getMany, the type kept': {
 			// the target's LNode follows the source's, its old type only it names
 			sourceXml: oneTypeXml,
 			targetXml: oneFollowerXml,

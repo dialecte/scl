@@ -191,7 +191,7 @@ describe('orphanUuidRefs - the lookups', () => {
 			},
 		// the second FunctionRef naming nothing is asked again after the first one's delete; the ControlRef left after a
 		// clear reads its LNode again from the transaction (its cache: no store read; the 4 getMany are the delete hooks',
-		// as on main). The local store: 40 tag reads moving 13 records (main 43, 17)
+		// as on main). The local store: 35 tag reads moving 10 records (main 43, 17)
 		'3 ControlRefs and 4 FunctionRefs, uuids shared, 3 pairs naming nothing → 11 lookups moving 2 records (main 14, 4)':
 			{
 				// three ControlRefs (two pairs on the first, one naming nothing), four FunctionRefs, two of each uuid
@@ -215,8 +215,8 @@ describe('orphanUuidRefs - the lookups', () => {
 						'records.getMany': 4,
 						getByAttributes: 0,
 						'records.getByAttributes': 0,
-						getByTagName: 40,
-						'records.getByTagName': 13,
+						getByTagName: 35,
+						'records.getByTagName': 10,
 					},
 				},
 			},
