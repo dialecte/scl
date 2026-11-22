@@ -1,5 +1,0 @@
-### Added
-
-- `query.lifecycle.scenarioOf.ied({ sourceQuery, ref, targetInstance? })` tells which scenario an IED operation runs with, before anything is reported: placed (no `targetInstance`), an ISD instance's IED is a `fork` and any other a new IED (`instantiate`); updated, on an open ISD another version of its file or another ISD instance is a `fork`, any other source the `template` the IED was placed from. It answers `{ scenario, sameFile }`, or `{ refused: { code, reason, meta, detail } }` carrying the error the report, apply and update verbs throw for that scenario (an unread source extension: the report's) (`NOT_A_VERSION_OF_FILE`, `OPTION_NOT_AVAILABLE`, `TARGET_INSTANCE_REQUIRED`), same key and meta: the query and the verbs read one check.
-- `query.lifecycle.scenarioOf.fsd` / `.asd` / `.ssd({ sourceQuery })` tell whether the source is a version of the open document's file (`{ sameFile }`), with no scenario: for these verbs the consumer states it.
-- Public types `IedScenario`, `IedScenarioOfParams`, `LayerScenario`, `LayerScenarioOfParams`, `LifecycleRefusal`, `LifecycleRefusalCode`, `LifecycleRefusalReason`, `LifecycleRefused`.
