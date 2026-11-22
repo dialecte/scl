@@ -84,6 +84,7 @@ export default defineConfig({
 						{ text: 'Reference', link: '/v2019C1/extensions/reference' },
 						{ text: 'Identity', link: '/v2019C1/extensions/identity' },
 						{ text: 'Signature', link: '/v2019C1/extensions/signature' },
+						{ text: 'Specification', link: '/v2019C1/extensions/specification' },
 						{
 							text: 'Lifecycle',
 							items: [

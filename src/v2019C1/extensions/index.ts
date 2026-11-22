@@ -7,6 +7,7 @@ import { info } from './info'
 import { lifecycle } from './lifecycle'
 import { reference } from './reference'
 import { signature } from './signature'
+import { specification } from './specification'
 
 export const SCL_EXTENSION_MODULES = {
 	cleanUp,
@@ -17,5 +18,6 @@ export const SCL_EXTENSION_MODULES = {
 	lifecycle,
 	reference,
 	signature,
+	specification,
 	info,
 }
