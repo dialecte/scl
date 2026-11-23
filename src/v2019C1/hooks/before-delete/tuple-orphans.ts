@@ -45,15 +45,31 @@ export function tupleOrphanOf(params: {
 		return Boolean(uuid) && subtree.byUuid.has(uuid)
 	})
 	if (named.length === 0) return undefined
+	const cause = causeOf({ refRecord, named, subtree })
 	if (DELETED_TUPLE_REFERRER_TAGS.has(refRecord.tagName))
-		return subscriberOrphanOf({ refRecord, named, subtree })
+		return { ...subscriberOrphanOf({ refRecord, named, subtree }), ...cause }
 	const scope = named.every(namesControlBlock) ? 'control-block' : 'data'
 	const result = inputSourceEffect({ record: refRecord, scope })
 	if (result.effect === 'deleted')
-		return { record: refRecord, effect: 'deleted', attributes: new Set() }
+		return { record: refRecord, effect: 'deleted', attributes: new Set(), ...cause }
 	return result.attributes.length > 0
-		? { record: refRecord, effect: 'cleared', attributes: new Set(result.attributes) }
+		? { record: refRecord, effect: 'cleared', attributes: new Set(result.attributes), ...cause }
 		: undefined
+}
+
+/** The first record of the deleted subtrees a referrer names by one of its uuids: why it goes. */
+function causeOf(params: {
+	refRecord: Scl.TrackedRecord<Scl.ElementsOf>
+	named: readonly ReferenceUuid[]
+	subtree: DeletedSubtree
+}): { cause?: string } {
+	const { refRecord, named, subtree } = params
+	for (const reference of named) {
+		const uuid = readAttribute({ record: refRecord, name: reference.uuid, defaults: 'none' })
+		const target = uuid ? subtree.byUuid.get(uuid) : undefined
+		if (target) return { cause: target.id }
+	}
+	return {}
 }
 
 /**

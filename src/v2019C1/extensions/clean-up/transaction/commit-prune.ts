@@ -1,4 +1,4 @@
-import { DATA_TYPE_TAGS, IDENTITY_ATTRIBUTES } from './commit-prune.constants'
+import { DATA_TYPE_TAGS } from './commit-prune.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
@@ -7,13 +7,9 @@ import { buildPathFromAncestry } from '@/v2019C1/extensions/reference/query/buil
 import { compareDocumentOrder } from '@/v2019C1/extensions/reference/query/find/compare-document-order'
 import { readAttribute } from '@/v2019C1/helpers'
 import { planCommit } from '@/v2019C1/hooks/before-commit/before-commit'
+import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 
-import type {
-	CommitPrune,
-	CommitPrunedContainer,
-	CommitPrunedIdentity,
-	CommitPrunedType,
-} from './commit-prune.types'
+import type { CommitPrune, CommitPrunedContainer, CommitPrunedType } from './commit-prune.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { PrunedContainer } from '@/v2019C1/hooks/before-commit/prune-emptied-containers.types'
 import type * as Core from '@dialecte/core'
@@ -23,7 +19,10 @@ import type { AnyRawRecord } from '@dialecte/core'
  * What the commit of this transaction will prune, before it does, without writing: the commit's own steps run over the
  * operations staged so far. Each container comes in document order with its identity, its parent, the element a
  * reference path names at or above it (`owner`), why it goes, every record it holds (another tool's data included) and
- * what goes with it outside (a data set's control blocks, `cleared` and `revised`); then the types the commit removes as unused, with their records.
+ * what goes with it outside (a data set's control blocks, the references naming it, `cleared` and `revised`); then the
+ * types the commit removes as unused with their records, what the commit's moves remove with why each goes, and the
+ * LNodes it releases with the binding each had and is left with. Together they name every record the commit removes
+ * beyond the transaction's own edits, each once.
  *
  * A preview holds only for the staged state it read (`stagedCount` operations): call it last, after every write, then
  * commit or discard. A step the commit gains later is seen here without a change. A transaction the commit refuses
@@ -40,6 +39,8 @@ export async function commitPrune(tx: Core.Transaction<Config>): Promise<CommitP
 		stagedCount: operations.length,
 		containers,
 		types: describeTypes({ operations: planned.stagedBy.get('unusedTypes') ?? [] }),
+		moves: planned.moveRemovals,
+		released: planned.released,
 	}
 }
 
@@ -65,10 +66,10 @@ async function describeContainers(
 		const path = buildPathFromAncestry({ record, ancestry })
 		const owner = path?.segments.at(-1)?.ref
 		const parentRecord = ancestry.at(-1)
-		const parentName = parentRecord ? identityOf(parentRecord).name : undefined
+		const parentName = parentRecord ? identityOf({ record: parentRecord }).name : undefined
 		const entry: CommitPrunedContainer = {
 			element: container.element,
-			identity: identityOf(record),
+			identity: identityOf({ record }),
 			parent: { ...container.parent, ...(parentName ? { name: parentName } : {}) },
 			...(path && owner?.id
 				? { owner: { tagName: owner.tagName as Scl.ElementsOf, id: owner.id, path: path.path } }
@@ -82,16 +83,6 @@ async function describeContainers(
 	return described
 		.sort((first, second) => compareDocumentOrder({ first: first.line, second: second.line }))
 		.map(({ entry }) => entry)
-}
-
-/** The name, uuid and type of a record, where its tag has them. */
-function identityOf(record: AnyRawRecord): CommitPrunedIdentity {
-	const identity: CommitPrunedIdentity = {}
-	for (const name of IDENTITY_ATTRIBUTES) {
-		const value = readAttribute({ record, name, defaults: 'none', fullObject: true })?.value
-		if (value) identity[name] = value
-	}
-	return identity
 }
 
 /** Records by id. */

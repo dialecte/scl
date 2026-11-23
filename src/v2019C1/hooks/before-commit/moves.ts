@@ -24,15 +24,24 @@ import { readAttribute } from '@/v2019C1/helpers'
 import {
 	buildCascadeOperations,
 	collectDeleteCascade,
+	heldByCascadeRoot,
 	orphanEffectOf,
+	outsideCascadeRemovals,
 } from '@/v2019C1/hooks/before-delete'
+import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 import { followAncestry } from '@/v2019C1/hooks/shared/follow-ancestry'
 import { changedAttributeNames, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { MovePlaces, MovedRef } from './moved-roots.types'
-import type { MoveWrite, UnboundReferences } from './moves.types'
+import type {
+	FollowedMoves,
+	MoveRemoval,
+	MoveRemovalReason,
+	MoveWrite,
+	UnboundReferences,
+} from './moves.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { OrphanedRef } from '@/v2019C1/hooks/before-delete'
+import type { DeleteCascade, OrphanedRef } from '@/v2019C1/hooks/before-delete'
 import type { FollowedRoot } from '@/v2019C1/hooks/shared/follow-ancestry.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -97,7 +106,7 @@ export async function followMovesAtCommit(
 		roots: readonly MovedRef[]
 		pending: ReadonlyMap<string, AnyRawRecord>
 	},
-): Promise<Scl.Operation[]> {
+): Promise<FollowedMoves> {
 	const { places, roots, pending } = params
 	const wrapped = await wrapMovedRoots(query, { places, roots, pending })
 	const unbound = referencesLeftOutOfScope(places)
@@ -129,15 +138,19 @@ export async function followMovesAtCommit(
 	const merged = new Map<string, AnyRawRecord>(pending)
 	for (const record of wrapped.created) merged.set(record.id, record)
 	for (const [id, write] of written) merged.set(id, write.newRecord)
-	const cascade = await unbindAndRemove(query, {
-		unbound: { cleared: unbound.cleared, deleted: [...unbound.deleted, ...removed] },
+	const { operations: cascade, removals } = await unbindAndRemove(query, {
+		outOfReach: unbound,
+		terminals: removed,
 		pending: merged,
 	})
-	return [
-		...createdOperations({ records: wrapped.created }),
-		...cascade,
-		...updatedOperations({ written, cascade }),
-	]
+	return {
+		operations: [
+			...createdOperations({ records: wrapped.created }),
+			...cascade,
+			...updatedOperations({ written, cascade }),
+		],
+		removals,
+	}
 }
 
 /** The writes of the updates among some operations. */
@@ -245,25 +258,41 @@ function outOfScopeAttributes(params: {
 	return attributes
 }
 
-/** The delete cascade of the references and terminals removed, with the references cleared, over what is written. */
+/**
+ * The delete cascade of the references a move put out of reach and the terminals it left across containers, with the
+ * references cleared, over what is written; and one removal entry per element removed, with why it goes: the roots
+ * themselves, then what the cascade takes outside them, each under the reason of the root it goes with
+ * ({@link outsideCascadeRemovals}). A record a removed element holds is not listed on its own.
+ */
 async function unbindAndRemove(
 	query: Core.Query<Config>,
 	params: {
-		unbound: UnboundReferences
+		/** The references whose target their new place cannot reach: cleared of those names, or deleted. */
+		outOfReach: UnboundReferences
+		/** The terminals left naming a node their container may not name: deleted with what they hold. */
+		terminals: readonly AnyRawRecord[]
 		pending: ReadonlyMap<string, AnyRawRecord>
 	},
-): Promise<Scl.Operation[]> {
-	const { unbound } = params
-	if (unbound.cleared.length === 0 && unbound.deleted.length === 0) return []
+): Promise<FollowedMoves> {
+	const { outOfReach, terminals } = params
+	const deleted = [...outOfReach.deleted, ...terminals]
+	if (outOfReach.cleared.length === 0 && deleted.length === 0)
+		return { operations: [], removals: [] }
 	// the typed edge: the delete cascade takes the dialecte's records
-	const roots = unbound.deleted as Scl.TrackedRecord<Scl.ElementsOf>[]
+	const roots = deleted as Scl.TrackedRecord<Scl.ElementsOf>[]
 	const pending = params.pending as ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 	const cascade =
 		roots.length > 0
 			? await collectDeleteCascade(query, { roots, emptiesContainers: true })
-			: { gone: new Set<string>(), deleted: [], within: [], cleared: [] }
+			: {
+					gone: new Set<string>(),
+					causeById: new Map<string, string>(),
+					deleted: [],
+					within: [],
+					cleared: [],
+				}
 	const cleared: OrphanedRef[] = [...cascade.cleared]
-	for (const { record, attributes } of unbound.cleared) {
+	for (const { record, attributes } of outOfReach.cleared) {
 		if (cascade.gone.has(record.id)) continue
 		cleared.push({
 			record: record as Scl.TrackedRecord<Scl.ElementsOf>,
@@ -271,11 +300,83 @@ async function unbindAndRemove(
 			attributes,
 		})
 	}
-	return buildCascadeOperations(query, {
+	const operations = await buildCascadeOperations(query, {
 		cascade: { ...cascade, cleared },
 		deletedRoots: roots,
 		pending,
 	})
+	return {
+		operations,
+		removals: moveRemovalsOf({ outOfReach, terminals, cascade, roots }),
+	}
+}
+
+/**
+ * One entry per element the moves remove: each reference put out of reach and each terminal left across containers,
+ * then what the cascade of those removals takes outside them, under the reason of the root it goes with. A reference
+ * the cascade removed already is not listed twice.
+ */
+function moveRemovalsOf(params: {
+	outOfReach: UnboundReferences
+	terminals: readonly AnyRawRecord[]
+	cascade: DeleteCascade
+	roots: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
+}): MoveRemoval[] {
+	const { outOfReach, terminals, cascade, roots } = params
+	const reasonByRoot = new Map<string, MoveRemovalReason>()
+	for (const record of outOfReach.deleted) reasonByRoot.set(record.id, 'out-of-reach')
+	for (const record of terminals) reasonByRoot.set(record.id, 'terminal-across-containers')
+	const heldByRoot = heldByCascadeRoot({ roots, cascade })
+	const removals: MoveRemoval[] = []
+	function add(params: {
+		record: AnyRawRecord
+		effect: MoveRemoval['effect']
+		reason: MoveRemovalReason
+		holds?: readonly Scl.RawRecord<Scl.ElementsOf>[]
+	}): void {
+		const { record, effect, reason, holds = [] } = params
+		removals.push({
+			element: { tagName: record.tagName as Scl.ElementsOf, id: record.id },
+			identity: identityOf({ record }),
+			effect,
+			reason,
+			holds,
+		})
+	}
+	for (const record of outOfReach.deleted)
+		add({
+			record,
+			effect: 'deleted',
+			reason: 'out-of-reach',
+			holds: heldByRoot.get(record.id) ?? [],
+		})
+	for (const record of terminals)
+		add({
+			record,
+			effect: 'deleted',
+			reason: 'terminal-across-containers',
+			holds: heldByRoot.get(record.id) ?? [],
+		})
+	for (const { record } of outOfReach.cleared) {
+		if (cascade.gone.has(record.id)) continue
+		add({ record, effect: 'cleared', reason: 'out-of-reach' })
+	}
+	// the cascade's cleared and deleted are disjoint (`collectDeleteCascade` drops a cleared record that goes), so the
+	// roots listed above are all a cascade record can repeat
+	const listed = new Set(removals.map((removal) => removal.element.id))
+	for (const { record, effect, rootId, holds } of outsideCascadeRemovals({ roots, cascade })) {
+		if (listed.has(record.id)) continue
+		const reason = rootId ? reasonByRoot.get(rootId) : undefined
+		if (!reason) {
+			// every record the cascade takes names one of the removals above: a gap would leave it unreported
+			throwDialecteError('ASSERTION_FAILED', {
+				detail: `moveRemovalsOf: the moves ${effect} ${record.tagName} "${record.id}" with no record of the removal it followed`,
+			})
+			continue
+		}
+		add({ record, effect, reason, holds })
+	}
+	return removals
 }
 
 /**

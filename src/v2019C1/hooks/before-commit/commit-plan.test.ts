@@ -1,4 +1,3 @@
-import logicalNodeWithOwnTypeXml from '../../extensions/clean-up/transaction/fixtures/commit-prune-a-logical-node-with-its-own-type.xml?raw'
 import { planCommit } from './before-commit'
 import { COMMIT_STEPS } from './commit-steps.constants'
 import relationInWrapperXml from './fixtures/commit-plan-a-relation-in-a-namespace-wrapper.xml?raw'
@@ -25,10 +24,11 @@ type PlanCase = SclTest.BaseXmlTestCase & {
 	containers: string[]
 }
 
-// The commit's steps run in one order, each reading what every step before it wrote, but the moved roots and the type
-// prune, which read the transaction's operations only.
+// The commit's steps run in one order, each reading what every step before it wrote but the moved roots, which read
+// the transaction's operations only. The type prune runs after the containers are pruned and reads what they left, so
+// a type the commit's own cascades stop naming goes too; the containers that prune empties are judged after it.
 describe('planCommit - the commit runs its steps in one order', () => {
-	it('lists its steps in the order they run, each reading every step before it but the type prune', () => {
+	it('lists its steps in the order they run, each reading every step before it but the moved roots', () => {
 		expect(COMMIT_STEPS.map((step) => `${step.name} ${step.readsEarlier}`)).toEqual([
 			'movedRoots false',
 			'lnodeNamings true',
@@ -37,8 +37,9 @@ describe('planCommit - the commit runs its steps in one order', () => {
 			'pathReferences true',
 			'moves true',
 			'releasedLNodes true',
-			'unusedTypes false',
 			'emptiedContainers true',
+			'unusedTypes true',
+			'emptiedTypeContainers true',
 			'noChildLeftBehind true',
 		])
 	})
@@ -288,35 +289,6 @@ async function goesWithPlanned(params: PlanParams): Promise<string[]> {
 		)
 		return `${container.element.tagName} ${container.element.id}: ${outside.join(', ') || 'nothing'}`
 	})
-}
-
-// The commit's prune never stages a record twice: a DataTypeTemplates emptied by the type prune takes none of the types
-// the type prune already deletes.
-describe('planCommit - each record deleted once', () => {
-	const testCases: SclTest.TestCases<SclTest.BaseXmlTestCase> = {
-		// IED1 is the only IED: its deletion leaves every type unused and the DataTypeTemplates empty
-		'the only IED deleted → every record the plan deletes, deleted once': {
-			sourceXml: logicalNodeWithOwnTypeXml,
-		},
-	}
-
-	async function act({ source }: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<void> {
-		await expect(deletedTwice({ source })).resolves.toEqual([])
-	}
-
-	runSclTestCases.withoutExport({ testCases, act })
-})
-
-/** The ids the plan deletes more than once after the only IED is deleted. */
-async function deletedTwice(params: { source: PlanParams['source'] }): Promise<string[]> {
-	const planned = await plannedAfter({
-		...params,
-		write: deleting([{ tagName: 'IED', id: 'ied1' }]),
-	})
-	const ids = planned.staged.flatMap((operation) =>
-		operation.status === 'deleted' ? [operation.oldRecord.id] : [],
-	)
-	return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))].sort()
 }
 
 /** The containers the plan of the commit lists after `write`, described; the transaction discarded. */

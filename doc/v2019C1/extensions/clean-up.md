@@ -81,7 +81,7 @@ if (preview && preview.containers.length > 0 && !(await confirmed(preview))) pre
 else await prepared.commit()
 ```
 
-`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types }`:
+`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types, moves, released }`:
 
 - `containers`: each container the commit removes, in document order:
   - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
@@ -91,11 +91,27 @@ else await prepared.commit()
     removed below it left it empty);
   - `holds`: every record it takes with it, its subtree in document order, another tool's data included (its `Private`
     and that data's own elements); each record names its `parent`; a container listed below it keeps its own records;
-  - `goesWith`: what its removal does outside it. A data set's control blocks lose their `datSet` (`cleared`) and the
+  - `goesWith`: what its removal does outside it, one entry per element, each with that element's `identity` (its
+    `name`, `uuid` and `type` where its tag has them) and the `effect` the commit has on it. Every reference the
+    prune removes beyond the container is listed under the container that caused it to go — a `FunctionCategoryRef`
+    naming a pruned `FunctionCategory`, a `VariableRef` naming a pruned `Variable` (`deleted`), a reference that
+    keeps its own content with the names of what went cleared from it (`cleared`); a record such a reference held
+    goes with it and is not listed on its own. A data set's control blocks lose their `datSet` (`cleared`) and the
     commit raises their revision (`revised`; a block the transaction already raised is not raised again).
 - `types`: each data type the commit removes as unused, with the records it holds. A `DataTypeTemplates` they leave
   empty is listed under `containers`, holding none of them.
+- `moves`: each element the commit's moves remove, with its `identity`, the `effect` (`deleted`, or `cleared` of the
+  names it can no longer reach) and the `reason`: `out-of-reach` (a reference whose target its new place cannot
+  name) or `terminal-across-containers` (a terminal left naming a node its container may not name). What goes with
+  either of them — a container left holding nothing, a reference naming that container — carries the reason of the
+  removal it followed; a record a removed element holds goes with it and is not listed on its own.
+- `released`: each `LNode` the commit released from a logical node the transaction deleted, with its `identity` and
+  the binding it had (`from`) and is left with (`to`): `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` and
+  `lnUuid`, each where the LNode names it.
 - `stagedCount`: the number of staged operations the preview read.
+
+Together they name every record the commit removes beyond the transaction's own edits, each once: a record a
+container or a type holds is listed under it, not on its own, and nothing the commit keeps is listed.
 
 A preview holds only for the staged state it read: a write staged after it is not in it. Call it last, after every
 write. A container the transaction deletes itself is not listed: it is a delete, not a prune. A transaction the commit

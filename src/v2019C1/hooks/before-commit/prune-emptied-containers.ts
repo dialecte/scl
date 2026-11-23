@@ -10,9 +10,13 @@ import {
 	buildCascadeOperations,
 	collectDeleteCascade,
 	collectEmptiedAbove,
+	heldByCascadeRoot,
+	outsideCascadeRemovals,
+	recordsOfCascade,
 } from '@/v2019C1/hooks/before-delete'
 import { DATA_SET_TAG } from '@/v2019C1/hooks/before-delete/orphaned-refs.constants'
 import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.constants'
+import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 
 import type {
 	PruneCandidate,
@@ -23,6 +27,7 @@ import type {
 } from './prune-emptied-containers.types'
 import type { RemovedChildren } from './removed-children.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { DeleteCascade } from '@/v2019C1/hooks/before-delete/orphaned-refs.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -83,7 +88,18 @@ export async function pruneEmptiedContainers(params: {
 		pending,
 		raised: raisedBlocksOf({ operations }),
 	})
-	return { operations: staged, containers: describeContainers({ roots, reasons, cascade, staged }) }
+	return {
+		operations: staged,
+		// the ancestry of what goes outside is walked over everything the cascade read, what earlier steps deleted
+		// already included: only what this prune reports is taken out of `cascade`
+		containers: describeContainers({
+			roots,
+			reasons,
+			cascade,
+			staged,
+			read: recordsOfCascade({ roots, cascade: read }),
+		}),
+	}
 }
 
 /**
@@ -93,26 +109,32 @@ export async function pruneEmptiedContainers(params: {
 function describeContainers(params: {
 	roots: readonly Scl.TrackedRecord<Scl.ElementsOf>[]
 	reasons: ReadonlyMap<string, PruneReason>
-	cascade: {
-		within: readonly Scl.RawRecord<Scl.ElementsOf>[]
-		deleted: readonly Scl.RawRecord<Scl.ElementsOf>[]
-	}
+	cascade: DeleteCascade
 	/** The operations the cascade staged: what reaches outside each container. */
 	staged: readonly Scl.Operation[]
+	/** Every record the cascade read, to walk a cause's ancestry over. */
+	read: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 }): PrunedContainer[] {
-	const { roots, reasons, cascade, staged } = params
-	const rootIds = new Set(roots.map((root) => root.id))
-	const read = new Map<string, Scl.RawRecord<Scl.ElementsOf>>(
-		[...roots, ...cascade.deleted, ...cascade.within].map((record) => [record.id, record]),
-	)
-	const withinByRoot = new Map<string, Scl.RawRecord<Scl.ElementsOf>[]>()
-	for (const record of [...cascade.deleted, ...cascade.within]) {
-		if (rootIds.has(record.id)) continue
-		const rootId = nearestRoot({ record, rootIds, read })
+	const { roots, reasons, cascade, staged, read } = params
+	const withinByRoot = heldByCascadeRoot({ roots, cascade, read })
+	// what the prune removes beyond the containers themselves goes on the one whose removal caused it
+	const outsideByRoot = new Map<string, PrunedEffect[]>()
+	for (const { record, effect, rootId, holds } of outsideCascadeRemovals({
+		roots,
+		cascade,
+		read,
+	})) {
+		// a record this prune deletes always names one of its subtrees; one it only clears may name what an earlier
+		// step deleted already, and goes with that step's removals, not with a container here
 		if (!rootId) continue
-		const held = withinByRoot.get(rootId)
-		if (held) held.push(record)
-		else withinByRoot.set(rootId, [record])
+		const outside = outsideByRoot.get(rootId) ?? []
+		outside.push({
+			element: { tagName: record.tagName, id: record.id },
+			identity: identityOf({ record }),
+			effect,
+			holds,
+		})
+		outsideByRoot.set(rootId, outside)
 	}
 	return roots.map(function describeRoot(root): PrunedContainer {
 		const { parent } = root
@@ -127,7 +149,9 @@ function describeContainers(params: {
 			parent: { tagName: parent.tagName, id: parent.id },
 			reason,
 			within: withinByRoot.get(root.id) ?? [],
-			goesWith: controlBlockEffects({ root, staged }),
+			goesWith: withoutRepeats({
+				effects: [...(outsideByRoot.get(root.id) ?? []), ...controlBlockEffects({ root, staged })],
+			}),
 		}
 	})
 }
@@ -152,29 +176,27 @@ function controlBlockEffects(params: {
 			continue
 		if (readAttribute({ record: oldRecord, name: 'datSet', defaults: 'none' }) !== name) continue
 		const element = { tagName: oldRecord.tagName, id: oldRecord.id }
+		const identity = identityOf({ record: oldRecord })
+		const holds: readonly Scl.RawRecord<Scl.ElementsOf>[] = []
 		if (!readAttribute({ record: newRecord, name: 'datSet', defaults: 'none', fullObject: true })) {
-			effects.push({ element, effect: 'cleared' })
+			effects.push({ element, identity, effect: 'cleared', holds })
 		}
 		const before = readAttribute({ record: oldRecord, name: 'confRev', defaults: 'none' })
 		const after = readAttribute({ record: newRecord, name: 'confRev', defaults: 'none' })
-		if (before !== after) effects.push({ element, effect: 'revised' })
+		if (before !== after) effects.push({ element, identity, effect: 'revised', holds })
 	}
 	return effects
 }
 
-/** The id of the nearest root above a record, its parents walked over the records read; `undefined` when none. */
-function nearestRoot(params: {
-	record: Scl.RawRecord<Scl.ElementsOf>
-	rootIds: ReadonlySet<string>
-	read: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
-}): string | undefined {
-	const { rootIds, read } = params
-	let parentRef = params.record.parent
-	while (parentRef) {
-		if (rootIds.has(parentRef.id)) return parentRef.id
-		parentRef = read.get(parentRef.id)?.parent ?? null
-	}
-	return undefined
+/** Each effect once, the first of a repeated element and effect kept. */
+function withoutRepeats(params: { effects: readonly PrunedEffect[] }): PrunedEffect[] {
+	const seen = new Set<string>()
+	return params.effects.filter(function unseen(effect) {
+		const key = `${effect.element.id}|${effect.effect}`
+		if (seen.has(key)) return false
+		seen.add(key)
+		return true
+	})
 }
 
 /** The control blocks whose configuration revision the transaction changed: a data set change raises it once. */
