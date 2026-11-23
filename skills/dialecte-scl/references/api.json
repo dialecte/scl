@@ -1367,6 +1367,19 @@
 			"intents": ["build the data model of a specification IED from logical nodes"],
 			"declaredAt": "src/v2019C1/extensions/specification/transaction/build-ied.ts:43",
 			"example": "const { plan, created } = await tx.specification.buildIed({\n\tied,\n\tlnodes,\n\topenValues: { lnType: firstOf(sameClassInTargetIed, firstOfClass) },\n})"
+		},
+		{
+			"path": "tx.specification.stageIsd",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: StageIsdParams) => Promise<StageIsdResult>",
+			"summary": "Stage, in an empty document, the ISD of a specification built from logical nodes: the process frames of the LNodes given, with the project's uuids and the LNodes' types; every LNode staged back to its specification (its binding released) before any IED exists there; the shell IED copied without the files it came from, named `iedName` (`iedUuid` stamped when given); then the IED built from the LNodes given (`buildIed`, name clashes and type candidates judged on the project, each logical device name fitting both `iedName` and `SPECIFICATION`). No Communication is written; the project and the shell are only read. Then `extract.ied` from the staging document, with `provenanceQuery` the project, writes the ISD.",
+			"intents": [
+				"stage an ISD built from logical nodes for a supplier",
+				"export an ISD of an allocation role",
+				"build an IED from logical nodes in a staging document"
+			],
+			"declaredAt": "src/v2019C1/extensions/specification/transaction/stage-isd.ts:52"
 		}
 	]
 }

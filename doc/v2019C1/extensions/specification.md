@@ -220,6 +220,81 @@ type IedValuePlan = {
 // IedBuildPlan gains: values: IedValuePlan[]; valuesLeftOut: { das: Scl.Ref<'DAS'>; reason: 'path-not-in-type' | 'functional-constraint' }[]
 ```
 
+### `stageIsd`
+
+Stages the ISD of a specification built from logical nodes: in an empty document (the transaction), the logical nodes
+given with their frame, reset to their specification, and the IED built from them on a copy of a shell IED. Then
+[`extract.ied`](./extract#ied) from that document, with the project as `provenanceQuery`, writes the ISD.
+
+```ts
+tx.specification.stageIsd(params: StageIsdParams): Promise<StageIsdResult>
+
+type StageIsdParams = {
+  sourceQuery: Core.Query<Config>      // the project; only read
+  lnodes: readonly Scl.Ref<'LNode'>[]  // the project's LNodes the staged IED implements
+  shell: { query: Core.Query<Config>; ied: Scl.Ref<'IED'> } // a specification IED copied as the staged IED
+  iedName: string                      // the staged IED's name: the real IED's for an instance
+  iedUuid?: string                     // stamped on the staged IED: the real IED's, so an instance ISD pairs with it
+  build?: Pick<BuildIedParams, 'prefixFromLeafSubFunction' | 'openValues' | 'excludeFunctionalConstraints'>
+}
+type StageIsdResult = {
+  ied: Scl.Ref<'IED'>        // the built IED in the staging document
+  build: IedBuildResult      // what the build planned and wrote
+  released: Scl.Ref<'LNode'>[] // the staged LNodes a project binding was released from
+}
+```
+
+Steps, in the staging document:
+
+1. Refuse before anything is written (`SPECIFICATION_STAGE_REFUSED`, `meta: { reason, stage: 'stageIsd', ref? }`): the
+   document already holds an `IED`, a `Substation`, a `Line` or a `Process` (`target-not-empty`); no LNode is given
+   (`no-lnodes`); the schema refuses `iedName` as an IED name (`ied-name`); the shell IED is a real device's
+   (`shell-not-specification`, the IED classification of `lifecycle.classifyIeds`); an LNode is not in a substation,
+   line or process of the project (`lnode-outside-process`, one in a function template for instance). A shell IED the
+   shell document does not hold refuses with `ELEMENT_NOT_FOUND`.
+2. Start the file (an SCD header; the ISD records the project, not this document).
+3. Write the process frames of the LNodes as `extract.ied` frames an IED's: the levels, equipment and functions above
+   them and what describes them, with the project's names and uuids and the LNodes' types. What the export changes
+   on what it writes (the cut links, the specified naming, the removed data mappings) is not applied here: a link
+   to an LNode left out stays as written, and the export cuts it.
+4. Release every staged LNode to its specification, before any IED is in the document: its naming back from its
+   `LNodeSpecNaming`, `lnUuid` removed, `iedName` `None` (see `dataModel` `releaseLNodeBindings`).
+5. Copy the shell IED with its data types, without its source files and with no lineage, named `iedName`, with
+   `iedUuid` when given.
+6. Build the IED from the LNodes given ([`buildIed`](#buildied)), with the project as `contextQuery` (name clashes
+   judged on the project, its types offered to the `lnType` rule) and each logical device name fitting both `iedName`
+   and `SPECIFICATION`, the name a template export gives the IED. The build's refusals pass through
+   (`SPECIFICATION_BUILD_REFUSED`). Once built, each LNode is specified on the built IED.
+
+No `Communication` is written. The built logical devices and logical nodes get uuids of their own: the project holds
+none to keep.
+
+```ts
+const staged = await scratch.transaction((tx) =>
+	tx.specification.stageIsd({
+		sourceQuery: project.query,
+		lnodes,
+		shell: { query: shellDocument.query, ied: shellIed },
+		iedName: 'P1',
+		iedUuid: realIedUuid,
+		build: { openValues: { lnType: firstOfClass } },
+	}),
+)
+await isd.transaction((tx) =>
+	tx.lifecycle.extract.ied({
+		sourceQuery: scratch.query,
+		provenanceQuery: project.query,
+		iedRef: staged.ied,
+		fileType: 'ISD',
+		kind: 'instance',
+		inputs: 'later-binding',
+		issuer: 'Issuer',
+		tool: 'Tool name',
+		who: 'user@example.com',
+	}),
+)
+```
+
 ## Open values
 
 A value the standard leaves open is never invented by the engine: the caller passes a rule, a pure synchronous
@@ -256,6 +331,7 @@ import {
 	firstOfClass,
 	OPEN_VALUE_RULES,
 	sameClassInTargetIed,
+	STAGE_REFUSAL_REASONS,
 	TO_IMPLEMENT_REASON,
 } from '@dialecte/scl/v2019C1'
 
@@ -272,6 +348,9 @@ import type {
 	LnTypeContext,
 	OpenValueRule,
 	OpenValues,
+	StageIsdParams,
+	StageIsdResult,
+	StageRefusalReason,
 	ValueLeftOut,
 	ValueLeftOutReason,
 	ValuePath,

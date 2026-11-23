@@ -1,0 +1,57 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl">
+	<Header id="Project" uuid="10000000-0000-4000-8000-000000000001" version="2" revision="A"/>
+	<Substation name="S1" uuid="d0000000-0000-4000-8000-000000000001" dev:db-id="s1">
+		<VoltageLevel name="E1" uuid="d0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="d0000000-0000-4000-8000-000000000003">
+				<Function name="PROT" uuid="a0000000-0000-4000-8000-000000000001" dev:db-id="prot">
+					<LNode iedName="R" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_T" lnUuid="b0000000-0000-4000-8000-000000000001" uuid="c0000000-0000-4000-8000-000000000001" dev:db-id="ptoc1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sPrefix="" sLnClass="PTOC" sLnInst="1"/>
+							<eIEC61850-6-100:DOS name="StrVal"><eIEC61850-6-100:SDS name="setMag"><eIEC61850-6-100:DAS name="f"><eIEC61850-6-100:Val>9</eIEC61850-6-100:Val></eIEC61850-6-100:DAS></eIEC61850-6-100:SDS></eIEC61850-6-100:DOS>
+						</Private>
+					</LNode>
+					<LNode iedName="None" lnClass="PTRC" lnInst="1" lnType="PTRC_T" uuid="c0000000-0000-4000-8000-000000000002" dev:db-id="ptrc1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sPrefix="" sLnClass="PTRC" sLnInst="1"/>
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef input="Blk" service="GOOSE" pDO="Pos" pDA="stVal" sourceLNodeUuid="c0000000-0000-4000-8000-000000000004" sourceDoName="Pos" sourceDaName="stVal" dev:db-id="ptrc1-blk"/>
+							</eIEC61850-6-100:LNodeInputs>
+						</Private>
+					</LNode>
+					<LNode iedName="None" lnClass="LLN0" lnInst="" lnType="LLN0_T" uuid="c0000000-0000-4000-8000-000000000003" dev:db-id="lln0">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeSpecNaming sIedName="S1" sPrefix="" sLnClass="LLN0" sLnInst=""/>
+						</Private>
+					</LNode>
+				</Function>
+				<Function name="CTRL" uuid="a0000000-0000-4000-8000-000000000002" dev:db-id="ctrl">
+					<LNode iedName="R" ldInst="LD1" prefix="" lnClass="CSWI" lnInst="1" lnType="CSWI_T" lnUuid="b0000000-0000-4000-8000-000000000002" uuid="c0000000-0000-4000-8000-000000000004" dev:db-id="cswi1"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="R" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="ied-r">
+		<IEDSourceFiles><SclFileReference fileType="ICD" fileName="r.icd"/></IEDSourceFiles>
+		<AccessPoint name="AP1"><Server><Authentication/>
+			<LDevice inst="LD1">
+				<LN0 lnClass="LLN0" inst="" lnType="V_LLN0"/>
+				<LN lnClass="PTOC" inst="1" prefix="" lnType="V_PTOC" uuid="b0000000-0000-4000-8000-000000000001"/>
+				<LN lnClass="CSWI" inst="1" prefix="" lnType="V_CSWI" uuid="b0000000-0000-4000-8000-000000000002"/>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="PTOC_T" lnClass="PTOC"><DO name="Beh" type="ENS_T"/><DO name="StrVal" type="ASG_T"/><DO name="Op" type="ACT_T"/></LNodeType>
+		<LNodeType id="PTRC_T" lnClass="PTRC"><DO name="Beh" type="ENS_T"/><DO name="Tr" type="ACT_T"/></LNodeType>
+		<LNodeType id="LLN0_T" lnClass="LLN0"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="CSWI_T" lnClass="CSWI"><DO name="Beh" type="ENS_T"/><DO name="Pos" type="DPC_T"/></LNodeType>
+		<LNodeType id="V_PTOC" lnClass="PTOC"><DO name="Beh" type="ENS_T"/><DO name="Op" type="ACT_T"/><DO name="Str" type="ACT_T"/></LNodeType>
+		<LNodeType id="V_LLN0" lnClass="LLN0"><DO name="Beh" type="ENS_T"/><DO name="Mod" type="ENS_T"/></LNodeType>
+		<LNodeType id="V_CSWI" lnClass="CSWI"><DO name="Beh" type="ENS_T"/><DO name="Pos" type="DPC_T"/><DO name="Loc" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+		<DOType id="ACT_T" cdc="ACT"><DA name="general" fc="ST" bType="BOOLEAN"/></DOType>
+		<DOType id="DPC_T" cdc="DPC"><DA name="stVal" fc="ST" bType="Dbpos"/></DOType>
+		<DOType id="ASG_T" cdc="ASG"><DA name="setMag" fc="SP" bType="Struct" type="AV_T"/></DOType>
+		<DAType id="AV_T"><BDA name="f" bType="FLOAT32"/></DAType>
+	</DataTypeTemplates>
+</SCL>
