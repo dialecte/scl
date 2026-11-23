@@ -6,33 +6,8 @@ export type SettableValue = { allowed?: ReadonlySet<string> }
 /** Per template `Val` record id, what the project may do with it: only the values it may set are listed. */
 export type SettableValues = ReadonlyMap<string, SettableValue>
 
-/** What a value of an IED is held to, from the data attribute it is given for (a `DAI` overriding its type's). */
-export type ValueDefinition = {
-	valKind?: string
-	valImport?: string
-	bType?: string
-	type?: string
-}
-
 /** Where a walk down an IED's data stands in the types: a logical node, a data object or a data attribute type. */
 export type TypeContext = { kind: 'logical-node' | 'object' | 'attribute'; id: string }
-
-/** What the template's types tell of the values of an IED, read once: see `readValueOwnership`. */
-export type ValueTypes = {
-	/** The members of each type, by type id. */
-	membersById: ReadonlyMap<string, ReadonlyMap<string, TypeMember>>
-	/** The values each enumeration allows, by its id. */
-	enumerationsById: ReadonlyMap<string, ReadonlySet<string>>
-}
-
-/** A member of a type: whether it continues the data object, the type it names, and what its values are held to. */
-export type TypeMember = {
-	continuesObject: boolean
-	type?: string
-	/** A data attribute's functional constraint. */
-	fc?: string
-	definition: ValueDefinition
-}
 
 /** What the project keeps of a template's values, for one report or apply. */
 export type ValueOwnership = {

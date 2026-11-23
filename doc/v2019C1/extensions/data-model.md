@@ -105,26 +105,46 @@ await targetDoc.transaction(async (tx) => {
 Unlocks an `LNode` bound to an (S-)IED, so its data model can be changed and it can be allocated again. An `LNode` is locked while an IED is assigned to it (`iedName` set and not `None`, see `isLNodeLocked`).
 
 ```ts
-unlockLNode(params: { lnode: Scl.Ref<'LNode'> }): Promise<void>
+unlockLNode(params: UnlockLNodeParams): Promise<UnlockLNodeResult>
 ```
 
 In one transaction, in this order:
 
-1. The data its `DOS` / `SDS` / `DAS` specify is no longer instantiated: the `DOI` / `SDI` / `DAI` holding it in the LN that implements it are removed (found by its data path while the binding still names that LN). Other instances of the LN stay.
+1. The values the system tool owns go; the rest of the LN that implements it stays, since the IED tool owns its data model and values. For each `DAS` of the LNode, the `DAI` its data path names in that LN (found while the binding still names it) loses its `Val` when all of these hold:
+   - its effective `valImport` is true: its own, else that of the `DA` / `BDA` it gives its value for, else `false` ([`readValueImport`](#readvalueimport)); `valKind="Set"` alone is not enough;
+   - it holds exactly one `Val`, with no `sGroup`;
+   - that `Val`, trimmed, equals the `DAS`'s one `Val`, else (the `DAS` holding none) the `DA` / `BDA` type's default `Val`; a `DAS` or type default counts only as exactly one `Val`, with no `sGroup` and not blank.
+
+   The `DAI` goes with it only when nothing else is left on it (no attribute but `name` / `ix`, no child), and each `SDI` / `DOI` above it the same, walking up. An `sAddr`, a `desc`, a `valImport` written on the `DAI`, another `DAI` keep what holds them.
+
 2. Its `SourceRef` / `ControlRef` are no longer implemented: `extRefAddr` / `extRefUuid`, `extCtrlAddr` / `extCtrlUuid` are dropped. Their source and the `ExtRef` / `ExtCtrl` in the IED stay.
 3. It goes back to its specification, kept by its `LNodeSpecNaming`, which is left as it is. Specified on a specification IED (an IED with no ICD or IID among its source files) holding the logical node its specified naming names, no other LNode bound to that logical node, and not unlocked from that IED itself: bound to that logical node, `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` from its specified naming and `lnUuid` that logical node's uuid. Otherwise assigned to no IED: `iedName="None"`, `lnUuid` cleared; `ldInst`, `prefix`, `lnClass`, `lnInst` are those of its `LNodeSpecNaming` (`ldInst` removed when it names no logical device). `lnType` stays.
 
-An `LNode` assigned to no IED is left as it is.
+An `LNode` assigned to no IED is left as it is (`{ removed: [], kept: [] }`).
+
+It answers what it did to the LN's data, for a consumer to show:
+
+- `removed`: each element removed, a `Val` then the `DAI` / `SDI` / `DOI` it left empty, walking up (values in no set order).
+- `kept`: per `DAI` a `DAS` names whose value stays, `{ dai, specification, reason }`, `reason` one of `not-imported`, `not-one-value`, `setting-group`, `no-specified-value` (no single plain value specified: the `DAS` holds several, blank or setting-group `Val`, or none and its type default is not one plain `Val`), `value-changed` (checked in that order). A `DAS` naming no `DAI` is in neither list.
 
 ```ts
-await doc.transaction(async (tx) => {
-	await tx.dataModel.unlockLNode({ lnode: { tagName: 'LNode', id: 'lnode-1' } })
-})
+const { removed, kept } = await doc.transaction((tx) =>
+	tx.dataModel.unlockLNode({ lnode: { tagName: 'LNode', id: 'lnode-1' } }),
+)
+// kept -> [{ dai: { tagName: 'DAI', id: 'dai-1' }, specification: { tagName: 'DAS', id: 'das-1' }, reason: 'value-changed' }]
+```
+
+### `readValueImport`
+
+Whether the system tool may import the value of a `DAI` (its effective `valImport`), from `@dialecte/scl/v2019C1` with the other helpers: the `DAI`'s own `valImport`, else that of its `DA` / `BDA`, else `false`; `true` and `1` are true. Synchronous, on records you hold. The lifecycle's settable values read it too.
+
+```ts
+readValueImport({ instance: dai, dataAttribute: da }) // -> true | false
 ```
 
 ## Exported types
 
-The `dataModel` module re-exports the parameter and result shapes of `importTypes` for typing call sites and tooling.
+The `dataModel` module re-exports the parameter and result shapes of `importTypes` and `unlockLNode` for typing call sites and tooling.
 
 ```ts
 import type {
@@ -134,6 +154,10 @@ import type {
 	KeepNameTypesFrom,
 	LogicalNodeRecord,
 	TypeFollower,
+	KeptValue,
+	KeptValueReason,
+	UnlockLNodeParams,
+	UnlockLNodeResult,
 } from '@dialecte/scl/v2019C1'
 ```
 
@@ -145,3 +169,7 @@ import type {
 | `LogicalNodeRecord` | A logical node whose closure is imported: an `LNode`, `LN` or `LN0` record.                                                                   |
 | `TypeFollower`      | A logical node of the target taking the type its source names: `{ source, target }`.                                                          |
 | `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                                                          |
+| `UnlockLNodeParams` | Parameters of `unlockLNode` (`lnode`).                                                                                                        |
+| `UnlockLNodeResult` | Result of `unlockLNode` (`removed`, `kept`).                                                                                                  |
+| `KeptValue`         | A `DAI` whose value an unlock keeps: `{ dai, specification, reason }`.                                                                        |
+| `KeptValueReason`   | Why: `'not-imported' \| 'not-one-value' \| 'setting-group' \| 'no-specified-value' \| 'value-changed'`.                                       |

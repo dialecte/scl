@@ -110,22 +110,22 @@ describe('unlockLNode', () => {
 					'//v2019C1:ControlRef[@extCtrlAddr]',
 				],
 			},
-		'its DOS / DAS are instantiated in the LN -> those DOI / DAI are removed, the others stay': {
-			sourceXml: boundBreakerXml(),
-			expectedQueries: [
-				'//default:LN[@lnClass="XCBR"]/default:DOI[@name="Beh"]',
-				'//v2019C1:DOS[@name="Pos"]/v2019C1:DAS[@name="ctlModel"]',
-			],
-			unexpectedQueries: ['//default:DOI[@name="Pos"]', '//default:DAI[@name="ctlModel"]'],
-		},
+		'its DAS is instantiated in the LN, no type says the value is imported -> the DOI / DAI and its value stay':
+			{
+				sourceXml: boundBreakerXml(),
+				expectedQueries: [
+					'//default:LN[@lnClass="XCBR"]/default:DOI[@name="Beh"]',
+					'//default:DOI[@name="Pos"]/default:DAI[@name="ctlModel"]/default:Val[text()="status-only"]',
+					'//v2019C1:DOS[@name="Pos"]/v2019C1:DAS[@name="ctlModel"]',
+				],
+			},
 		'an LNode assigned to an IED by its name only -> the same reset': {
 			sourceXml: boundBreakerXml({ binding: 'iedName="P1" ldInst="LD0"' }),
-			expectedQueries: ['//default:LNode[@iedName="None"][@lnInst="1"]'],
-			unexpectedQueries: [
-				'//default:DOI[@name="Pos"]',
-				'//v2019C1:SourceRef[@extRefAddr]',
-				'//default:LNode[@ldInst]',
+			expectedQueries: [
+				'//default:LNode[@iedName="None"][@lnInst="1"]',
+				'//default:DOI[@name="Pos"]/default:DAI[@name="ctlModel"]',
 			],
+			unexpectedQueries: ['//v2019C1:SourceRef[@extRefAddr]', '//default:LNode[@ldInst]'],
 		},
 		'an LNode assigned to no IED -> left as it is': {
 			sourceXml: boundBreakerXml({

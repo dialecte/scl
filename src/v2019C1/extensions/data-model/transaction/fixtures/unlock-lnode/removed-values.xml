@@ -1,0 +1,110 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation dev:db-id="substation" name="S1">
+		<Function dev:db-id="function" name="F1">
+			<LNode dev:db-id="lnode" iedName="P1" ldInst="LD0" prefix="" lnClass="CSWI" lnInst="1" lnUuid="ln-uuid" lnType="CSWI_T">
+				<Private dev:db-id="lnode-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeSpecNaming dev:db-id="lnode-naming" sLnClass="CSWI" sLnInst="1"/>
+					<eIEC61850-6-100:DOS dev:db-id="dos-equal" name="Equal">
+						<eIEC61850-6-100:DAS dev:db-id="das-equal" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-trimmed" name="Trimmed">
+						<eIEC61850-6-100:DAS dev:db-id="das-trimmed" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-own-import" name="OwnImport">
+						<eIEC61850-6-100:DAS dev:db-id="das-own-import" name="silent"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-default-equal" name="DefaultEqual">
+						<eIEC61850-6-100:DAS dev:db-id="das-default-equal" name="withDefault"/>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-short-address" name="ShortAddress">
+						<eIEC61850-6-100:DAS dev:db-id="das-short-address" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-described" name="Described">
+						<eIEC61850-6-100:DAS dev:db-id="das-described" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-object-described" name="ObjectDescribed">
+						<eIEC61850-6-100:DAS dev:db-id="das-object-described" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-shared" name="Shared">
+						<eIEC61850-6-100:DAS dev:db-id="das-shared" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-nested" name="Nested">
+						<eIEC61850-6-100:SDS dev:db-id="sds-nested" name="sub">
+							<eIEC61850-6-100:DAS dev:db-id="das-nested" name="setVal"><eIEC61850-6-100:Val>5</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+						</eIEC61850-6-100:SDS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-nested-shared" name="NestedShared">
+						<eIEC61850-6-100:SDS dev:db-id="sds-nested-shared" name="sub">
+							<eIEC61850-6-100:DAS dev:db-id="das-nested-shared" name="setVal"><eIEC61850-6-100:Val>5</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+						</eIEC61850-6-100:SDS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-missing" name="Missing">
+						<eIEC61850-6-100:DAS dev:db-id="das-missing" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED dev:db-id="ied" name="P1">
+		<AccessPoint dev:db-id="access-point" name="AP1">
+			<Server dev:db-id="server">
+				<LDevice dev:db-id="ldevice" inst="LD0">
+					<LN0 dev:db-id="ln0" lnClass="LLN0" inst="" lnType="LLN0_T"/>
+					<LN dev:db-id="ln" prefix="" lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="ln-uuid">
+						<DOI dev:db-id="doi-equal" name="Equal"><DAI dev:db-id="dai-equal" name="imported"><Val dev:db-id="val-equal">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-trimmed" name="Trimmed"><DAI dev:db-id="dai-trimmed" name="imported"><Val dev:db-id="val-trimmed">  1 </Val></DAI></DOI>
+						<DOI dev:db-id="doi-own-import" name="OwnImport"><DAI dev:db-id="dai-own-import" name="silent" valImport="true"><Val dev:db-id="val-own-import">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-default-equal" name="DefaultEqual"><DAI dev:db-id="dai-default-equal" name="withDefault"><Val dev:db-id="val-default-equal">4</Val></DAI></DOI>
+						<DOI dev:db-id="doi-short-address" name="ShortAddress"><DAI dev:db-id="dai-short-address" name="imported" sAddr="40001"><Val dev:db-id="val-short-address">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-described" name="Described"><DAI dev:db-id="dai-described" name="imported" desc="described value"><Val dev:db-id="val-described">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-object-described" name="ObjectDescribed" desc="described object"><DAI dev:db-id="dai-object-described" name="imported"><Val dev:db-id="val-object-described">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-shared" name="Shared">
+							<DAI dev:db-id="dai-shared" name="imported"><Val dev:db-id="val-shared">1</Val></DAI>
+							<DAI dev:db-id="dai-shared-other" name="silent"><Val dev:db-id="val-shared-other">30</Val></DAI>
+						</DOI>
+						<DOI dev:db-id="doi-nested" name="Nested">
+							<SDI dev:db-id="sdi-nested" name="sub"><DAI dev:db-id="dai-nested" name="setVal"><Val dev:db-id="val-nested">5</Val></DAI></SDI>
+						</DOI>
+						<DOI dev:db-id="doi-nested-shared" name="NestedShared">
+							<SDI dev:db-id="sdi-nested-shared" name="sub">
+								<DAI dev:db-id="dai-nested-shared" name="setVal"><Val dev:db-id="val-nested-shared">5</Val></DAI>
+								<DAI dev:db-id="dai-nested-other" name="other"><Val dev:db-id="val-nested-other">2</Val></DAI>
+							</SDI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="templates">
+		<LNodeType dev:db-id="lln0-type" id="LLN0_T" lnClass="LLN0">
+			<DO dev:db-id="lln0-mod" name="Mod" type="VALUES_T"/>
+		</LNodeType>
+		<LNodeType dev:db-id="cswi-type" id="CSWI_T" lnClass="CSWI">
+			<DO dev:db-id="do-equal" name="Equal" type="VALUES_T"/>
+			<DO dev:db-id="do-trimmed" name="Trimmed" type="VALUES_T"/>
+			<DO dev:db-id="do-own-import" name="OwnImport" type="VALUES_T"/>
+			<DO dev:db-id="do-default-equal" name="DefaultEqual" type="VALUES_T"/>
+			<DO dev:db-id="do-short-address" name="ShortAddress" type="VALUES_T"/>
+			<DO dev:db-id="do-described" name="Described" type="VALUES_T"/>
+			<DO dev:db-id="do-object-described" name="ObjectDescribed" type="VALUES_T"/>
+			<DO dev:db-id="do-shared" name="Shared" type="VALUES_T"/>
+			<DO dev:db-id="do-nested" name="Nested" type="NESTED_T"/>
+			<DO dev:db-id="do-nested-shared" name="NestedShared" type="NESTED_T"/>
+			<DO dev:db-id="do-missing" name="Missing" type="VALUES_T"/>
+		</LNodeType>
+		<DOType dev:db-id="values-type" id="VALUES_T" cdc="ING">
+			<DA dev:db-id="da-imported" name="imported" fc="SP" bType="INT32" valImport="true"/>
+			<DA dev:db-id="da-silent" name="silent" fc="SP" bType="INT32"/>
+			<DA dev:db-id="da-set-kind" name="setKind" fc="SP" bType="INT32" valKind="Set"/>
+			<DA dev:db-id="da-with-default" name="withDefault" fc="SP" bType="INT32" valImport="true"><Val dev:db-id="da-default">4</Val></DA>
+		</DOType>
+		<DOType dev:db-id="nested-type" id="NESTED_T" cdc="CMV">
+			<SDO dev:db-id="sdo-sub" name="sub" type="SUB_T"/>
+		</DOType>
+		<DOType dev:db-id="sub-type" id="SUB_T" cdc="ING">
+			<DA dev:db-id="da-set-val" name="setVal" fc="SP" bType="INT32" valImport="true"/>
+			<DA dev:db-id="da-other" name="other" fc="SP" bType="INT32" valImport="true"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

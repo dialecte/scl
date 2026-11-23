@@ -152,6 +152,20 @@
 			"example": "readAttributes({ record })                      // → { lnClass: 'XCBR', iedName: 'None', ... }\nreadAttributes({ record, defaults: 'none' })    // → stored only"
 		},
 		{
+			"path": "@dialecte/scl/v2019C1.readValueImport",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(params: ReadValueImportParams) => boolean",
+			"summary": "Whether the system tool may import a value of a `DAI` (its effective `valImport`): the `DAI`'s own `valImport`, else that of the `DA` / `BDA` it gives its value for, else `false` (the schema default). `true` and `1` are true.",
+			"intents": [
+				"effective valImport of a DAI",
+				"whether a DAI value may be imported by the system tool",
+				"DAI valImport inherited from its DA or BDA"
+			],
+			"declaredAt": "src/v2019C1/helpers/value-import.ts:12"
+		},
+		{
 			"path": "@dialecte/scl/v2019C1.sameClassInTargetIed",
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
@@ -956,7 +970,7 @@
 				"clean up LNode bindings after an IED or LN is deleted",
 				"clear dangling data mappings and signal implementations"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:45",
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:46",
 			"example": "await tx.cleanUp.resetLNode()"
 		},
 		{
@@ -1001,15 +1015,15 @@
 			"path": "tx.dataModel.unlockLNode",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: { lnode: Scl.Ref<'LNode'>; }) => Promise<void>",
-			"summary": "Unlock an LNode bound to an (S-)IED, so its data model can be changed and it can be allocated again: the data its `DOS` / `SDS` / `DAS` specify is no longer instantiated in the LN that implements it (those `DOI` / `SDI` / `DAI` are removed), its signals are no longer implemented (its `SourceRef` / `ControlRef` lose the address and uuid naming their ExtRef / ExtCtrl; the ExtRef / ExtCtrl themselves stay), and it goes back to the specification its `LNodeSpecNaming` keeps, which is left as it is: bound to the logical node of the specification IED it is specified on when that IED holds it, no other LNode is bound to it and the LNode is not unlocked from that IED itself; else assigned to no IED (`iedName` `None`, `lnUuid` cleared), its logical device, prefix, class and instance those of its `LNodeSpecNaming`. An LNode assigned to no IED is left as it is.",
+			"signature": "(params: UnlockLNodeParams) => Promise<UnlockLNodeResult>",
+			"summary": "Unlock an LNode bound to an (S-)IED, so its data model can be changed and it can be allocated again. The IED tool owns the data model of the LN implementing it and its values; the unlock removes only the values the system tool owns: for each `DAS` of the LNode, the `Val` of the `DAI` its data path names, when that `DAI`'s effective `valImport` is true (`readValueImport`), it holds exactly one `Val`, with no `sGroup`, and that `Val` (trimmed) equals the `DAS`'s, else the type default of its `DA` / `BDA`. The `DAI` goes with it only when nothing else is left on it (no attribute but its `name` / `ix`, no child), each `SDI` / `DOI` above it the same; everything else stays. Its signals are no longer implemented (its `SourceRef` / `ControlRef` lose the address and uuid naming their ExtRef / ExtCtrl; the ExtRef / ExtCtrl themselves stay), and it goes back to the specification its `LNodeSpecNaming` keeps, which is left as it is: bound to the logical node of the specification IED it is specified on when that IED holds it, no other LNode is bound to it and the LNode is not unlocked from that IED itself; else assigned to no IED (`iedName` `None`, `lnUuid` cleared), its logical device, prefix, class and instance those of its `LNodeSpecNaming`. An LNode assigned to no IED is left as it is.",
 			"intents": [
 				"unbind an LNode from its IED",
 				"make the data model of an LNode editable again",
 				"deallocate an LNode",
-				"remove the DOI/SDI/DAI instantiating its data and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl"
+				"remove the values an LNode's specification imported into its IED and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/unlock-lnode.ts:25"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/unlock-lnode.ts:53"
 		},
 		{
 			"path": "tx.history.addEntry",

@@ -2,12 +2,12 @@ import {
 	DATA_REFERRER_LOGICAL_NODE_TAGS,
 	MEMBER_KIND_BY_TAG,
 } from './lost-data-instances.constants'
-import { VALUE_TAGS } from './value-ownership.constants'
 
 import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data-types.constants'
+import { VALUE_TAGS } from '@/v2019C1/extensions/data-model/query/read-value-types.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { ValueTypes } from './value-ownership.types'
+import type { ValueTypes } from '@/v2019C1/extensions/data-model/query/read-value-types.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { AnyTreeRecord } from '@dialecte/core'
 

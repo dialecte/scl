@@ -1,4 +1,4 @@
-import { VALUE_TAGS } from './value-ownership.constants'
+import { VALUE_TAGS } from '@/v2019C1/extensions/data-model/query/read-value-types.constants'
 
 /** The logical nodes whose data instances a type gives the data of. */
 export const DATA_REFERRER_LOGICAL_NODE_TAGS: ReadonlySet<string> = new Set(['LN', 'LN0'])

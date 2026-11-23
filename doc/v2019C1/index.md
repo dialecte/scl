@@ -119,6 +119,14 @@ readAttributes({ record: lnode, defaults: 'none' }) // the stored attributes onl
 
 In the default view an absent attribute reads its schema value (`'None'` for an LNode's `iedName`), `''` when it has none. Only `{ defaults: 'none', fullObject: true }` returns `undefined` for it, the only way to tell it from one written empty.
 
+`readValueImport({ instance, dataAttribute })` reads the same way whether the system tool may import a `DAI`'s value: its own `valImport`, else its `DA` / `BDA`'s, else `false` (see [Data Model](/v2019C1/extensions/data-model#readvalueimport)).
+
+```ts
+import { readValueImport } from '@dialecte/scl/v2019C1'
+
+readValueImport({ instance: dai, dataAttribute: da }) // true when the DAI or, silent, its DA says valImport="true"
+```
+
 ## `Scl` type namespace
 
 All types from `@dialecte/core` are re-exported pre-bound to the SCL config under the `Scl` namespace. Import once, use everywhere:

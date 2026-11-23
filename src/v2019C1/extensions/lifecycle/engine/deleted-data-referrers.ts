@@ -2,11 +2,11 @@ import { DATA_REFERRER_TAGS, LOGICAL_NODE_TAGS } from './deleted-data-referrers.
 import { movedOut, removedElementsOf, topmostBelow } from './moved'
 import { classifyUnmatched } from './removal-base'
 import { typeChangesOf } from './type-change'
-import { readValueTypes } from './value-ownership'
-import { FUNCTIONAL_CONSTRAINT_ATTRIBUTE } from './value-ownership.constants'
 
 import { toRawRecord, toRef } from '@dialecte/core/helpers'
 
+import { readValueTypes } from '@/v2019C1/extensions/data-model/query/read-value-types'
+import { FUNCTIONAL_CONSTRAINT_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/read-value-types.constants'
 import { CONF_REV_CONTROL_TAGS } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 import { confRevRaisesOf } from '@/v2019C1/hooks/shared/data-set-entry'
@@ -21,8 +21,8 @@ import type {
 import type { ConfRevBump, DiffReads } from './diff.types'
 import type { RemovalBase } from './removal-base.types'
 import type { TypeComparison } from './type-change.types'
-import type { ValueTypes } from './value-ownership.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { ValueTypes } from '@/v2019C1/extensions/data-model/query/read-value-types.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { InputSourceEffect } from '@/v2019C1/hooks/shared/input-source.types'
 import type * as Core from '@dialecte/core'
