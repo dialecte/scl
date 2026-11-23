@@ -35,8 +35,9 @@ import type * as Core from '@dialecte/core'
  *
  * Refuses with `SPECIFICATION_STAGE_REFUSED` before any write (`meta: { reason, stage: 'stageIsd', ref? }`): a staging
  * document already holding an IED or a process part (`target-not-empty`); no LNode (`no-lnodes`); an IED name the
- * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); an LNode outside the project's
- * substations, lines and processes (`lnode-outside-process`). The build's own refusals pass through
+ * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); an LNode the project does not hold
+ * or holds outside its substations, lines and processes (`lnode-outside-process`); checked in that order, the first
+ * refusing. An LNode given twice is staged once. The build's own refusals pass through
  * (`SPECIFICATION_BUILD_REFUSED`).
  *
  * @intent stage an ISD built from logical nodes for a supplier, export an ISD of an allocation role, build an IED from logical nodes in a staging document
@@ -111,19 +112,21 @@ async function readStage(
 	})
 	if (outside) refuse({ reason: 'lnode-outside-process', ref: outside })
 
+	// an LNode given twice is staged once (the build drops a repeat itself)
+	const ids = new Set(lnodes.map((lnode) => lnode.id))
 	const satellites = await readSatelliteIndex(sourceQuery)
 	const plan = planProcessFrames({
 		index,
 		satellites,
-		lnodes: new Set(lnodes.map((lnode) => lnode.id)),
+		lnodes: ids,
 		iedUuids: new Set(),
 		options: {},
 	})
-	const bound = lnodes.flatMap(function boundInProject(lnode) {
-		const record = index.byId.get(lnode.id)?.record
-		if (!record) return []
+	const bound = [...ids].filter(function boundInProject(lnodeId) {
+		const record = index.byId.get(lnodeId)?.record
+		if (!record) return false
 		const { iedName: boundTo, lnUuid } = readAttributes({ record, defaults: 'none' })
-		return lnUuid || (boundTo && boundTo !== UNALLOCATED_IED_NAME) ? [lnode.id] : []
+		return Boolean(lnUuid || (boundTo && boundTo !== UNALLOCATED_IED_NAME))
 	})
 	return { plan, bound }
 }
