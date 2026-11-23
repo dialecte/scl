@@ -42,6 +42,18 @@ export type PlanIedProcessParams = {
 	options: ProcessOptions
 }
 
+/** What `planProcessFrames` plans from: the section laid out, the LNodes given, what the IED part writes. */
+export type PlanProcessFramesParams = {
+	index: ProcessIndex
+	/** The variables and behaviour descriptions of the document with the references they hold. */
+	satellites: SatelliteIndex
+	/** The LNodes the process part holds (record ids), whatever implements them. */
+	lnodes: ReadonlySet<string>
+	/** The uuids of what the IED part writes: a process reference may name one. */
+	iedUuids: ReadonlySet<string>
+	options: ProcessOptions
+}
+
 /** The process section laid out for the plan, from its elements: each by id, by uuid, by path, and its children. */
 export type ProcessIndex = {
 	nodes: readonly SectionNode[]

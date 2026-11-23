@@ -52,9 +52,11 @@ import type * as Core from '@dialecte/core'
  * with its expected data and without that link. Each LNode gets its own naming as specified naming; data
  * specifications lose their mapping. `labels: false` leaves no label in the file.
  * Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only
- * as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED.
+ * as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED: the document `provenanceQuery`
+ * names when given (what the ISD holds is still read from `sourceQuery`).
  * Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header
- * fileType. Other extensions are refused with OPTION_NOT_AVAILABLE before writes.
+ * fileType (the type of the `provenanceQuery` document when given). Other extensions are refused with
+ * OPTION_NOT_AVAILABLE before writes.
  * Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or
  * process) and an unavailable revision start.
  *
@@ -135,7 +137,7 @@ async function readIedExport(
 	params: IedExtractParams & { iedName: string },
 ): Promise<IedExport> {
 	const { sourceQuery, iedRef, iedName } = params
-	const sourceFileType = await readIedSourceFileType(sourceQuery)
+	const sourceFileType = await readIedSourceFileType(params.provenanceQuery ?? sourceQuery)
 	const selection = await selectIedContent(sourceQuery, { iedRef, iedName, inputs: params.inputs })
 	const processSource = await readIedProcessSource(sourceQuery, { iedRef })
 	const process = planIedProcess({
@@ -251,18 +253,18 @@ async function finishIedExport(
 		processMappings: readonly Scl.CloneMapping[]
 	},
 ): Promise<void> {
-	const { sourceQuery, issuer, labels, kind } = params.params
+	const { sourceQuery, provenanceQuery = sourceQuery, issuer, labels, kind } = params.params
 	const { sourceFileType, supervisionDependencies } = params.read
 	const clonedIed = { tagName: 'IED', id: params.ied.id } as const
 	await tx.update(clonedIed, { attributes: { manufacturer: issuer } })
 	// an instance records the project it was extracted from; a template is tied to none
 	if (kind === 'instance') {
 		await writeProvenance(tx, {
-			sourceQuery,
+			sourceQuery: provenanceQuery,
 			target: { anchor: 'document', fileType: sourceFileType },
 		})
 		await writeProvenance(tx, {
-			sourceQuery,
+			sourceQuery: provenanceQuery,
 			target: { anchor: 'ied', root: clonedIed, fileType: sourceFileType },
 		})
 	}

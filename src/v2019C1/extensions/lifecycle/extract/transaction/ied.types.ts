@@ -15,6 +15,11 @@ export type IsdKind = 'instance' | 'template'
 export type IedExtractParams = {
 	/** Source type follows its registered extension; .xml or no extension uses SCD, ignoring Header fileType. */
 	sourceQuery: Core.Query<Config>
+	/**
+	 * The document an instance ISD records as its source, at the Header and on the IED, its type read from its extension
+	 * as for the source: the source document by default. What the ISD holds is still read from `sourceQuery`.
+	 */
+	provenanceQuery?: Core.Query<Config>
 	/** The selected source IED, not necessarily the first IED in the source. */
 	iedRef: Scl.Ref<'IED'>
 	/** Initializes an ISD Header with a fresh file UUID and initial history. */
