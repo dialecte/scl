@@ -38,6 +38,16 @@ describe('the commit prune can never make a data type unused by itself', () => {
 		expect(withoutIdentity).toEqual([])
 	})
 
+	// A pruned container is itself deleted, and `emptiedRule`'s identity guard says nothing about its own tag: a
+	// prunable tag with an identity of its own is pruned all the same (`FunctionCategory`, `SubCategory`, `Variable`,
+	// `DataSet`, `SubNetwork` all have one). So no prunable tag may name a data type itself.
+	it('never prunes a type referrer itself: no prunable tag names a data type', () => {
+		const prunableReferrers = [...PRUNED_WHEN_EMPTY_TAGS].filter((tagName) =>
+			TYPE_ID_REFERRER_TAGS.has(tagName),
+		)
+		expect(prunableReferrers).toEqual([])
+	})
+
 	// A container pruned by `lost-required` takes the children it still holds with it, and their subtrees with them
 	// (the cascade's `within`). Those staying children are all unidentified - `emptiedRule` gives up on an identified
 	// one - so it is the unidentified children of a prunable container, read a whole subtree deep, that must hold no
