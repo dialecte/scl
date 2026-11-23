@@ -13,6 +13,9 @@ export type BuildOptions = {
 	server?: Scl.Ref<'Server'>
 	prefixFromLeafSubFunction: boolean
 	openValues: BuildOpenValues
+	excludeFunctionalConstraints: readonly string[]
+	/** Other IED names each logical device name must also fit. */
+	ldNameAlsoFits: readonly string[]
 }
 
 /** Where an LNode's logical device comes from: the element holding it, or its own `ldInst`. */

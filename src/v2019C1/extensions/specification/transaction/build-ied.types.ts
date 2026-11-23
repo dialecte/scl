@@ -2,6 +2,7 @@ import type {
 	BUILD_OPEN_POINTS,
 	BUILD_REFUSAL_REASONS,
 	FUNCTION_LIKE_TAGS,
+	VALUE_LEFT_OUT_REASONS,
 } from './build-ied.constants'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { OpenValues } from '@/v2019C1/helpers/open-values.types'
@@ -52,6 +53,13 @@ export type BuildIedParams = {
 	 * beside the target's. Default: the document built in.
 	 */
 	contextQuery?: Core.Query<Config>
+	/**
+	 * Other IED names each logical device name must also fit (the IED name followed by the inst, at most the definition's
+	 * limit): the longest of the target IED's name and these counts. For a build whose IED is renamed afterwards.
+	 */
+	ldNameAlsoFits?: readonly string[]
+	/** Values whose functional constraint is one of these are left out (`valuesLeftOut`). Default: none. */
+	excludeFunctionalConstraints?: readonly string[]
 }
 
 export type BuildRefusal = {
@@ -90,6 +98,30 @@ export type OpenValueUsed = {
 	value: string
 }
 
+/** Why a specified value is not written. */
+export type ValueLeftOutReason = (typeof VALUE_LEFT_OUT_REASONS)[number]
+
+/** Where a value sits below its logical node: the DOI, the SDIs down from it, the DAI. */
+export type ValuePath = {
+	doi: string
+	sdi: { name: string; ix?: string }[]
+	dai: { name: string; ix?: string }
+}
+
+/** One value a logical node specifies, as it is written on the built logical node. */
+export type IedValuePlan = {
+	lnode: Scl.Ref<'LNode'>
+	das: Scl.Ref<'DAS'>
+	path: ValuePath
+	vals: { value: string; sGroup?: string }[]
+	valKind?: string
+	valImport?: string
+	/** The DAI already there with other values: its values are replaced. */
+	existing?: Scl.Ref<'DAI'>
+}
+
+export type ValueLeftOut = { das: Scl.Ref<'DAS'>; reason: ValueLeftOutReason }
+
 export type IedBuildPlan = {
 	lDevices: PlannedLDevice[]
 	logicalNodes: PlannedLogicalNode[]
@@ -99,6 +131,10 @@ export type IedBuildPlan = {
 	leftOut: LeftOutLNode[]
 	/** Every value a caller rule supplied. */
 	openValuesUsed: OpenValueUsed[]
+	/** The values the logical nodes specify that are not on their logical nodes yet (or differ). */
+	values: IedValuePlan[]
+	/** Specified values not written, and why: the build goes on. */
+	valuesLeftOut: ValueLeftOut[]
 	/** Why the build cannot be written; empty when it can. */
 	refusals: BuildRefusal[]
 }
