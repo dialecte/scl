@@ -1,0 +1,10 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl">
+	<Substation name="S1"><VoltageLevel name="E1"><Bay name="Q01" dev:db-id="q01"><Function name="PROT" dev:db-id="q01-prot"><LNode iedName="None" lnClass="PTOC" lnInst="1" lnType="PTOC_T" dev:db-id="ptoc1"/></Function></Bay></VoltageLevel></Substation>
+	<IED name="S" dev:db-id="ied-s"><AccessPoint name="AP1"><Server dev:db-id="server-s"><Authentication/></Server></AccessPoint></IED>
+	<DataTypeTemplates>
+		<LNodeType id="PTOC_T" lnClass="PTOC"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="LLN0_T" lnClass="LLN0"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="LPHD_T" lnClass="LPHD"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -204,6 +204,15 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The update needs the instance it starts from, among those the project holds',
 	},
 	/**
+	 * Building a specification IED's data model from logical nodes breaks a rule: nothing is written.
+	 * `meta: { reason, refusals: [{ reason, ref?, detail }] }` — `reason` is the first refusal's; `refusals` lists every
+	 * one, each with the element it is about.
+	 */
+	SPECIFICATION_BUILD_REFUSED: {
+		code: 'SCL2013',
+		message: 'The specification IED cannot be built from these logical nodes',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */

@@ -1,1 +1,1 @@
-export {}
+export { buildIed } from './build-ied'

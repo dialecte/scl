@@ -6,3 +6,5 @@ export type {
 	ReadAttributesParams,
 	SclReadAttributesBaseParams,
 } from './read-attributes.types'
+export { firstOf } from './open-values'
+export type { OpenValueRule, OpenValues } from './open-values.types'
