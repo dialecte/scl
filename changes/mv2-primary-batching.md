@@ -1,3 +1,0 @@
-### Changed
-
-- A template update of a process section (a substation scope and the applications and functions it holds, also when an IED's specification is updated) reads its primaries in batches: the template's applications and standalone functions are read once per update (their records and their ancestors, one call each), and each pass over them (the move pass of each placed instance, the application loop, the function loop) reads the project's records of each primary tag once and, for the move pass, the ancestors of every held instance in one call. Before, each primary was read on its own, once per placed instance and again in each loop. What the update writes is the same.

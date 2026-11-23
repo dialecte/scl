@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-23
+
+The engine builds a specification IED from logical nodes. `tx.specification.buildIed` (and its plan, `query.specification.planIed`) writes the logical devices, logical nodes, LLN0, LPHD and the specified values, values the standard leaves open coming from the caller's `openValues` rules or refused; `query.specification.roleLNodes` lists an allocation role's logical nodes and who implements them, `query.specification.toImplement` what is left to implement on a real IED; `extract.ied` records the document an ISD was staged from; process-section updates read their primaries in batches. Nothing breaking.
+
+### Added
+
+- `extract.ied` takes `provenanceQuery`: the document an instance ISD records as its source, at the `Header` and on the IED, its type read from that document's extension (default: the source document). An IED built in a staging document can name the project it was staged from; only that document's extension is checked. A template records none.
+- `tx.specification.buildIed` and `query.specification.planIed`: build the logical devices, logical nodes, LLN0 and LPHD of a specification IED from logical nodes, and bind each logical node to its own; logical nodes another IED implements are left out and listed; refusals under `SPECIFICATION_BUILD_REFUSED` (`SCL2013`).
+- `openValues`: a per-call option of rules for the values the standard leaves open (a missing logical node type, the type of an added LLN0 or LPHD, a logical device name), refused when no rule answers; built-in rules `firstOf`, `sameClassInTargetIed`, `firstOfClass` (also by name in `OPEN_VALUE_RULES`).
+- `importTypes` (and `query.dataModel.resolve`) take `lnodeTypeIds`: LNodeTypes imported by id with their closure, whether or not a logical node names them; `buildIed` imports a type it picked from `contextQuery` this way.
+- `buildIed` writes the values the logical nodes specify (DOS/SDS/DAS with a value) as DOI/SDI/DAI of the built logical nodes; values whose data the type does not hold, or of an excluded functional constraint (`excludeFunctionalConstraints`), are listed in the plan's `valuesLeftOut`; a value already on the logical node is not written again.
+- `buildIed` / `planIed` option `ldNameAlsoFits`: other IED names each logical device name must fit too (the length check uses the longest of the IED's name and these), for an IED renamed after the build.
+- `query.specification.roleLNodes({ allocationRole })`: the logical nodes below the functions an allocation role names, the IEDs implementing them (each with its kind), the ones not implemented yet, and the function references naming no function.
+- `query.specification.toImplement({ ied })`: the logical nodes specified for the specification IED(s) a real IED implements that no logical node of a real device implements yet, the other real IEDs sharing that specification, or the reason the list is empty (a specification IED, no specification IED name).
+
+### Changed
+
+- A template update of a process section (a substation scope and the applications and functions it holds, also when an IED's specification is updated) reads its primaries in batches: the template's applications and standalone functions are read once per update (their records and their ancestors, one call each), and each pass over them (the move pass of each placed instance, the application loop, the function loop) reads the project's records of each primary tag once and, for the move pass, the ancestors of every held instance in one call. Before, each primary was read on its own, once per placed instance and again in each loop. What the update writes is the same.
+
+### Fixed
+
+- `importTypes` ends its progress plan when it throws: a caller catching the error goes on in its own progress frame.
+
 ## [0.25.0] - 2026-11-23
 
 The engine says which lifecycle scenario applies. `query.lifecycle.scenarioOf` answers the scenario of an IED placement or update, or the refusal the verbs would throw, from one check the verbs share; `info.search` hits name their ancestors as refs; reference lookups and signal naming make fewer reads; scl runs on `@dialecte/core` 0.14.0.
