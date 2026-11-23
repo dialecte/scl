@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-23
+
+The engine builds a specification IED from logical nodes. `tx.specification.buildIed` (and its plan, `query.specification.planIed`) writes the logical devices, logical nodes, LLN0, LPHD and the specified values, values the standard leaves open coming from the caller's `openValues` rules or refused; `query.specification.roleLNodes` lists an allocation role's logical nodes and who implements them, `query.specification.toImplement` what is left to implement on a real IED; `extract.ied` records the document an ISD was staged from; process-section updates read their primaries in batches; the commit's prune preview lists every removal it does, and its type prune reads the commit's own writes. Nothing breaking.
+
+### Added
+
+- `extract.ied` takes `provenanceQuery`: the document an instance ISD records as its source, at the `Header` and on the IED, its type read from that document's extension (default: the source document). An IED built in a staging document can name the project it was staged from; only that document's extension is checked. A template records none.
+- `tx.specification.buildIed` and `query.specification.planIed`: build the logical devices, logical nodes, LLN0 and LPHD of a specification IED from logical nodes, and bind each logical node to its own; logical nodes another IED implements are left out and listed; refusals under `SPECIFICATION_BUILD_REFUSED` (`SCL2013`).
+- `openValues`: a per-call option of rules for the values the standard leaves open (a missing logical node type, the type of an added LLN0 or LPHD, a logical device name), refused when no rule answers; built-in rules `firstOf`, `sameClassInTargetIed`, `firstOfClass` (also by name in `OPEN_VALUE_RULES`).
+- `importTypes` (and `query.dataModel.resolve`) take `lnodeTypeIds`: LNodeTypes imported by id with their closure, whether or not a logical node names them; `buildIed` imports a type it picked from `contextQuery` this way.
+- `buildIed` writes the values the logical nodes specify (DOS/SDS/DAS with a value) as DOI/SDI/DAI of the built logical nodes; values whose data the type does not hold, or of an excluded functional constraint (`excludeFunctionalConstraints`), are listed in the plan's `valuesLeftOut`; a value already on the logical node is not written again.
+- `buildIed` / `planIed` option `ldNameAlsoFits`: other IED names each logical device name must fit too (the length check uses the longest of the IED's name and these), for an IED renamed after the build.
+- `query.specification.roleLNodes({ allocationRole })`: the logical nodes below the functions an allocation role names, the IEDs implementing them (each with its kind), the ones not implemented yet, and the function references naming no function.
+- `query.specification.toImplement({ ied })`: the logical nodes specified for the specification IED(s) a real IED implements that no logical node of a real device implements yet, the other real IEDs sharing that specification, or the reason the list is empty (a specification IED, no specification IED name).
+
+### Changed
+
+- A template update of a process section (a substation scope and the applications and functions it holds, also when an IED's specification is updated) reads its primaries in batches: the template's applications and standalone functions are read once per update (their records and their ancestors, one call each), and each pass over them (the move pass of each placed instance, the application loop, the function loop) reads the project's records of each primary tag once and, for the move pass, the ancestors of every held instance in one call. Before, each primary was read on its own, once per placed instance and again in each loop. What the update writes is the same.
+- `tx.cleanUp.commitPrune()` also returns `moves` and `released`: each element the commit's moves remove (a reference its new place cannot reach, a terminal left naming a node its container may not name, and what goes with either), with why it goes, and each `LNode` the commit released from a logical node the transaction deleted, with the binding it had and the one it is left with. With the containers and the types, they name every record the commit removes beyond the edits, each once.
+- The commit prunes the containers before the types, and the type prune reads what every earlier step wrote, so a type the commit's own cascades stop naming goes too; a `DataTypeTemplates` the type prune empties is pruned by a second pass after it. Hardening: no cascade reaches a type referrer today, and every commit writes what it wrote before.
+- `tx.cleanUp.commitPrune()` lists what a container the commit prunes takes **outside** itself: every reference the prune deletes or clears beyond the container's own subtree is now on that container's `goesWith`, under the container whose removal caused it (a `FunctionCategoryRef` naming a pruned `FunctionCategory`, a `VariableRef` naming a pruned `Variable`). Each entry of `goesWith` carries the `identity` of the element it names (its `name`, `uuid` and `type` where its tag has them), beside its `element` and its `effect`; the control blocks of a pruned data set are listed as before.
+
+### Fixed
+
+- `importTypes` ends its progress plan when it throws: a caller catching the error goes on in its own progress frame.
+
 ## [0.25.0] - 2026-11-23
 
 The engine says which lifecycle scenario applies. `query.lifecycle.scenarioOf` answers the scenario of an IED placement or update, or the refusal the verbs would throw, from one check the verbs share; `info.search` hits name their ancestors as refs; reference lookups and signal naming make fewer reads; scl runs on `@dialecte/core` 0.14.0.
