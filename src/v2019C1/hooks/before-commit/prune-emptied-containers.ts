@@ -124,8 +124,8 @@ function describeContainers(params: {
 		cascade,
 		read,
 	})) {
-		// a record this prune deletes always names one of its subtrees; one it only clears may name what an earlier
-		// step deleted already, and goes with that step's removals, not with a container here
+		// every record the cascade takes names one of the pruned subtrees, and its ancestry is walked over everything
+		// the cascade read, so a root is always found: a gap under-reports the preview rather than failing the commit
 		if (!rootId) continue
 		const outside = outsideByRoot.get(rootId) ?? []
 		outside.push({
