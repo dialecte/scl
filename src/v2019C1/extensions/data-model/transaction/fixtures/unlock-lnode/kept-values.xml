@@ -1,0 +1,101 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation dev:db-id="substation" name="S1">
+		<Function dev:db-id="function" name="F1">
+			<LNode dev:db-id="lnode" iedName="P1" ldInst="LD0" prefix="" lnClass="CSWI" lnInst="1" lnUuid="ln-uuid" lnType="CSWI_T">
+				<Private dev:db-id="lnode-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeSpecNaming dev:db-id="lnode-naming" sLnClass="CSWI" sLnInst="1"/>
+					<eIEC61850-6-100:DOS dev:db-id="dos-own-false" name="OwnFalse">
+						<eIEC61850-6-100:DAS dev:db-id="das-own-false" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-silent" name="Silent">
+						<eIEC61850-6-100:DAS dev:db-id="das-silent" name="silent"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-set-kind" name="SetKind">
+						<eIEC61850-6-100:DAS dev:db-id="das-set-kind" name="setKind"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-two-values" name="TwoValues">
+						<eIEC61850-6-100:DAS dev:db-id="das-two-values" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-no-value" name="NoValue">
+						<eIEC61850-6-100:DAS dev:db-id="das-no-value" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-setting-group" name="SettingGroup">
+						<eIEC61850-6-100:DAS dev:db-id="das-setting-group" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-changed" name="Changed">
+						<eIEC61850-6-100:DAS dev:db-id="das-changed" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-default-changed" name="DefaultChanged">
+						<eIEC61850-6-100:DAS dev:db-id="das-default-changed" name="withDefault"/>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-unspecified" name="Unspecified">
+						<eIEC61850-6-100:DAS dev:db-id="das-unspecified" name="imported"/>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-spec-two-values" name="SpecTwoValues">
+						<eIEC61850-6-100:DAS dev:db-id="das-spec-two-values" name="imported"><eIEC61850-6-100:Val>1</eIEC61850-6-100:Val><eIEC61850-6-100:Val>2</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-spec-setting-group" name="SpecSettingGroup">
+						<eIEC61850-6-100:DAS dev:db-id="das-spec-setting-group" name="withDefault"><eIEC61850-6-100:Val sGroup="1">4</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-spec-blank" name="SpecBlank">
+						<eIEC61850-6-100:DAS dev:db-id="das-spec-blank" name="withDefault"><eIEC61850-6-100:Val> </eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-multi-default" name="MultiDefault">
+						<eIEC61850-6-100:DAS dev:db-id="das-multi-default" name="multiDefault"/>
+					</eIEC61850-6-100:DOS>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED dev:db-id="ied" name="P1">
+		<AccessPoint dev:db-id="access-point" name="AP1">
+			<Server dev:db-id="server">
+				<LDevice dev:db-id="ldevice" inst="LD0">
+					<LN0 dev:db-id="ln0" lnClass="LLN0" inst="" lnType="LLN0_T"/>
+					<LN dev:db-id="ln" prefix="" lnClass="CSWI" inst="1" lnType="CSWI_T" uuid="ln-uuid">
+						<DOI dev:db-id="doi-own-false" name="OwnFalse"><DAI dev:db-id="dai-own-false" name="imported" valImport="false"><Val dev:db-id="val-own-false">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-silent" name="Silent"><DAI dev:db-id="dai-silent" name="silent"><Val dev:db-id="val-silent">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-set-kind" name="SetKind"><DAI dev:db-id="dai-set-kind" name="setKind"><Val dev:db-id="val-set-kind">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-two-values" name="TwoValues"><DAI dev:db-id="dai-two-values" name="imported"><Val dev:db-id="val-two-values-1">1</Val><Val dev:db-id="val-two-values-2">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-no-value" name="NoValue"><DAI dev:db-id="dai-no-value" name="imported"/></DOI>
+						<DOI dev:db-id="doi-setting-group" name="SettingGroup"><DAI dev:db-id="dai-setting-group" name="imported"><Val dev:db-id="val-setting-group" sGroup="1">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-changed" name="Changed"><DAI dev:db-id="dai-changed" name="imported"><Val dev:db-id="val-changed">9</Val></DAI></DOI>
+						<DOI dev:db-id="doi-default-changed" name="DefaultChanged"><DAI dev:db-id="dai-default-changed" name="withDefault"><Val dev:db-id="val-default-changed">6</Val></DAI></DOI>
+						<DOI dev:db-id="doi-unspecified" name="Unspecified"><DAI dev:db-id="dai-unspecified" name="imported"><Val dev:db-id="val-unspecified">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-spec-two-values" name="SpecTwoValues"><DAI dev:db-id="dai-spec-two-values" name="imported"><Val dev:db-id="val-spec-two-values">1</Val></DAI></DOI>
+						<DOI dev:db-id="doi-spec-setting-group" name="SpecSettingGroup"><DAI dev:db-id="dai-spec-setting-group" name="withDefault"><Val dev:db-id="val-spec-setting-group">4</Val></DAI></DOI>
+						<DOI dev:db-id="doi-spec-blank" name="SpecBlank"><DAI dev:db-id="dai-spec-blank" name="withDefault"><Val dev:db-id="val-spec-blank">4</Val></DAI></DOI>
+						<DOI dev:db-id="doi-multi-default" name="MultiDefault"><DAI dev:db-id="dai-multi-default" name="multiDefault"><Val dev:db-id="val-multi-default">7</Val></DAI></DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="templates">
+		<LNodeType dev:db-id="lln0-type" id="LLN0_T" lnClass="LLN0">
+			<DO dev:db-id="lln0-mod" name="Mod" type="VALUES_T"/>
+		</LNodeType>
+		<LNodeType dev:db-id="cswi-type" id="CSWI_T" lnClass="CSWI">
+			<DO dev:db-id="do-own-false" name="OwnFalse" type="VALUES_T"/>
+			<DO dev:db-id="do-silent" name="Silent" type="VALUES_T"/>
+			<DO dev:db-id="do-set-kind" name="SetKind" type="VALUES_T"/>
+			<DO dev:db-id="do-two-values" name="TwoValues" type="VALUES_T"/>
+			<DO dev:db-id="do-no-value" name="NoValue" type="VALUES_T"/>
+			<DO dev:db-id="do-setting-group" name="SettingGroup" type="VALUES_T"/>
+			<DO dev:db-id="do-changed" name="Changed" type="VALUES_T"/>
+			<DO dev:db-id="do-default-changed" name="DefaultChanged" type="VALUES_T"/>
+			<DO dev:db-id="do-unspecified" name="Unspecified" type="VALUES_T"/>
+			<DO dev:db-id="do-spec-two-values" name="SpecTwoValues" type="VALUES_T"/>
+			<DO dev:db-id="do-spec-setting-group" name="SpecSettingGroup" type="VALUES_T"/>
+			<DO dev:db-id="do-spec-blank" name="SpecBlank" type="VALUES_T"/>
+			<DO dev:db-id="do-multi-default" name="MultiDefault" type="VALUES_T"/>
+		</LNodeType>
+		<DOType dev:db-id="values-type" id="VALUES_T" cdc="ING">
+			<DA dev:db-id="da-imported" name="imported" fc="SP" bType="INT32" valImport="true"/>
+			<DA dev:db-id="da-silent" name="silent" fc="SP" bType="INT32"/>
+			<DA dev:db-id="da-set-kind" name="setKind" fc="SP" bType="INT32" valKind="Set"/>
+			<DA dev:db-id="da-with-default" name="withDefault" fc="SP" bType="INT32" valImport="true"><Val dev:db-id="da-default">4</Val></DA>
+			<DA dev:db-id="da-multi-default" name="multiDefault" fc="SG" bType="INT32" valImport="true"><Val dev:db-id="da-multi-plain">7</Val><Val dev:db-id="da-multi-group" sGroup="1">8</Val></DA>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

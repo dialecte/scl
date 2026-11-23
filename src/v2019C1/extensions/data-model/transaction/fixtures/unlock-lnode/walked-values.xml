@@ -1,0 +1,53 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+	<Substation dev:db-id="substation" name="S1">
+		<Function dev:db-id="function" name="F1">
+			<LNode dev:db-id="lnode" iedName="P1" ldInst="LD0" prefix="" lnClass="MMXU" lnInst="1" lnUuid="ln-uuid" lnType="MMXU_T">
+				<Private dev:db-id="lnode-private" type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeSpecNaming dev:db-id="lnode-naming" sLnClass="MMXU" sLnInst="1"/>
+					<eIEC61850-6-100:DOS dev:db-id="dos-struct" name="Struct">
+						<eIEC61850-6-100:DAS dev:db-id="das-struct" name="f" mappedDaName="Struct.mag.f" mappedLnUuid="ln-uuid"><eIEC61850-6-100:Val>2.5</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+					<eIEC61850-6-100:DOS dev:db-id="dos-indexed" name="Indexed">
+						<eIEC61850-6-100:DAS dev:db-id="das-indexed" name="arr" ix="1"><eIEC61850-6-100:Val>3</eIEC61850-6-100:Val></eIEC61850-6-100:DAS>
+					</eIEC61850-6-100:DOS>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED dev:db-id="ied" name="P1">
+		<AccessPoint dev:db-id="access-point" name="AP1">
+			<Server dev:db-id="server">
+				<LDevice dev:db-id="ldevice" inst="LD0">
+					<LN0 dev:db-id="ln0" lnClass="LLN0" inst="" lnType="LLN0_T"/>
+					<LN dev:db-id="ln" prefix="" lnClass="MMXU" inst="1" lnType="MMXU_T" uuid="ln-uuid">
+						<DOI dev:db-id="doi-struct" name="Struct">
+							<SDI dev:db-id="sdi-struct" name="mag"><DAI dev:db-id="dai-struct" name="f"><Val dev:db-id="val-struct">2.5</Val></DAI></SDI>
+						</DOI>
+						<DOI dev:db-id="doi-indexed" name="Indexed">
+							<DAI dev:db-id="dai-indexed-0" name="arr" ix="0"><Val dev:db-id="val-indexed-0">3</Val></DAI>
+							<DAI dev:db-id="dai-indexed" name="arr" ix="1"><Val dev:db-id="val-indexed">3</Val></DAI>
+						</DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates dev:db-id="templates">
+		<LNodeType dev:db-id="lln0-type" id="LLN0_T" lnClass="LLN0">
+			<DO dev:db-id="lln0-mod" name="Mod" type="ARRAY_T"/>
+		</LNodeType>
+		<LNodeType dev:db-id="mmxu-type" id="MMXU_T" lnClass="MMXU">
+			<DO dev:db-id="do-struct" name="Struct" type="STRUCT_T"/>
+			<DO dev:db-id="do-indexed" name="Indexed" type="ARRAY_T"/>
+		</LNodeType>
+		<DOType dev:db-id="struct-type" id="STRUCT_T" cdc="MV">
+			<DA dev:db-id="da-mag" name="mag" fc="MX" bType="Struct" type="AV_T"/>
+		</DOType>
+		<DOType dev:db-id="array-type" id="ARRAY_T" cdc="ING">
+			<DA dev:db-id="da-arr" name="arr" fc="SP" bType="INT32" count="2" valImport="true"/>
+		</DOType>
+		<DAType dev:db-id="av-type" id="AV_T">
+			<BDA dev:db-id="bda-f" name="f" bType="FLOAT32" valImport="true"/>
+		</DAType>
+	</DataTypeTemplates>
+</SCL>

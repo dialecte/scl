@@ -1,24 +1,14 @@
 import { readLostDataInstances } from './lost-data-instances'
 import { textChangeOf } from './text-change'
-import {
-	ENUMERATED_BASIC_TYPE,
-	ENUMERATION_TAGS,
-	SETTABLE_VALUE_KIND,
-	VALUE_IMPORTED,
-	VALUE_TAGS,
-	FUNCTIONAL_CONSTRAINT_ATTRIBUTE,
-} from './value-ownership.constants'
+import { ENUMERATED_BASIC_TYPE, SETTABLE_VALUE_KIND } from './value-ownership.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
-import {
-	DATA_TYPE_MODEL,
-	DATA_TYPES_SELECT,
-	LNODE_TYPE_ATTRIBUTE,
-} from '@/v2019C1/extensions/data-model/query/data-types.constants'
-import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
-import { readAttribute } from '@/v2019C1/helpers'
+import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data-types.constants'
+import { readValueTypes } from '@/v2019C1/extensions/data-model/query/read-value-types'
+import { VALUE_TAGS } from '@/v2019C1/extensions/data-model/query/read-value-types.constants'
+import { readAttribute, readValueImport } from '@/v2019C1/helpers'
 
 import type { DiffNode, ReportInstance } from './diff.types'
 import type {
@@ -26,16 +16,18 @@ import type {
 	TakenOver,
 	TextComparison,
 	TypeContext,
-	TypeMember,
-	ValueDefinition,
 	ValueOwnership,
-	ValueTypes,
 } from './value-ownership.types'
 import type { Config } from '@/v2019C1/config'
+import type {
+	TypeMember,
+	ValueDefinition,
+	ValueTypes,
+} from '@/v2019C1/extensions/data-model/query/read-value-types.types'
 import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { MatchKey, NamesFollow } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
-import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * What the project keeps of a template's values, and what of its data the template's types no longer name, for one
@@ -172,114 +164,6 @@ function holdsValue(node: AnyTreeRecord): boolean {
 }
 
 /**
- * The members of every type of the template's data model, with what their values are held to, and the values of each
- * enumeration: one read of the `DataTypeTemplates`.
- */
-export async function readValueTypes(query: Core.Query<Config>): Promise<ValueTypes> {
-	const collected = await collectWithAncestry(query, { select: DATA_TYPES_SELECT })
-	const placed = collected.records.flatMap(function withParent(record) {
-		const parent = collected.ancestryOf(record.id).at(-1)
-		return parent ? [{ record, parent }] : []
-	})
-	return {
-		membersById: groupMembers(placed.flatMap((entry) => optional(typeMemberOf(entry)))),
-		enumerationsById: groupEnumerations(
-			placed.flatMap((entry) => optional(enumerationValueOf(entry))),
-		),
-	}
-}
-
-/** A value as a list of one, nothing as an empty list. */
-function optional<T>(value: T | undefined): T[] {
-	return value === undefined ? [] : [value]
-}
-
-/** The members, by the id of the type holding them, then by name. */
-function groupMembers(
-	members: readonly { typeId: string; name: string; member: TypeMember }[],
-): ReadonlyMap<string, ReadonlyMap<string, TypeMember>> {
-	const membersById = new Map<string, Map<string, TypeMember>>()
-	for (const { typeId, name, member } of members) {
-		const ofType = membersById.get(typeId) ?? new Map<string, TypeMember>()
-		ofType.set(name, member)
-		membersById.set(typeId, ofType)
-	}
-	return membersById
-}
-
-/** The values, by the id of the enumeration holding them. */
-function groupEnumerations(
-	values: readonly { enumerationId: string; value: string }[],
-): ReadonlyMap<string, ReadonlySet<string>> {
-	const enumerationsById = new Map<string, Set<string>>()
-	for (const { enumerationId, value } of values) {
-		const ofEnumeration = enumerationsById.get(enumerationId) ?? new Set<string>()
-		ofEnumeration.add(value)
-		enumerationsById.set(enumerationId, ofEnumeration)
-	}
-	return enumerationsById
-}
-
-/** A record as a value of the enumeration holding it, when it is one. */
-function enumerationValueOf(params: {
-	record: AnyRawRecord
-	parent: AnyRawRecord
-}): { enumerationId: string; value: string } | undefined {
-	const { record, parent } = params
-	if (record.tagName !== ENUMERATION_TAGS.value || parent.tagName !== ENUMERATION_TAGS.type)
-		return undefined
-	const enumerationId = readAttribute({ record: parent, name: 'id', defaults: 'none' })
-	return enumerationId ? { enumerationId, value: record.value.trim() } : undefined
-}
-
-/** A record as a member of the type holding it, when it is one: its type's id, its name and what it is. */
-function typeMemberOf(params: {
-	record: AnyRawRecord
-	parent: AnyRawRecord
-}): { typeId: string; name: string; member: TypeMember } | undefined {
-	const { record, parent } = params
-	const parentType = DATA_TYPE_MODEL.types.get(parent.tagName)
-	const modelMember = parentType?.members.get(record.tagName)
-	if (!parentType || !modelMember) return undefined
-	const typeId = readAttribute({ record: parent, name: parentType.idAttribute, defaults: 'none' })
-	const name = readAttribute({ record, name: modelMember.nameAttribute, defaults: 'none' })
-	if (!typeId || !name) return undefined
-	const type = readAttribute({ record, name: modelMember.typeAttribute, defaults: 'none' })
-	const fc = readAttribute({ record, name: FUNCTIONAL_CONSTRAINT_ATTRIBUTE, defaults: 'none' })
-	return {
-		typeId,
-		name,
-		member: {
-			continuesObject: modelMember.continuesObject,
-			...(type ? { type } : {}),
-			...(fc ? { fc } : {}),
-			definition: readDefinition({ record, defaults: 'optional' }),
-		},
-	}
-}
-
-/**
- * What a data attribute or a `DAI` says of its values. A data attribute's kind and import flag take their schema
- * defaults when absent (of kind `Set`, not imported); a `DAI`'s only what it writes, overriding its type's.
- */
-function readDefinition(params: {
-	record: AnyRawRecord
-	defaults: 'optional' | 'none'
-}): ValueDefinition {
-	const { record, defaults } = params
-	const valKind = readAttribute({ record, name: 'valKind', defaults })
-	const valImport = readAttribute({ record, name: 'valImport', defaults })
-	const bType = readAttribute({ record, name: 'bType', defaults: 'none' })
-	const type = readAttribute({ record, name: 'type', defaults: 'none' })
-	return {
-		...(valKind ? { valKind } : {}),
-		...(valImport ? { valImport } : {}),
-		...(bType ? { bType } : {}),
-		...(type ? { type } : {}),
-	}
-}
-
-/**
  * The settable values below a node, walking its data down the types: a logical node opens its type, a `DOI` / `SDI`
  * the member it names, a `DAI` the data attribute its values are given for.
  */
@@ -322,25 +206,22 @@ function childContextOf(params: {
 }
 
 /**
- * What a `DAI`'s values are held to: its own kind and import flag, else its data attribute's — its own count when its
- * data attribute is not found in the template's types.
+ * What a `DAI`'s values are held to: its own kind, else its data attribute's, and whether its value is imported
+ * (`readValueImport`) — only its own when its data attribute is not found in the template's types.
  */
 function valueDefinitionOf(params: {
 	node: AnyTreeRecord
 	context: TypeContext | undefined
 	types: ValueTypes
-}): ValueDefinition | undefined {
+}): ValueDefinition {
 	const { node, context, types } = params
 	const member = context ? memberNamed({ node, context, types }) : undefined
-	const overrides = pickOverrides(readDefinition({ record: node, defaults: 'none' }))
-	if (!member && Object.keys(overrides).length === 0) return undefined
-	return { ...member?.definition, ...overrides }
-}
-
-/** The kind and import flag a `DAI` writes, which override its data attribute's. */
-function pickOverrides(definition: ValueDefinition): ValueDefinition {
-	const { valKind, valImport } = definition
-	return { ...(valKind ? { valKind } : {}), ...(valImport ? { valImport } : {}) }
+	const valKind = readAttribute({ record: node, name: 'valKind', defaults: 'none' })
+	return {
+		...member?.definition,
+		...(valKind ? { valKind } : {}),
+		imported: readValueImport({ instance: node, dataAttribute: member?.record }),
+	}
 }
 
 /** The member of the current type a `DOI`, `SDI` or `DAI` names. */
@@ -360,9 +241,7 @@ function settableValueOf(params: {
 	types: ValueTypes
 }): SettableValue | undefined {
 	const { definition, types } = params
-	const settable =
-		definition.valKind === SETTABLE_VALUE_KIND ||
-		(definition.valImport !== undefined && VALUE_IMPORTED.has(definition.valImport))
+	const settable = definition.valKind === SETTABLE_VALUE_KIND || definition.imported === true
 	if (!settable) return undefined
 	const allowed =
 		definition.bType === ENUMERATED_BASIC_TYPE && definition.type

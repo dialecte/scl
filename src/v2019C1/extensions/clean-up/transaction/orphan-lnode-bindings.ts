@@ -29,7 +29,8 @@ import type * as Core from '@dialecte/core'
  *   rewritten: bound to the logical node of the specification IED it is specified on when that IED
  *   holds it and no other LNode is bound to it, else assigned to no IED, its logical device, prefix,
  *   class and instance from its `LNodeSpecNaming` (see `releaseLNodeBindings`). Nothing of a device is
- *   removed: unlike `dataModel.unlockLNode`, the data a device instantiates stays where it is.
+ *   removed: unlike `dataModel.unlockLNode`, which removes the values the system tool owns, every value
+ *   a device instantiates stays where it is.
  *
  * The other names of an LNode's implementation follow the same rule, whether it is bound or not (an
  * LNode implemented by several logical nodes, or sharing one, stays assigned to no IED and names
