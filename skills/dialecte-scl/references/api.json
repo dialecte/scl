@@ -842,6 +842,19 @@
 			"declaredAt": "src/v2019C1/extensions/specification/query/role-lnodes.ts:35"
 		},
 		{
+			"path": "doc.query.specification.toImplement",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: ToImplementParams) => Promise<ToImplement>",
+			"summary": "What is still to implement on a real IED: the specification IED names of the LNodes it implements (the `sIedName` of their `LNodeSpecNaming`, which keeps the specification once an LNode is mapped), and every LNode of the process section specified on one of those names that no real IED implements yet. An LNode mapped to a specification IED is still to implement: it is specified, not implemented. Implemented counts every real IED, an LNode implemented with others by one logical node (its data naming the LN) included. The other real IEDs implementing LNodes specified on those names are listed: when one specification IED is implemented by several real IEDs, nothing says which of them an LNode left is meant for, so it is listed for each.",
+			"intents": [
+				"what is still to implement on a real IED",
+				"the logical nodes left of the specification a real device implements"
+			],
+			"declaredAt": "src/v2019C1/extensions/specification/query/to-implement.ts:33",
+			"example": "await doc.query.specification.toImplement({ ied: { tagName: 'IED', id: 'ied-r' } })"
+		},
+		{
 			"path": "tx.cleanUp.commitPrune",
 			"root": "tx",
 			"otherRoutes": [],
