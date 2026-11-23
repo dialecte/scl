@@ -55,6 +55,15 @@ export const SCL_IMPORT_DIAGNOSTICS = {
 			message: 'The data path of a reference is not split by the data model of the file',
 		},
 		/**
+		 * A behaviour variable (`InputVar`, `OutputVar`) names data and a signal at once: the two reference groups are never
+		 * set together. It is kept as read.
+		 */
+		'exclusive-reference-groups': {
+			severity: 'warning',
+			family: 'reference',
+			message: 'A reference names its target by two exclusive groups of attributes at once',
+		},
+		/**
 		 * Names written from a path (a terminal's level names, a connectivity node's path name) disagree
 		 * with that path: they are written again from it.
 		 */

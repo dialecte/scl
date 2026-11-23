@@ -550,7 +550,7 @@ describe('reference-parsing', () => {
 											<eIEC61850-6-100:SourceRef input="Trip" inputInst="1" uuid="srcref-trip-uuid" source="S1/B1/PTRC1.Tr.general" sourceDoName="Tr" sourceDaName="general" />
 										</eIEC61850-6-100:LNodeInputs>
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
-											<eIEC61850-6-100:InputVar dataName="Op.general" inputName="Trip" />
+											<eIEC61850-6-100:InputVar inputName="Trip" />
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>
@@ -574,7 +574,7 @@ describe('reference-parsing', () => {
 											<eIEC61850-6-100:ControlRef output="TripCmd" outputInst="1" uuid="ctrlref-tripcmd-uuid" controlled="S1/B1/PTRC1.Tr" controlledDoName="Tr" />
 										</eIEC61850-6-100:LNodeOutputs>
 										<eIEC61850-6-100:BehaviorDescription name="BD1">
-											<eIEC61850-6-100:OutputVar dataName="Pos.stVal" outputName="TripCmd" />
+											<eIEC61850-6-100:OutputVar outputName="TripCmd" />
 										</eIEC61850-6-100:BehaviorDescription>
 									</Private>
 								</LNode>

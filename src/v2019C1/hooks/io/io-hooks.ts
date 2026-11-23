@@ -3,6 +3,7 @@ import { createImportStepProgress } from './import-step-progress'
 import { LOCAL_NAME_RESOLUTIONS } from './io-hooks.constants'
 
 import {
+	EXCLUSIVE_REFERENCE_TAGS,
 	REFERENCE_TAG_NAMES,
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
@@ -30,6 +31,7 @@ import { namesGroundedNode } from '@/v2019C1/helpers/grounded-node'
 import {
 	ambiguousReferenceDiagnostic,
 	dataPathNotSplitDiagnostic,
+	exclusiveReferenceGroupsDiagnostic,
 	incoherentPathNamesDiagnostic,
 	incoherentReferenceDiagnostic,
 	incoherentReferenceRelated,
@@ -51,7 +53,9 @@ import type {
 	SclImportSessionOptions,
 } from './io-hooks.types'
 import type {
+	DataPathNotSplitDiagnostic,
 	DiagnosticAttributeRef,
+	ExclusiveReferenceGroupsDiagnostic,
 	SclImportDiagnostic,
 	UnsupportedXPathDiagnostic,
 } from '@/v2019C1/errors/import-diagnostics.types'
@@ -122,6 +126,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 	const pendingResolutions: PendingResolution[] = []
 	const pendingPathFills: PendingPathFill[] = []
 	const xpathDiagnostics: UnsupportedXPathDiagnostic[] = []
+	const exclusiveDiagnostics: ExclusiveReferenceGroupsDiagnostic[] = []
 	const ownPathElements: CollectedElement[] = []
 	const mappedDataImport = createMappedDataImport()
 	const specNamingImport = createSpecNamingImport()
@@ -154,6 +159,16 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 		if (MAPPED_NAME_REFS.has(tagName)) return
 
 		const pairs = UUID_REFERENCE_PAIRS[tagName as keyof typeof UUID_REFERENCE_PAIRS]
+		// both groups of an element naming its target by one of them: reported, each group still read as written
+		const bothGroups = exclusiveGroupsHeld({ record, pairs })
+		if (bothGroups) {
+			exclusiveDiagnostics.push(
+				exclusiveReferenceGroupsDiagnostic({
+					ref: { tagName: record.tagName, id: record.id },
+					meta: { attributes: bothGroups },
+				}),
+			)
+		}
 		for (const pair of pairs) {
 			collectReference({ record, ancestry, pair })
 		}
@@ -236,7 +251,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 	): Promise<AfterImportResult<SclImportDiagnostic>> {
 		const progress = createImportStepProgress({ context })
 		const updates: RecordPatch[] = []
-		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics]
+		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics, ...exclusiveDiagnostics]
 
 		const specNaming = await progress.run({
 			step: 'spec-naming',
@@ -427,6 +442,8 @@ function resolvePending(params: {
 			specNamings,
 			pathUuid: undefined,
 			formerForm: false,
+			qualifier: undefined,
+			dataTypes,
 		})
 	}
 	if (!parsed) return { diagnostics: [] }
@@ -453,6 +470,8 @@ function resolvePending(params: {
 			specNamings,
 			pathUuid: resolvedUuid,
 			formerForm,
+			qualifier: parsed.qualifier,
+			dataTypes,
 		})
 	}
 
@@ -463,30 +482,12 @@ function resolvePending(params: {
 	const lnType = index.targetsByUuid.get(resolvedUuid)?.lnType
 	const dataNames = dataNamesOfPath({ pending, qualifier: parsed.qualifier, lnType, dataTypes })
 	if (dataNames === undefined) {
-		return {
-			diagnostics: [
-				dataPathNotSplitDiagnostic({
-					ref: referenceRefOf(pending),
-					meta: {
-						pathValue: pending.pathValue,
-						...(parsed.qualifier && !lnType ? { untyped: true as const } : {}),
-					},
-				}),
-			],
-		}
+		return { diagnostics: [notSplitDiagnosticOf({ pending, qualifier: parsed.qualifier, lnType })] }
 	}
 
 	const rewrite = pending.alwaysStandardize || formerForm
 	// the standard path written with the data names the path gives, when the reference held none
-	const withDataNames = {
-		...pending,
-		referenceAttributes: [
-			...pending.referenceAttributes.filter(
-				(attribute) => !dataNames.some((dataName) => dataName.name === attribute.name),
-			),
-			...dataNames,
-		],
-	}
+	const withDataNames = withAttributes({ pending, attributes: dataNames })
 	return patchOf({
 		pending,
 		index,
@@ -582,11 +583,15 @@ function referenceRefOf(pending: PendingResolution): DiagnosticAttributeRef {
 
 /**
  * A reference the file gives both a path and a uuid. When the path names the element the uuid
- * names, only a former path, or a name that must be written in the standard form, is written again
- * (a data path keeps the qualifier it is written with). When it names another element, or none, the
- * uuid wins: the path is written from the element the uuid names, and the disagreement is reported
- * with the elements involved. A uuid naming no element of the file (an element of another file) is
- * kept as read. `pathUuid` is the uuid of the element the path names, when the file holds one.
+ * names, the data names the path carries after an LNode are written beside the uuid when the
+ * reference held none (left as read, and reported, when the data model of the file does not split
+ * them), and only a former path, or a name that must be written in the standard form, is written
+ * again (a data path keeps the qualifier it is written with). When it names another element, or
+ * none, the uuid wins: the path is written from the element the uuid names and the data names the
+ * reference holds (never the data the path named on another element), and the disagreement is
+ * reported with the elements involved. A uuid naming no element of the file (an element of another
+ * file) is kept as read. `pathUuid` is the uuid of the element the path names, when the file holds
+ * one; `qualifier` the data the path names after it.
  */
 function resolveWithUuid(params: {
 	pending: PendingResolution
@@ -595,14 +600,28 @@ function resolveWithUuid(params: {
 	specNamings: ReadonlyMap<string, AnyRawRecord>
 	pathUuid: string | undefined
 	formerForm: boolean
+	qualifier: string | undefined
+	dataTypes: DataTypes
 }): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
-	const { pending, uuid, index, specNamings, pathUuid, formerForm } = params
+	const { pending, uuid, index, specNamings, pathUuid, formerForm, qualifier, dataTypes } = params
 	if (pathUuid === uuid) {
+		const lnType = index.targetsByUuid.get(uuid)?.lnType
+		const dataNames = dataNamesOfPath({ pending, qualifier, lnType, dataTypes })
+		if (dataNames === undefined) {
+			return { diagnostics: [notSplitDiagnosticOf({ pending, qualifier, lnType })] }
+		}
 		const standardName =
 			pending.alwaysStandardize && pending.pair.resolution !== RESOLUTION_TYPE.lnode
 		const rewrite = formerForm || standardName
-		const standard = rewrite ? standardPathOf({ pending, index, uuid, specNamings }) : []
-		return patchOf({ pending, index, uuid, attributes: standard })
+		const standard = rewrite
+			? standardPathOf({
+					pending: withAttributes({ pending, attributes: dataNames }),
+					index,
+					uuid,
+					specNamings,
+				})
+			: []
+		return patchOf({ pending, index, uuid, attributes: [...standard, ...dataNames] })
 	}
 
 	const target = index.targetsByUuid.get(uuid)
@@ -610,8 +629,8 @@ function resolveWithUuid(params: {
 		return { diagnostics: [] }
 	}
 	// a path that cannot be written from the element the uuid names (outside the context a local
-	// name is read in) is kept as read
-	const standard = standardPathOf({ pending, index, uuid, specNamings })
+	// name is read in) is kept as read; the data the path named belongs to another element
+	const standard = standardPathOf({ pending: withoutPath({ pending }), index, uuid, specNamings })
 	if (standard.length === 0) return { diagnostics: [] }
 	const outcome = patchOf({ pending, index, uuid, attributes: standard })
 	const pathTarget = pathUuid ? index.targetsByUuid.get(pathUuid) : undefined
@@ -632,6 +651,73 @@ function resolveWithUuid(params: {
 			}),
 		],
 	}
+}
+
+/** What the import says of a reference whose data path the data model of the file does not split. */
+function notSplitDiagnosticOf(params: {
+	pending: PendingResolution
+	qualifier: string | undefined
+	lnType: string | undefined
+}): DataPathNotSplitDiagnostic {
+	const { pending, qualifier, lnType } = params
+	return dataPathNotSplitDiagnostic({
+		ref: referenceRefOf(pending),
+		meta: {
+			pathValue: pending.pathValue,
+			...(qualifier && !lnType ? { untyped: true as const } : {}),
+		},
+	})
+}
+
+/** The reference as it would read with `attributes` written over the ones it holds. */
+function withAttributes(params: {
+	pending: PendingResolution
+	attributes: readonly { name: string; value: string }[]
+}): PendingResolution {
+	const { pending, attributes } = params
+	return {
+		...pending,
+		referenceAttributes: [
+			...pending.referenceAttributes.filter(
+				(attribute) => !attributes.some((written) => written.name === attribute.name),
+			),
+			...attributes,
+		],
+	}
+}
+
+/** The reference as it would read without its path: what it names is then given by its uuid and its data names only. */
+function withoutPath(params: { pending: PendingResolution }): PendingResolution {
+	const { pending } = params
+	return {
+		...pending,
+		referenceAttributes: pending.referenceAttributes.filter(
+			(attribute) => attribute.name !== pending.pair.attribute.path,
+		),
+	}
+}
+
+/**
+ * The reference attributes `record` holds, pair by pair in the registry's order (path, uuid, data names), when its tag
+ * names its target by the attributes of one pair only (`EXCLUSIVE_REFERENCE_TAGS`) and it holds those of two;
+ * `undefined` otherwise.
+ */
+function exclusiveGroupsHeld(params: {
+	record: AnyRawRecord
+	pairs: readonly ReferencePair[]
+}): string[] | undefined {
+	const { record, pairs } = params
+	if (!EXCLUSIVE_REFERENCE_TAGS.has(record.tagName)) return undefined
+	const groups = pairs
+		.map((pair) =>
+			[
+				pair.attribute.path,
+				pair.attribute.uuid,
+				...pair.companions.map((companion) => companion.name),
+			].filter((name) => readAttribute({ record, name, defaults: 'none' })),
+		)
+		.filter((held) => held.length > 0)
+	return groups.length > 1 ? groups.flat() : undefined
 }
 
 /**

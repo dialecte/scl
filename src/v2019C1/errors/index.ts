@@ -9,6 +9,7 @@ export type {
 	AmbiguousReferenceDiagnostic,
 	DataPathNotSplitDiagnostic,
 	DerivedSpecificationNamingDiagnostic,
+	ExclusiveReferenceGroupsDiagnostic,
 	IncoherentPathName,
 	IncoherentPathNamesDiagnostic,
 	IncoherentReferenceDiagnostic,

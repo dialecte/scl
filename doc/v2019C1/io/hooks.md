@@ -101,6 +101,7 @@ What the import has to say about a file comes back as diagnostics, beside the wr
 | `unsupported-xpath-reference`  | `warning`     | Path uses an XPath syntax not supported by the resolver                                                                                                                            |
 | `incoherent-reference`         | `warning`     | The path (or the names, for an IED-section reference named by attributes) and the uuid of a reference name two different elements: the uuid wins, or the reference is left as read |
 | `data-path-not-split`          | `warning`     | The path of an LNode a reference names could not be given the data-object name a data reference by uuid carries: the reference is left as read                                     |
+| `exclusive-reference-groups`   | `warning`     | A behaviour variable names data and its input or output at once: each group is still read as written                                                                               |
 | `incoherent-path-names`        | `information` | Names written from a path disagree with it: they are written again from the path                                                                                                   |
 | `derived-specification-naming` | `information` | An LNode bound to a real IED had no `LNodeSpecNaming`: one was made from the LN it is bound to                                                                                     |
 

@@ -27,6 +27,12 @@ import type { Scl } from '@/v2019C1/config'
  */
 export const FUNCTION_SCOPE_TAGS: ReadonlySet<string> = new Set(['Function', 'EqFunction'])
 
+/**
+ * The element whose behaviour names its own data alone (`Op.general`): a `behavior-description` data path read from a
+ * BehaviorDescription it holds has no level before the data. Below any other level, the path reaches an LNode first.
+ */
+export const BEHAVIOR_DATA_HOLDER_TAG = 'LNode' satisfies Scl.ElementsOf
+
 export const UUID_REFERENCE_PAIRS = {
 	AllocationRoleRef: [
 		{
@@ -511,6 +517,19 @@ export const TUPLE_REFERENCE_PAIRS = {
 		},
 	],
 } as const satisfies TupleReferencePairsShape
+
+/**
+ * The reference tags whose pairs are exclusive groups: the element names one target, by the attributes of one pair only
+ * (a behaviour variable names data, or its input / output signal, never both).
+ */
+const EXCLUSIVE_REFERENCE_TAG_NAMES = [
+	'InputVar',
+	'OutputVar',
+] as const satisfies readonly (keyof typeof UUID_REFERENCE_PAIRS)[]
+
+export const EXCLUSIVE_REFERENCE_TAGS: ReadonlySet<string> = new Set<string>(
+	EXCLUSIVE_REFERENCE_TAG_NAMES,
+)
 
 /**
  * Reference tags that carry semantic CONTENT beyond the pointer: the eIEC signal specs

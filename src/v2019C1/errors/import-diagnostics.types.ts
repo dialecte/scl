@@ -85,6 +85,16 @@ export type DataPathNotSplitDiagnostic = Diagnostic<'data-path-not-split'> & {
 }
 
 /**
+ * A behaviour variable holding attributes of both its reference groups (its data, and its input or output): `ref` is
+ * the variable, `attributes` the reference attributes it holds, in the registry's order.
+ */
+export type ExclusiveReferenceGroupsDiagnostic = Diagnostic<'exclusive-reference-groups'> & {
+	meta: {
+		attributes: string[]
+	}
+}
+
+/**
  * Attributes written from a path (a terminal's level names, a connectivity node's `pathName`) that
  * disagree with that path: they were written again from it. `ref` is the element holding them.
  */
@@ -113,5 +123,6 @@ export type SclImportDiagnostic =
 	| UnsupportedXPathDiagnostic
 	| IncoherentReferenceDiagnostic
 	| DataPathNotSplitDiagnostic
+	| ExclusiveReferenceGroupsDiagnostic
 	| IncoherentPathNamesDiagnostic
 	| DerivedSpecificationNamingDiagnostic
