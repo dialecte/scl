@@ -52,8 +52,9 @@ import type * as Core from '@dialecte/core'
  * with its expected data and without that link. Each LNode gets its own naming as specified naming; data
  * specifications lose their mapping. `labels: false` leaves no label in the file.
  * Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only
- * as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED: the document `provenanceQuery`
- * names when given (what the ISD holds is still read from `sourceQuery`).
+ * as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED: the
+ * document `provenanceQuery` names when given (what the ISD holds is still read from `sourceQuery`); a template
+ * records none, the extension of that document still checked.
  * Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header
  * fileType (the type of the `provenanceQuery` document when given). Other extensions are refused with
  * OPTION_NOT_AVAILABLE before writes.
@@ -136,8 +137,8 @@ async function readIedExport(
 	tx: Core.Transaction<Config>,
 	params: IedExtractParams & { iedName: string },
 ): Promise<IedExport> {
-	const { sourceQuery, iedRef, iedName } = params
-	const sourceFileType = await readIedSourceFileType(params.provenanceQuery ?? sourceQuery)
+	const { sourceQuery, provenanceQuery = sourceQuery, iedRef, iedName } = params
+	const sourceFileType = await readIedSourceFileType(provenanceQuery)
 	const selection = await selectIedContent(sourceQuery, { iedRef, iedName, inputs: params.inputs })
 	const processSource = await readIedProcessSource(sourceQuery, { iedRef })
 	const process = planIedProcess({
