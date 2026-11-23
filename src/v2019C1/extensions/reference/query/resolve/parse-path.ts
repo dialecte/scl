@@ -2,7 +2,7 @@ import { buildMappedLNodePath } from '../build/build-mapped-lnode-path'
 import { scopedNameKey } from '../build/name-scope'
 import { getPathSegment, joinPathParts } from '../build/path-segment'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
+import { BEHAVIOR_DATA_HOLDER_TAG, UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
@@ -331,8 +331,14 @@ function parseBehaviorDescriptionPath(params: {
 	const contextPath = findScopeContextPath({ ancestry, specNamings })
 	if (!contextPath) return null
 
+	// The data of the LNode holding the behaviour is named alone; below any other level, the path reaches an LNode
+	// first ("/" down to it), then names its data ("." after it).
 	if (pathAttrName === 'dataName') {
-		return { lookupKey: contextPath, qualifier: pathValue }
+		if (scopeHolderOf({ ancestry })?.tagName === BEHAVIOR_DATA_HOLDER_TAG) {
+			return { lookupKey: contextPath, qualifier: pathValue }
+		}
+		const { path, qualifier } = splitLnodeQualifier(pathValue)
+		return { lookupKey: `${contextPath}/${path}`, ...(qualifier ? { qualifier } : {}) }
 	}
 
 	// The name is local to the BehaviorDescription's parent: the signal's
@@ -378,6 +384,18 @@ function findScopeContextPath(params: {
 
 	if (parts.length === 0) return null
 	return joinPathParts(parts)
+}
+
+/** The nearest level above the nearest BehaviorDescription of `ancestry`: the element its references start below. */
+function scopeHolderOf(params: { ancestry: readonly AnyRawRecord[] }): AnyRawRecord | undefined {
+	const { ancestry } = params
+	const behaviorDescriptionIndex = ancestry.findLastIndex(
+		(record) => record.tagName === 'BehaviorDescription',
+	)
+	if (behaviorDescriptionIndex === -1) return undefined
+	return ancestry
+		.slice(0, behaviorDescriptionIndex)
+		.findLast((record) => getPathSegment(record) !== null)
 }
 
 /**

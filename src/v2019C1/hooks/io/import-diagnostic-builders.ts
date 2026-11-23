@@ -9,6 +9,7 @@ import type {
 	AmbiguousReferenceDiagnostic,
 	DataPathNotSplitDiagnostic,
 	DerivedSpecificationNamingDiagnostic,
+	ExclusiveReferenceGroupsDiagnostic,
 	IncoherentPathNamesDiagnostic,
 	IncoherentReferenceDiagnostic,
 	UnresolvedReferenceDiagnostic,
@@ -70,6 +71,14 @@ export function dataPathNotSplitDiagnostic(params: {
 	meta: DataPathNotSplitDiagnostic['meta']
 }): DataPathNotSplitDiagnostic {
 	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'data-path-not-split', params)
+}
+
+/** A behaviour variable holding attributes of both its reference groups. */
+export function exclusiveReferenceGroupsDiagnostic(params: {
+	ref: DiagnosticRef
+	meta: ExclusiveReferenceGroupsDiagnostic['meta']
+}): ExclusiveReferenceGroupsDiagnostic {
+	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'exclusive-reference-groups', params)
 }
 
 /** Attributes written from a path that the file gave other values. */
