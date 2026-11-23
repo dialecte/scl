@@ -6,7 +6,7 @@ import levelMovingBayControl from './fixtures/level-template-revision-2-moving-b
 import twoApplicationsRevision1 from './fixtures/level-template-with-two-applications-revision-1.xml?raw'
 import twoApplicationsMovingBayControl from './fixtures/level-template-with-two-applications-revision-2-moving-baycontrol-to-q02.xml?raw'
 
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { report } from '@/v2019C1/extensions/lifecycle/report'
@@ -22,6 +22,31 @@ import type { Scl } from '@/v2019C1/config'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SclTest } from '@/v2019C1/test'
 import type { CountedQueryCall } from '@/v2019C1/test/count-query-reads.types'
+
+/**
+ * The project reads the resolution itself makes (`resolvePrimaryParentsOfEach`, through the query it is given): the tag
+ * reads are counted there only, so other paths of the apply reading the same tags do not ride in.
+ */
+const resolution = vi.hoisted(() => ({ calls: [] as Array<() => CountedQueryCall[]> }))
+
+vi.mock(
+	'@/v2019C1/extensions/lifecycle/layers/topology/resolve-primary-parents',
+	async function countResolutionReads(importOriginal) {
+		const original =
+			await importOriginal<
+				typeof import('@/v2019C1/extensions/lifecycle/layers/topology/resolve-primary-parents')
+			>()
+		async function resolvePrimaryParentsOfEachCounted(
+			...[query, params]: Parameters<typeof original.resolvePrimaryParentsOfEach>
+		) {
+			// read when called, after the test module's imports are done
+			const counted = countDocumentQueryReads(query)
+			resolution.calls.push(counted.calls)
+			return original.resolvePrimaryParentsOfEach(counted.query, params)
+		}
+		return { ...original, resolvePrimaryParentsOfEach: resolvePrimaryParentsOfEachCounted }
+	},
+)
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -52,10 +77,7 @@ type PrimaryReads = {
 	templateAncestorsBatched: number
 	/** Project: the ancestors of held primaries read in one call. */
 	heldAncestries: number
-	/**
-	 * Project: every record of a primary tag read, by every path of the apply (the cascade reads the tags too): the
-	 * resolution adds one per primary tag per frame instance and one per later loop, whatever the primaries.
-	 */
+	/** Project, inside the resolution's calls: the records of a primary tag read, one per tag present per pass. */
 	tagReads: number
 }
 
@@ -82,11 +104,11 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 					templateRecordsBatched: 1,
 					templateAncestorsBatched: 1,
 					heldAncestries: 2,
-					tagReads: 11,
+					tagReads: 3,
 				},
 			},
 		// one application (Display) and one function (BayControl), BayControl moved to Q02
-		'an application and a function → the template read once, each frame instance one ancestry read, the loops none':
+		'an application and a function → the template read once, each frame instance one read per tag and one ancestry read, each loop one read of its tag':
 			{
 				sourceXml: levelRevision1,
 				targetXml: projectXml,
@@ -96,11 +118,11 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 					templateRecordsBatched: 1,
 					templateAncestorsBatched: 1,
 					heldAncestries: 2,
-					tagReads: 15,
+					tagReads: 6,
 				},
 			},
 		// two applications (Display, Alarm) and one function: the Application tag read once per pass, not per application
-		'two applications and a function → the Application tag read once per pass, not once per application':
+		'two applications and a function → the same reads as one application: the Application tag read once per pass, not once per application':
 			{
 				sourceXml: twoApplicationsRevision1,
 				targetXml: projectXml,
@@ -110,7 +132,7 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 					templateRecordsBatched: 1,
 					templateAncestorsBatched: 1,
 					heldAncestries: 2,
-					tagReads: 20,
+					tagReads: 6,
 				},
 			},
 	}
@@ -129,6 +151,7 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 
 		const template = countDocumentQueryReads(next.query)
 		let projectCalls: () => CountedQueryCall[] = () => []
+		resolution.calls = []
 		await target.transaction(async function applyCounted(tx) {
 			const counted = countDocumentQueryReads(tx)
 			projectCalls = counted.calls
@@ -140,9 +163,13 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 			})
 		})
 
-		expect(primaryReadsOf({ template: template.calls(), project: projectCalls() })).toEqual(
-			testCase.expected,
-		)
+		expect(
+			primaryReadsOf({
+				template: template.calls(),
+				project: projectCalls(),
+				resolving: resolution.calls.flatMap((calls) => calls()),
+			}),
+		).toEqual(testCase.expected)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })
@@ -152,8 +179,9 @@ describe('tx.lifecycle.apply - the reads resolving the primaries of a template u
 function primaryReadsOf(params: {
 	template: readonly CountedQueryCall[]
 	project: readonly CountedQueryCall[]
+	resolving: readonly CountedQueryCall[]
 }): PrimaryReads {
-	const { template, project } = params
+	const { template, project, resolving } = params
 	// the refs the template primaries are read by: their ancestors and their records, in one call each
 	const batched = template.find(
 		(call) => call.method === 'findAncestorsOfEach' && holdsPrimaries(call.args[0]),
@@ -175,7 +203,7 @@ function primaryReadsOf(params: {
 		heldAncestries: project.filter(
 			(call) => call.method === 'findAncestorsOfEach' && holdsPrimaries(call.args[0]),
 		).length,
-		tagReads: project.filter(
+		tagReads: resolving.filter(
 			(call) =>
 				call.method === 'getRecordsByTagName' && PRIMARY_TAGS.has(String(call.args[0] ?? '')),
 		).length,
