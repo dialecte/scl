@@ -7,7 +7,7 @@ import type * as Core from '@dialecte/core'
 
 /**
  * What building the data model of a specification IED from these logical nodes would create, bind, leave out or
- * refuse, without writing: the plan `tx.specification.buildIed` writes. Every refusal is listed in `refusals`; the
+ * refuse, without writing: the plan `tx.specification.buildIed` writes, values (`values`, `valuesLeftOut`) included. Every refusal is listed in `refusals`; the
  * values the caller's `openValues` rules gave are listed in `openValuesUsed`. A fixed number of reads, whatever the
  * number of logical nodes; nothing is kept after the call.
  *
@@ -42,6 +42,8 @@ export async function planWithServer(
 		...(params.server && { server: params.server }),
 		prefixFromLeafSubFunction: params.prefixFromLeafSubFunction ?? false,
 		openValues: params.openValues ?? {},
+		excludeFunctionalConstraints: params.excludeFunctionalConstraints ?? [],
+		ldNameAlsoFits: params.ldNameAlsoFits ?? [],
 	}
 	const server = serverOf({ input, options })
 	const plan = planBuild({ input, options })

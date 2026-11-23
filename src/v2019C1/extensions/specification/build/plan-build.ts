@@ -5,6 +5,7 @@ import {
 	LN_PREFIX_MAX,
 	LN_PREFIX_PATTERN,
 } from '../naming/normalize-ld-inst.constants'
+import { planValues } from '../query/plan-values'
 import {
 	ADDED_LPHD,
 	LDEVICE_NAME_MAX,
@@ -43,6 +44,8 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		added: [],
 		leftOut: [],
 		openValuesUsed: [],
+		values: [],
+		valuesLeftOut: [],
 		refusals: [],
 	}
 	const targetRefusal = refuseTarget({ input, options })
@@ -91,6 +94,16 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 	}
 
 	const additions = planAdditions({ input, options, lDevices, logicalNodes, requested })
+	const valuesPlanned = planValues({
+		logicalNodes,
+		specifiedValues: input.specifiedValues,
+		heldValues: input.heldValues,
+		valueTypes: input.valueTypes,
+		contextTypeIds: new Set(
+			input.types.filter((type) => !type.inTargetDocument).map((type) => type.id),
+		),
+		excludeFunctionalConstraints: options.excludeFunctionalConstraints,
+	})
 	refusals.push(...additions.refusals)
 	return {
 		lDevices: [...lDevices.values()].map(({ inst, from, existing: built }) => ({
@@ -102,6 +115,8 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		added: additions.added,
 		leftOut,
 		openValuesUsed: [...named.openValuesUsed, ...lnodeTypes, ...additions.openValuesUsed],
+		values: valuesPlanned.values,
+		valuesLeftOut: valuesPlanned.valuesLeftOut,
 		refusals,
 	}
 }
@@ -285,7 +300,7 @@ function nameLDevices(params: {
 	const openValuesUsed: OpenValueUsed[] = []
 	const instOfSource = new Map<string, string>()
 	for (const source of sources.values()) {
-		const checked = checkSource({ input, source, names })
+		const checked = checkSource({ input, options, source, names })
 		const sharedAcross =
 			source.kind === 'ldInst' &&
 			[...sources.values()].some(
@@ -424,10 +439,12 @@ function nameContainers(params: {
 /** One source's logical device name, or why it is refused. */
 function checkSource(params: {
 	input: BuildInput
+	options: BuildOptions
 	source: LDeviceSource
 	names: ReadonlyMap<string, ContainerName>
 }): { inst?: string; answered?: boolean; refusal?: BuildRefusal } {
-	const { input, source, names } = params
+	const { input, options, source, names } = params
+	const longest = longestIedName({ name: input.ied.name, alsoFits: options.ldNameAlsoFits })
 	const name: ContainerName =
 		source.kind === 'ldInst'
 			? { inst: source.inst, answered: false, clashes: false }
@@ -440,7 +457,7 @@ function checkSource(params: {
 			'no-function',
 			'the LNode is in no function and no ldInst rule names its logical device',
 		)
-	const tooLong = input.ied.name.length + name.inst.length > LDEVICE_NAME_MAX
+	const tooLong = longest.length + name.inst.length > LDEVICE_NAME_MAX
 	if (name.answered && (!LD_INST_PATTERN.test(name.inst) || tooLong))
 		return refuse(
 			'open-value-invalid',
@@ -448,11 +465,17 @@ function checkSource(params: {
 		)
 	if (name.inst === '') return refuse('ld-name', 'nothing is left of the name once normalised')
 	if (name.clashes) return refuse('ld-name', `${name.inst} names another logical device too`)
-	if (tooLong)
-		return refuse('ld-name', `${input.ied.name}${name.inst} is longer than ${LDEVICE_NAME_MAX}`)
+	if (tooLong) return refuse('ld-name', `${longest}${name.inst} is longer than ${LDEVICE_NAME_MAX}`)
 	if (!LD_INST_PATTERN.test(name.inst))
 		return refuse('ld-name', `${name.inst} is not a logical device name`)
 	return { inst: name.inst, answered: name.answered }
+}
+
+/** The longest of the IED's name and the other names its logical device names must fit. */
+function longestIedName(params: { name: string; alsoFits: readonly string[] }): string {
+	return [params.name, ...params.alsoFits].reduce((longest, name) =>
+		name.length > longest.length ? name : longest,
+	)
 }
 
 /** A target logical device holding a logical node bound (by uuid or by its names) from an LNode of another element. */

@@ -131,6 +131,8 @@ type BuildIedParams = {
   prefixFromLeafSubFunction?: boolean // default false
   openValues?: { ldInst?: OpenValueRule<LdInstContext>; lnType?: OpenValueRule<LnTypeContext> }
   contextQuery?: Core.Query<Config>   // the document deciding name clashes and offering types; default the one built in
+  ldNameAlsoFits?: readonly string[] // other IED names each logical device name must fit too (an IED renamed later)
+  excludeFunctionalConstraints?: readonly string[] // values of these functional constraints left out (see Values)
 }
 type IedBuildResult = {
   plan: IedBuildPlan
@@ -145,7 +147,8 @@ type IedBuildResult = {
   digits and `_` become `_`, runs of `_` collapse, leading `_` go. Two elements of the document giving the same name
   each get the name of the level above them in front (`Q01_PROT`, `Q02_PROT`); the whole document decides, so a
   function's logical device has the same name in every IED built from it. A name still clashing, empty, or making the
-  logical device name (IED name followed by the inst) longer than 64 is refused. A logical device of that name already
+  logical device name (IED name followed by the inst) longer than 64 is refused; with `ldNameAlsoFits`, the longest of
+  the IED's name and those names counts. A logical device of that name already
   in the IED is reused only when it holds no logical node bound from another element.
 - **Logical nodes** — one LN per LNode, its prefix, class, instance and type the LNode's; an `LLN0` LNode is the LN0.
   With `prefixFromLeafSubFunction`, an LNode without prefix in a subfunction holding none takes the subfunction's name
@@ -186,6 +189,37 @@ const { plan, created } = await tx.specification.buildIed({
 })
 ```
 
+### Values
+
+`buildIed` also writes the values the logical nodes specify, in the same transaction, after their logical nodes.
+
+- **What is copied** — every DAS holding at least one `Val`: its `Val`s (with `sGroup`), `valKind` and `valImport`
+  become those of the DAI at the same place below the built logical node (DOS → DOI, SDS → SDI, by `name` and `ix`).
+  The values of an LLN0 LNode land on the logical device's LN0. A DAS without `Val`, and the mapping attributes
+  (`mappedDoName`, `mappedDaName`, `mappedLnUuid`), are never written.
+- **Left out, not refused** — a value whose data the logical node's type does not hold (`path-not-in-type`), or whose
+  functional constraint (the `fc` of the first data attribute on its path) is in `excludeFunctionalConstraints`
+  (`functional-constraint`), is listed in `plan.valuesLeftOut`; the build goes on.
+- **Built again** — a value the logical node already holds as specified is not planned; one it holds otherwise is
+  planned with `existing` (its DAI): its `Val`s are replaced, and a `valKind` or `valImport` the specification no
+  longer gives is cleared. A DAI whose DAS no longer holds a `Val` is left as it is.
+- **Paths** — a value sits on a leaf: a path ending on a sub data object or a structured attribute, array data
+  without its index, or an index on data that is no array is `path-not-in-type`. A type whose id several types of
+  the document carry is not read, so its values are `path-not-in-type` too.
+
+```ts
+type IedValuePlan = {
+	lnode: Scl.Ref<'LNode'>
+	das: Scl.Ref<'DAS'>
+	path: { doi: string; sdi: { name: string; ix?: string }[]; dai: { name: string; ix?: string } }
+	vals: { value: string; sGroup?: string }[]
+	valKind?: string
+	valImport?: string
+	existing?: Scl.Ref<'DAI'>
+}
+// IedBuildPlan gains: values: IedValuePlan[]; valuesLeftOut: { das: Scl.Ref<'DAS'>; reason: 'path-not-in-type' | 'functional-constraint' }[]
+```
+
 ## Open values
 
 A value the standard leaves open is never invented by the engine: the caller passes a rule, a pure synchronous
@@ -217,6 +251,7 @@ target IED already uses), `firstOfClass` (the first type of the class); the last
 ```ts
 import {
 	BUILD_REFUSAL_REASONS,
+	VALUE_LEFT_OUT_REASONS,
 	firstOf,
 	firstOfClass,
 	OPEN_VALUE_RULES,
@@ -230,12 +265,16 @@ import type {
 	BuildRefusal,
 	BuildRefusalReason,
 	FunctionTag,
+	IedValuePlan,
 	IedBuildPlan,
 	IedBuildResult,
 	LdInstContext,
 	LnTypeContext,
 	OpenValueRule,
 	OpenValues,
+	ValueLeftOut,
+	ValueLeftOutReason,
+	ValuePath,
 	OtherImplementer,
 	RoleImplementer,
 	RoleLNodes,

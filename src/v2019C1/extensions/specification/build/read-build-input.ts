@@ -1,4 +1,5 @@
 import { FUNCTION_LIKES } from './build.constants'
+import { readHeldValues, readValueTypes, specifiedValuesOf } from './read-values'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -53,6 +54,29 @@ export async function readBuildInput(
 	const contextSection = contextQuery === query ? section : await readProcessSection(contextQuery)
 	const implementations = await resolveMappedLNodes(query, { lnodes: asked })
 	const types = await readTypeCandidates({ query, contextQuery })
+	const specifiedValues = specifiedValuesOf({
+		nodes: section.nodes,
+		lnodeIds: new Set(asked.map((lnode) => lnode.id)),
+	})
+	const heldValues = await readHeldValues(query, {
+		logicalNodes: [...implementations].flatMap(([lnodeId, implementation]) =>
+			implementation.ied.id === params.ied.id && specifiedValues.has(lnodeId)
+				? [implementation.ln]
+				: [],
+		),
+	})
+	const valueTypes = await readValueTypes({
+		query,
+		contextQuery,
+		types,
+		lnClasses: new Set(
+			lnodeRecords.flatMap((record, position) =>
+				specifiedValues.has(asked[position]?.id ?? '')
+					? [readAttributes({ record: record as AnyRawRecord, defaults: 'none' }).lnClass ?? '']
+					: [],
+			),
+		),
+	})
 
 	const lDevices = targetLDevicesOf({
 		lDevices: subtree.LDevice ?? [],
@@ -86,6 +110,9 @@ export async function readBuildInput(
 		}),
 		clashSet: contextSection.nodes.filter(isFunctionLike),
 		types,
+		specifiedValues,
+		heldValues,
+		valueTypes,
 	}
 }
 

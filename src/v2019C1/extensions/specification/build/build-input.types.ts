@@ -1,4 +1,6 @@
+import type { ValuePath } from '../transaction/build-ied.types'
 import type { Scl } from '@/v2019C1/config'
+import type { DataTypeRecords } from '@/v2019C1/extensions/data-model/query/read-data-type-records.types'
 import type { IedKind } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.types'
 import type { MappedLNode } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
 import type { AnyRawRecord } from '@dialecte/core'
@@ -51,4 +53,31 @@ export type BuildInput = {
 	clashSet: SectionElement[]
 	/** The target document's LNodeTypes, then the context document's it lacks, each in document order. */
 	types: TypeCandidate[]
+	/** The values each LNode asked for specifies, by LNode id, in document order. */
+	specifiedValues: ReadonlyMap<string, SpecifiedValue[]>
+	/** The values each logical node of the target IED an LNode asked for is bound to holds, by logical node id. */
+	heldValues: ReadonlyMap<string, HeldValue[]>
+	/** Read only when a value is specified. */
+	valueTypes: ValueTypes
 }
+
+/** A value an LNode specifies: a DAS with at least one `Val`, and where it sits below the LNode. */
+export type SpecifiedValue = {
+	das: Scl.Ref<'DAS'>
+	path: ValuePath
+	vals: { value: string; sGroup?: string }[]
+	valKind?: string
+	valImport?: string
+}
+
+/** A value a logical node of the target IED already holds: a DAI with its values, and where it sits. */
+export type HeldValue = {
+	dai: Scl.Ref<'DAI'>
+	path: ValuePath
+	vals: { value: string; sGroup?: string }[]
+	valKind?: string
+	valImport?: string
+}
+
+/** The data types the values are resolved through: the target document's, and the context document's when another. */
+export type ValueTypes = { target?: DataTypeRecords; context?: DataTypeRecords }

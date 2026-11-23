@@ -1,5 +1,6 @@
 import { planWithServer } from '../query/plan-ied'
 import { ADDED_LPHD } from './build-ied.constants'
+import { writeValues } from './write-values'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -23,7 +24,9 @@ import type * as Core from '@dialecte/core'
  * the LNode's; the LN0 and the LPHD a logical device lacks, added. LNodes another IED implements are left out and
  * listed. Values the standard leaves open (a missing type, the type of an added LN0 or LPHD, a caller's logical device
  * name) come from `openValues` rules, are judged like the engine's own, and are listed; without a rule the build is
- * refused. Building again what is built writes nothing.
+ * refused. The values the LNodes specify (a DAS with a `Val`) are written on the DOI, SDI and DAI of their logical
+ * nodes (`plan.values`); those the type does not hold, or of an excluded functional constraint, are listed in
+ * `plan.valuesLeftOut`. Building again what is built writes nothing.
  *
  * Refuses with `SPECIFICATION_BUILD_REFUSED` before any write, listing every refusal (`meta.refusals`); with
  * `ELEMENT_NOT_FOUND` when the document holds no such IED or LNode.
@@ -108,6 +111,11 @@ async function writePlan(params: {
 	const { tx, plan, server, typeIds } = params
 	const created: IedBuildResult['created'] = { lDevices: [], logicalNodes: [] }
 	const bound: Scl.Ref<'LNode'>[] = []
+	const logicalNodeOf = new Map(
+		plan.logicalNodes.flatMap((logicalNode) =>
+			logicalNode.existing ? [[logicalNode.lnode.id ?? '', logicalNode.existing] as const] : [],
+		),
+	)
 	for (const lDevice of plan.lDevices) {
 		const lDeviceRef = lDevice.existing ?? (await addLDevice({ tx, server, inst: lDevice.inst }))
 		if (!lDevice.existing) created.lDevices.push(lDeviceRef)
@@ -139,9 +147,11 @@ async function writePlan(params: {
 			if ('lnode' in logicalNode) {
 				await tx.update(logicalNode.lnode, { attributes: { lnUuid: written.uuid } })
 				bound.push(logicalNode.lnode)
+				logicalNodeOf.set(logicalNode.lnode.id ?? '', written.ref)
 			}
 		}
 	}
+	await writeValues({ tx, values: plan.values, logicalNodeOf })
 	return { plan, created, bound }
 }
 

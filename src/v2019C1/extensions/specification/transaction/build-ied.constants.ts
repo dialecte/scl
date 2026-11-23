@@ -47,3 +47,6 @@ export const BUILD_REFUSAL_REASONS = [
 
 /** The open points `buildIed` declares. */
 export const BUILD_OPEN_POINTS = ['ldInst', 'lnType'] as const
+
+/** Why a specified value is not written: the logical node's type holds no such data, or its functional constraint is excluded. */
+export const VALUE_LEFT_OUT_REASONS = ['path-not-in-type', 'functional-constraint'] as const

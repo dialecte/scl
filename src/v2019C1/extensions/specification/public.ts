@@ -1,4 +1,4 @@
-export { BUILD_REFUSAL_REASONS } from './transaction/build-ied.constants'
+export { BUILD_REFUSAL_REASONS, VALUE_LEFT_OUT_REASONS } from './transaction/build-ied.constants'
 export { firstOfClass, sameClassInTargetIed } from './build/open-value-rules'
 export { OPEN_VALUE_RULES } from './build/open-value-rules.constants'
 export type {
@@ -8,8 +8,12 @@ export type {
 	BuildRefusalReason,
 	IedBuildPlan,
 	IedBuildResult,
+	IedValuePlan,
 	LdInstContext,
 	LnTypeContext,
+	ValueLeftOut,
+	ValueLeftOutReason,
+	ValuePath,
 } from './transaction/build-ied.types'
 export type {
 	FunctionTag,
