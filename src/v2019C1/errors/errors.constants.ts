@@ -213,6 +213,15 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The specification IED cannot be built from these logical nodes',
 	},
 	/**
+	 * Staging the ISD of a specification built from logical nodes breaks a rule: nothing is written.
+	 * `meta: { reason, stage: 'stageIsd', ref? }`: `target-not-empty`, `lnode-outside-process`, `shell-not-specification`,
+	 * `no-lnodes` or `ied-name`; `ref` names the element it is about.
+	 */
+	SPECIFICATION_STAGE_REFUSED: {
+		code: 'SCL2014',
+		message: 'The ISD of these logical nodes cannot be staged',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */
