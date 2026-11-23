@@ -1,11 +1,12 @@
 ---
-description: Specification extension for @dialecte/scl v2019C1 — what an allocation role holds and which IEDs implement it.
+description: Specification extension for @dialecte/scl v2019C1 — what an allocation role holds, which IEDs implement it, and building a specification IED from logical nodes.
 ---
 
 # Specification
 
 The `specification` extension reads the specification side of a project: which logical nodes an allocation role holds
-and how far they are implemented, and what is left to implement on a real IED.
+and how far they are implemented, and what is left to implement on a real IED; and it builds the data model of a
+specification IED from logical nodes.
 
 ## Query methods
 
@@ -87,13 +88,154 @@ const { specifiedAs, lnodes, otherImplementers } = await doc.query.specification
 })
 ```
 
+### `planIed`
+
+What building a specification IED's data model from these logical nodes would create, bind, leave out or refuse,
+without writing: the plan `tx.specification.buildIed` writes (same parameters, see below).
+
+```ts
+doc.query.specification.planIed(params: BuildIedParams): Promise<IedBuildPlan>
+
+type IedBuildPlan = {
+  lDevices: { inst: string; from: Scl.Ref<LNodeContainerTag> | 'lnode-ldInst'; existing?: Scl.Ref<'LDevice'> }[]
+  logicalNodes: {
+    lnode: Scl.Ref<'LNode'>; lDeviceInst: string; kind: 'LN0' | 'LN'
+    identity: { prefix: string; lnClass: string; inst: string }; lnType: string
+    existing?: Scl.Ref<'LN' | 'LN0'> // already built and bound to this LNode
+  }[]
+  added: { lDeviceInst: string; kind: 'LN0' | 'LPHD'; lnType: string }[] // LN0 and LPHD a logical device lacks
+  leftOut: { lnode: Scl.Ref<'LNode'>; reason: 'implemented-elsewhere'; ied: Scl.Ref<'IED'> }[]
+  openValuesUsed: { point: 'ldInst' | 'lnType'; element: Scl.Ref; value: string }[] // every value a rule gave
+  refusals: { reason: BuildRefusalReason; ref?: Scl.Ref; detail: string }[] // empty when the build can be written
+}
+```
+
+A fixed number of reads, whatever the number of logical nodes. Refuses with `ELEMENT_NOT_FOUND` when the document
+holds no such IED or LNode.
+
+## Transaction methods
+
+Access via `tx.specification`.
+
+### `buildIed`
+
+Builds the data model of a specification IED from logical nodes and binds each logical node to its own.
+
+```ts
+tx.specification.buildIed(params: BuildIedParams): Promise<IedBuildResult>
+
+type BuildIedParams = {
+  ied: Scl.Ref<'IED'>                 // a specification IED
+  lnodes: readonly Scl.Ref<'LNode'>[]
+  server?: Scl.Ref<'Server'>          // required only when the IED has several servers
+  prefixFromLeafSubFunction?: boolean // default false
+  openValues?: { ldInst?: OpenValueRule<LdInstContext>; lnType?: OpenValueRule<LnTypeContext> }
+  contextQuery?: Core.Query<Config>   // the document deciding name clashes and offering types; default the one built in
+}
+type IedBuildResult = {
+  plan: IedBuildPlan
+  created: { lDevices: Scl.Ref<'LDevice'>[]; logicalNodes: Scl.Ref<'LN' | 'LN0'>[] }
+  bound: Scl.Ref<'LNode'>[]
+}
+```
+
+- **Logical devices** — an LNode's own `ldInst` names its logical device. Otherwise its nearest function or equipment
+  function, or subfunction holding subfunctions, is one logical device; a subfunction holding none adds its logical
+  nodes to the logical device of the function above it. The name is the function's: characters other than letters,
+  digits and `_` become `_`, runs of `_` collapse, leading `_` go. Two elements of the document giving the same name
+  each get the name of the level above them in front (`Q01_PROT`, `Q02_PROT`); the whole document decides, so a
+  function's logical device has the same name in every IED built from it. A name still clashing, empty, or making the
+  logical device name (IED name followed by the inst) longer than 64 is refused. A logical device of that name already
+  in the IED is reused only when it holds no logical node bound from another element.
+- **Logical nodes** — one LN per LNode, its prefix, class, instance and type the LNode's; an `LLN0` LNode is the LN0.
+  With `prefixFromLeafSubFunction`, an LNode without prefix in a subfunction holding none takes the subfunction's name
+  as prefix (prefix, class and instance at most 13). Two LNodes giving one logical node in a logical device are refused.
+- **Added** — every logical device gets an LN0 and an LPHD (`inst="1"`) when no LNode gives one.
+- **Bound** — each LNode gets `lnUuid` = its logical node's uuid; its names and its specification naming follow.
+- **Implemented elsewhere** — an LNode another IED implements is left out and listed in `plan.leftOut`; the rest is
+  built.
+- **Built again** — an LNode the IED already implements keeps its logical node: building twice writes nothing.
+- **Open values** — no type is given for an LNode without `lnType`, nor for an added LN0 or LPHD, and the logical
+  device of an LNode in no function has no name. The caller's `openValues` rules answer them; an answer is judged as
+  the engine's own (a name: its pattern, its length, the clash rule; a type: one of the candidates of the class, in
+  the document built in) and listed in `plan.openValuesUsed`. Without an answer the build is refused. An `lnType`
+  naming no LNodeType is a broken reference: refused, never asked.
+- Refuses before any write with `SPECIFICATION_BUILD_REFUSED`: `meta.refusals` lists every refusal, `meta.reason` is
+  the first one's.
+
+| reason                  | when                                                                                                                                         |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `not-specification-ied` | the IED is a real device's (an ICD or IID among its source files)                                                                            |
+| `lnode-outside-process` | the LNode is not in a substation, line or process (a function template's)                                                                    |
+| `server`                | the IED has no server, or several and none (or one it does not hold) is given                                                                |
+| `no-function`           | the LNode has no `ldInst`, no function holds it and no `ldInst` rule names its logical device                                                |
+| `ld-name`               | a logical device name empty, still clashing, too long, or already used by another element's logical device                                   |
+| `ln-name`               | an LNode without valid instance, prefix and instance longer than 12, an LLN0 with a prefix, a subfunction name that does not fit as a prefix |
+| `ln-collision`          | two LNodes giving one logical node, or a logical node of that identity already in the logical device                                         |
+| `type-missing`          | no type: the LNode names none and no rule answers, or names a type the document lacks                                                        |
+| `type-mismatch`         | the type is of another logical node class                                                                                                    |
+| `open-value-invalid`    | a rule's answer fails the check the engine applies to its own                                                                                |
+
+```ts
+import { firstOf, firstOfClass, sameClassInTargetIed } from '@dialecte/scl/v2019C1'
+
+const { plan, created } = await tx.specification.buildIed({
+	ied,
+	lnodes,
+	openValues: { lnType: firstOf(sameClassInTargetIed, firstOfClass) },
+})
+```
+
+## Open values
+
+A value the standard leaves open is never invented by the engine: the caller passes a rule, a pure synchronous
+function from what the verb knows about the point to a value, or `undefined` to leave it open.
+
+```ts
+type OpenValueRule<Context, Value = string> = (context: Context) => Value | undefined
+type OpenValues<Points> = { [Point in keyof Points]?: OpenValueRule<Points[Point]> }
+
+type LdInstContext = {
+	container: Scl.Ref<LNodeContainerTag>
+	containerName: string
+	derived?: string
+}
+type LnTypeContext = {
+	kind: 'LN' | 'LN0' | 'LPHD'
+	lnClass: string
+	lnode?: Scl.Ref<'LNode'> // absent for an added LN0 or LPHD
+	candidates: readonly { id: string; inTargetIed: boolean }[] // that class's LNodeTypes, document order
+}
+```
+
+Built-in rules: `firstOf(...rules)` (the first rule answering), `sameClassInTargetIed` (a type a logical node of the
+target IED already uses), `firstOfClass` (the first type of the class); the last two also by name in
+`OPEN_VALUE_RULES`, for a caller that names a rule instead of passing a function.
+
 ## Exported types
 
 ```ts
-import { TO_IMPLEMENT_REASON } from '@dialecte/scl/v2019C1'
+import {
+	BUILD_REFUSAL_REASONS,
+	firstOf,
+	firstOfClass,
+	OPEN_VALUE_RULES,
+	sameClassInTargetIed,
+	TO_IMPLEMENT_REASON,
+} from '@dialecte/scl/v2019C1'
 
 import type {
+	BuildIedParams,
+	BuildOpenValues,
+	BuildRefusal,
+	BuildRefusalReason,
 	FunctionTag,
+	IedBuildPlan,
+	IedBuildResult,
+	LdInstContext,
+	LnTypeContext,
+	OpenValueRule,
+	OpenValues,
 	OtherImplementer,
 	RoleImplementer,
 	RoleLNodes,

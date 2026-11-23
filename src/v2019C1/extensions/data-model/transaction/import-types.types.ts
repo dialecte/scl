@@ -43,6 +43,11 @@ export type ImportTypesParams = {
 	sourceQuery: Core.Query<Config>
 	records: LogicalNodeRecord[]
 	/**
+	 * LNodeTypes of the source to import by id, whether or not a logical node names them (a type a caller chose for a
+	 * logical node it is about to build): their closure is walked from the type, as for the types `records` name.
+	 */
+	lnodeTypeIds?: readonly string[]
+	/**
 	 * Clone mappings from the caller's instance `deepClone` (its `mappings`). The
 	 * `lnType` of each cloned target whose source type was forked/deduped is
 	 * repointed — only the mapped targets are touched, so pre-existing instances

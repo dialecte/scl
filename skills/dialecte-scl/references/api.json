@@ -18,6 +18,27 @@
 			"declaredAt": "src/v2019C1/dialecte.ts:15"
 		},
 		{
+			"path": "@dialecte/scl/v2019C1.firstOf",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "<Context, Value = string>(...rules: readonly OpenValueRule<Context, Value>[]) => OpenValueRule<Context, Value>",
+			"summary": "The first answer of the rules given, in order: a rule returning `undefined` hands over to the next one.",
+			"intents": ["combine open value rules", "fall back from one rule to another"],
+			"declaredAt": "src/v2019C1/helpers/open-values.ts:11",
+			"example": "const lnType = firstOf(sameClassInTargetIed, firstOfClass)"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.firstOfClass",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(context: LnTypeContext) => string | undefined",
+			"summary": "`lnType` rule: the first LNodeType of the logical node's class in document order, else none.",
+			"intents": ["take the first data type of that logical node class"],
+			"declaredAt": "src/v2019C1/extensions/specification/build/open-value-rules.ts:18"
+		},
+		{
 			"path": "@dialecte/scl/v2019C1.getPathSegment",
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
@@ -129,6 +150,16 @@
 			],
 			"declaredAt": "src/v2019C1/helpers/read-attributes.ts:56",
 			"example": "readAttributes({ record })                      // → { lnClass: 'XCBR', iedName: 'None', ... }\nreadAttributes({ record, defaults: 'none' })    // → stored only"
+		},
+		{
+			"path": "@dialecte/scl/v2019C1.sameClassInTargetIed",
+			"root": "export",
+			"entry": "@dialecte/scl/v2019C1",
+			"otherRoutes": [],
+			"signature": "(context: LnTypeContext) => string | undefined",
+			"summary": "`lnType` rule: the first candidate type a logical node of the target IED already uses (the shell's LN0 or LPHD type, a type of that class already built), else none.",
+			"intents": ["take the type a logical node of that class already has in the target IED"],
+			"declaredAt": "src/v2019C1/extensions/specification/build/open-value-rules.ts:9"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertCoherentSclReferences",
@@ -392,8 +423,8 @@
 			"path": "doc.query.dataModel.resolve",
 			"root": "q",
 			"otherRoutes": [],
-			"signature": "(params: { records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]; }) => Promise<ResolvedDataModel>",
-			"summary": "The data types behind LNodes and LNs: every LNodeType their `lnType` names, with the DOType, DAType and EnumType it uses down the whole tree, each listed once. An `lnType` naming no LNodeType fails.",
+			"signature": "(params: { records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]; lnodeTypeIds?: readonly string[]; }) => Promise<ResolvedDataModel>",
+			"summary": "The data types behind LNodes and LNs: every LNodeType their `lnType` names (and every one `lnodeTypeIds` names), with the DOType, DAType and EnumType it uses down the whole tree, each listed once. An `lnType` naming no LNodeType fails.",
 			"intents": [
 				"data types used by an LNode or LN",
 				"LNodeType/DOType/DAType/EnumType closure of a logical node",
@@ -827,6 +858,15 @@
 				"content key of an element for dedup"
 			],
 			"declaredAt": "src/v2019C1/extensions/signature/query/element-signature.ts:49"
+		},
+		{
+			"path": "doc.query.specification.planIed",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: PlanIedParams) => Promise<IedBuildPlan>",
+			"summary": "What building the data model of a specification IED from these logical nodes would create, bind, leave out or refuse, without writing: the plan `tx.specification.buildIed` writes. Every refusal is listed in `refusals`; the values the caller's `openValues` rules gave are listed in `openValuesUsed`. A fixed number of reads, whatever the number of logical nodes; nothing is kept after the call.",
+			"intents": ["what building an S-IED from these logical nodes would create"],
+			"declaredAt": "src/v2019C1/extensions/specification/query/plan-ied.ts:22"
 		},
 		{
 			"path": "doc.query.specification.roleLNodes",
@@ -1317,6 +1357,16 @@
 				"write source file provenance"
 			],
 			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:42"
+		},
+		{
+			"path": "tx.specification.buildIed",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: BuildIedParams) => Promise<IedBuildResult>",
+			"summary": "Build the data model of a specification IED from logical nodes, and bind each logical node to its own: one logical device per function (or equipment function, or subfunction holding subfunctions; an LNode's own `ldInst` wins), its name normalised from the function's and decided over the whole document; one LN per LNode, its identity and type the LNode's; the LN0 and the LPHD a logical device lacks, added. LNodes another IED implements are left out and listed. Values the standard leaves open (a missing type, the type of an added LN0 or LPHD, a caller's logical device name) come from `openValues` rules, are judged like the engine's own, and are listed; without a rule the build is refused. Building again what is built writes nothing.",
+			"intents": ["build the data model of a specification IED from logical nodes"],
+			"declaredAt": "src/v2019C1/extensions/specification/transaction/build-ied.ts:40",
+			"example": "const { plan, created } = await tx.specification.buildIed({\n\tied,\n\tlnodes,\n\topenValues: { lnType: firstOf(sameClassInTargetIed, firstOfClass) },\n})"
 		}
 	]
 }

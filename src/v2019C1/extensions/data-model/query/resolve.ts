@@ -16,7 +16,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
 /**
- * The data types behind LNodes and LNs: every LNodeType their `lnType` names, with the DOType,
+ * The data types behind LNodes and LNs: every LNodeType their `lnType` names (and every one `lnodeTypeIds` names), with the DOType,
  * DAType and EnumType it uses down the whole tree, each listed once. An `lnType` naming no
  * LNodeType fails.
  *
@@ -30,9 +30,11 @@ export async function resolve(
 	query: Core.Query<Config>,
 	params: {
 		records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
+		/** LNodeTypes walked from their id, after the types the records name, whether or not a record names them. */
+		lnodeTypeIds?: readonly string[]
 	},
 ): Promise<ResolvedDataModel> {
-	const { records } = params
+	const { records, lnodeTypeIds = [] } = params
 
 	const dataModelMap: DataModelMap = {
 		lnodeTypes: new Map(),
@@ -42,11 +44,18 @@ export async function resolve(
 	}
 	let dataTypes: DataTypeRecords | undefined
 
+	const named: string[] = []
 	for (const record of records) {
 		const lnType = await query.getAttribute(record, { name: 'lnType' })
-		if (!lnType) continue
+		if (lnType) named.push(lnType)
+	}
+	const lnTypes = [...named, ...lnodeTypeIds.filter((id) => id !== '')]
 
-		dataTypes ??= await readDataTypeRecords({ query, lnTypes: lnTypesOf({ records }) })
+	for (const lnType of lnTypes) {
+		dataTypes ??= await readDataTypeRecords({
+			query,
+			lnTypes: [...new Set([...lnTypesOf({ records }), ...lnodeTypeIds])].filter((id) => id !== ''),
+		})
 
 		const lnodeType = await findType({ query, dataTypes, tagName: 'LNodeType', id: lnType })
 		invariant(lnodeType, {

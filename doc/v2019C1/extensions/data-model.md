@@ -32,6 +32,7 @@ Walks the data model tree starting from a list of `LNode`, `LN` or `LN0` records
 ```ts
 resolve(params: {
   records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
+  lnodeTypeIds?: readonly string[] // LNodeTypes walked from their id too, whether or not a record names them
 }): Promise<ResolvedDataModel>
 ```
 
@@ -67,6 +68,7 @@ Child type references inside the imported types — and the `lnType`/`type` of t
 importTypes(params: {
   sourceQuery: Scl.Query
   records: (Scl.TrackedRecord<'LNode'> | Scl.TrackedRecord<'LN'> | Scl.TrackedRecord<'LN0'>)[]
+  lnodeTypeIds?: readonly string[] // LNodeTypes walked from their id too, whether or not a record names them
   cloneMappings?: Scl.CloneMapping[]   // repoint cloned instances' lnType/type on fork
   followers?: TypeFollower[]           // { source, target }: target logical nodes taking their source's type
   forkPrefix?: string                  // optional prefix; id is always <forkPrefix><id>_<contentHash>
@@ -135,11 +137,11 @@ import type {
 } from '@dialecte/scl/v2019C1'
 ```
 
-| Type                | Description                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `cloneMappings?`, `followers?`, `forkPrefix?`, `keepNameTypesFrom?`). |
-| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                                                                |
-| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked, reclaimed }`.                                                  |
-| `LogicalNodeRecord` | A logical node whose closure is imported: an `LNode`, `LN` or `LN0` record.                                                  |
-| `TypeFollower`      | A logical node of the target taking the type its source names: `{ source, target }`.                                         |
-| `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                                         |
+| Type                | Description                                                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ImportTypesParams` | Parameters of `importTypes` (`sourceQuery`, `records`, `lnodeTypeIds?`, `cloneMappings?`, `followers?`, `forkPrefix?`, `keepNameTypesFrom?`). |
+| `ImportTypesResult` | Result of `importTypes` (`idRemap`, `stats`).                                                                                                 |
+| `ImportTypesStats`  | Per-run reconciliation counts — `{ reused, preserved, forked, reclaimed }`.                                                                   |
+| `LogicalNodeRecord` | A logical node whose closure is imported: an `LNode`, `LN` or `LN0` record.                                                                   |
+| `TypeFollower`      | A logical node of the target taking the type its source names: `{ source, target }`.                                                          |
+| `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                                                          |
