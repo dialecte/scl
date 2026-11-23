@@ -6,7 +6,7 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
 			"otherRoutes": [],
-			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: CreateProjectParams<CustomModules> | undefined) => Project<Config, { cleanUp: { ...; }; ... 7 more ...; info: { ...; }; } & CustomModules, Store>",
+			"signature": "<CustomModules extends ExtensionModules = Record<never, never>>(params?: CreateProjectParams<CustomModules> | undefined) => Project<Config, { cleanUp: { ...; }; ... 8 more ...; info: { ...; }; } & CustomModules, Store>",
 			"summary": "Create an SCL project: every part of it comes from the dialecte's declaration (`SCL_DIALECTE`). Call .open(name) to initialize the store and hydrate state. The factory carries the declaration (`createSclProject.dialecte`) and deletes an SCL project without opening it (`createSclProject.destroyProject({ name, storage })`).",
 			"intents": [
 				"open an SCL project",
@@ -232,7 +232,7 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1/test",
 			"otherRoutes": [],
-			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 6 more ...; info: { ...; }; }>>",
+			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 7 more ...; info: { ...; }; }>>",
 			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first: once imported, the given documents must pass the output checks but the XSD validator (schema, uniqueness, references, identity; see `assertGivenDocuments`), or the call rejects with a plain `Error` named after the running test. `allowInvalidFixture` tolerates the violations it lists (with the reason; a listed violation they lack fails the call too), `allowIncoherentReferences` leaves the references out.",
 			"intents": [
 				"open an SCL project in a test with fixtures imported",
@@ -827,6 +827,19 @@
 				"content key of an element for dedup"
 			],
 			"declaredAt": "src/v2019C1/extensions/signature/query/element-signature.ts:49"
+		},
+		{
+			"path": "doc.query.specification.roleLNodes",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: RoleLNodesParams) => Promise<RoleLNodes>",
+			"summary": "The logical nodes of an allocation role: every LNode below the functions its `FunctionRef`s name (by `functionUuid`, else by the `function` path), once each and in document order, nested subfunctions and equipment functions included; the IEDs implementing them, each with its kind (a role names no IED: one role may be implemented by several IEDs, one IED may serve several roles), in document order; the LNodes no logical node implements; the function references naming no function. A fixed number of reads, whatever the size of the role; nothing is kept after the call.",
+			"intents": [
+				"the logical nodes of an allocation role",
+				"which IEDs implement them",
+				"which are not implemented yet"
+			],
+			"declaredAt": "src/v2019C1/extensions/specification/query/role-lnodes.ts:35"
 		},
 		{
 			"path": "tx.cleanUp.commitPrune",
