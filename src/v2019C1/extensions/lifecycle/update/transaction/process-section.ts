@@ -9,7 +9,8 @@ import { deleteDropped } from '@/v2019C1/extensions/lifecycle/engine/removal-bas
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import {
 	findDroppedPrimaries,
-	resolvePrimaryParents,
+	readTemplatePrimaries,
+	resolvePrimaryParentsOfEach,
 	reconcileTopologyFrame,
 	landGroundedTerminals,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
@@ -55,6 +56,21 @@ export async function updateProcessSection(
 	const applications: AppliedInstance<'Application'>[] = []
 	const functions: AppliedFunction[] = []
 
+	// the template side of every primary, read once for every pass below: the template is not written
+	const templatePrimaries = await readTemplatePrimaries(sourceQuery, {
+		refs: [...applicationRefs, ...standaloneFunctions],
+	})
+	const templateApplications = templatePrimaries.slice(0, applicationRefs.length)
+	const templateFunctions = templatePrimaries.slice(applicationRefs.length)
+	// what each pass resolves the primaries against: the project as it is when the pass runs
+	const resolution = {
+		anchor: targetParent,
+		unitId: root.id,
+		matchKey,
+		primaryTargets: params.primaryTargets,
+		gainedIn: params.gainedIn,
+	}
+
 	// reconcile the topology frame's OWN content (BayType/equipment/attrs) before the fn/app
 	// cascade; the fn/app tags are a boundary, so the cascade below owns them. Each frame
 	// instance is gated by ONLY its own decision groups (from report.ssd) in the full track.
@@ -75,17 +91,14 @@ export async function updateProcessSection(
 		// a held primary the revision puts on another level moves there once the frame added what it lands in, before
 		// the frame's removals: a removed level never takes it
 		beforeRemovals: async function movePrimaries({ instanceRootRef, instanceLevels, added }) {
-			for (const primaryRef of [...applicationRefs, ...standaloneFunctions]) {
-				const placement = await resolvePrimaryParents(tx, {
-					sourceQuery,
-					primaryRef,
-					anchor: targetParent,
-					unitId: root.id,
-					instanceLevelsList: [instanceLevels],
-					matchKey,
-					primaryTargets: params.primaryTargets,
-					gainedIn: params.gainedIn,
-				})
+			// read per frame instance: the frame and the instances before this one wrote since
+			const placements = await resolvePrimaryParentsOfEach(tx, {
+				...resolution,
+				primaries: templatePrimaries,
+				instanceLevelsList: [instanceLevels],
+				withMoves: true,
+			})
+			for (const placement of placements) {
 				await writePrimaryMoves(tx, {
 					moves: placement.moves,
 					report,
@@ -114,17 +127,21 @@ export async function updateProcessSection(
 		await deleteDropped(tx, { dropped, accepted })
 	}
 
-	for (const applicationRef of applicationRefs) {
-		const placement = await resolvePrimaryParents(tx, {
-			sourceQuery,
-			primaryRef: applicationRef,
-			anchor: targetParent,
-			unitId: root.id,
-			instanceLevelsList,
-			matchKey,
-			primaryTargets: params.primaryTargets,
-			gainedIn: params.gainedIn,
-		})
+	// the moves are written: the loops read where each primary is placed, not where it moves
+	const applicationPlacements = await resolvePrimaryParentsOfEach(tx, {
+		...resolution,
+		primaries: templateApplications,
+		instanceLevelsList,
+		withMoves: false,
+	})
+	for (const [position, applicationRef] of applicationRefs.entries()) {
+		const placement = applicationPlacements[position]
+		// one application in, one placement out
+		if (!placement) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `Application "${applicationRef.id}" was resolved to nothing`,
+			})
+		}
 		for (const { parent, placedFor } of placement.places) {
 			// its level was left out: so is it (the report made it depend on that level)
 			if (!parent) continue
@@ -154,17 +171,21 @@ export async function updateProcessSection(
 		}
 	}
 
-	for (const functionRef of standaloneFunctions) {
-		const placement = await resolvePrimaryParents(tx, {
-			sourceQuery,
-			primaryRef: functionRef,
-			anchor: targetParent,
-			unitId: root.id,
-			instanceLevelsList,
-			matchKey,
-			primaryTargets: params.primaryTargets,
-			gainedIn: params.gainedIn,
-		})
+	// read after the applications: updating them writes the functions they compose
+	const functionPlacements = await resolvePrimaryParentsOfEach(tx, {
+		...resolution,
+		primaries: templateFunctions,
+		instanceLevelsList,
+		withMoves: false,
+	})
+	for (const [position, functionRef] of standaloneFunctions.entries()) {
+		const placement = functionPlacements[position]
+		// one function in, one placement out
+		if (!placement) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `Function "${functionRef.id}" was resolved to nothing`,
+			})
+		}
 		for (const { parent, placedFor } of placement.places) {
 			if (!parent) continue
 			const updated = await updateFsd(tx, {
