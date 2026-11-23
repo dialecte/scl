@@ -1,5 +1,11 @@
 export { beforeDelete } from './before-delete'
 export {
+	heldByCascadeRoot,
+	nearestCascadeRoot,
+	outsideCascadeRemovals,
+	recordsOfCascade,
+} from './cascade-cause'
+export {
 	buildCascadeOperations,
 	collectDeleteCascade,
 	collectEmptiedAbove,
@@ -9,3 +15,4 @@ export {
 	readSubtreeRecords,
 } from './orphaned-refs'
 export type { DeleteCascade, OrphanedRef } from './orphaned-refs.types'
+export type { CascadeOutside } from './cascade-cause.types'

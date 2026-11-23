@@ -7,7 +7,10 @@ import { assertMovesFollowed, followMovesAtCommit } from './moves'
 import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
-import { releaseLNodesOfDeletedLogicalNodes } from './release-deleted-logical-nodes'
+import {
+	releaseLNodesOfDeletedLogicalNodes,
+	releasedLNodeBindings,
+} from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
 import { writeTupleReferencesAtCommit } from './tuple-references'
@@ -137,56 +140,100 @@ export async function pathReferences({
 
 /**
  * What the transaction's moves change around them, over what every step before wrote ({@link followMovesAtCommit});
- * nothing without a move.
+ * nothing without a move. What they remove on the way - a reference their new place cannot reach, a terminal left
+ * naming a node its container may not name, and what goes with either - is kept in the state, so the commit's preview
+ * lists it.
  */
 export async function moves({ plan, writes }: CommitStepParams): Promise<CommitStepResult> {
 	const { query, state } = plan
 	if (!state.movePlaces) return { operations: [] }
-	return {
-		operations: await followMovesAtCommit(query, {
-			places: state.movePlaces,
-			roots: state.targetRoots ?? [],
-			pending: writes.pending,
-		}),
-	}
+	const followed = await followMovesAtCommit(query, {
+		places: state.movePlaces,
+		roots: state.targetRoots ?? [],
+		pending: writes.pending,
+	})
+	return { operations: followed.operations, state: { moveRemovals: followed.removals } }
 }
 
-/** The LNodes bound to a logical node the transaction deleted, released ({@link releaseLNodesOfDeletedLogicalNodes}). */
+/**
+ * The LNodes bound to a logical node the transaction deleted, released ({@link releaseLNodesOfDeletedLogicalNodes}).
+ * The binding each had and the one it is left with are kept in the state ({@link releasedLNodeBindings}), so the
+ * commit's preview says which LNodes it unbound.
+ */
 export async function releasedLNodes({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query } = plan
+	const released = await releaseLNodesOfDeletedLogicalNodes(query, {
+		operations,
+		pending: writes.pending,
+	})
 	return {
-		operations: await releaseLNodesOfDeletedLogicalNodes(query, {
-			operations,
+		operations: released,
+		state: { released: releasedLNodeBindings({ operations: released }) },
+	}
+}
+
+/**
+ * The types no referrer names any more, with what only they named ({@link pruneUnusedTypes}). The names are judged over
+ * the transaction's operations and over everything the steps before staged, so a type a cascade of the commit itself
+ * stopped naming goes too; what those steps deleted does not count as a referrer, and what they wrote is read instead
+ * of the staged state.
+ */
+export async function unusedTypes({ plan, writes }: CommitStepParams): Promise<CommitStepResult> {
+	const { operations, query, staged } = plan
+	return {
+		operations: await pruneUnusedTypes({
+			operations: [...operations, ...[...staged.values()].flat()],
+			query,
 			pending: writes.pending,
+			gone: writes.gone,
 		}),
 	}
 }
 
-/** The types no referrer names any more, with what only they named ({@link pruneUnusedTypes}). */
-export async function unusedTypes({ plan }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
-	return { operations: await pruneUnusedTypes({ operations, query }) }
-}
-
 /**
- * The containers the transaction left holding nothing, judged with what every step before wrote, a type the type prune
- * removed among what is gone ({@link pruneEmptiedContainers}): each kept in the state with why it goes.
+ * The containers the transaction left holding nothing, judged with what every step before wrote
+ * ({@link pruneEmptiedContainers}): each kept in the state with why it goes.
  */
 export async function emptiedContainers({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query, staged } = plan
+	const { operations, query } = plan
 	const pruned = await pruneEmptiedContainers({
-		operations: [...operations, ...(staged.get('unusedTypes') ?? [])],
+		operations,
 		query,
 		pending: writes.pending,
 		gone: writes.gone,
 	})
 	return { operations: pruned.operations, state: { containers: pruned.containers } }
+}
+
+/**
+ * The containers the type prune left holding nothing - a `DataTypeTemplates` holding only the types it removed - judged
+ * over the transaction's operations and that step's ({@link pruneEmptiedContainers}). One the first pass pruned is gone
+ * already and is neither pruned nor reported twice; the containers it removes are added to the ones the first pass kept
+ * in the state. Reads nothing when the type prune removed no type: the first pass judged every candidate already.
+ */
+export async function emptiedTypeContainers({
+	plan,
+	writes,
+}: CommitStepParams): Promise<CommitStepResult> {
+	const { operations, query, staged, state } = plan
+	const typePrune = staged.get('unusedTypes') ?? []
+	if (typePrune.length === 0) return { operations: [] }
+	const pruned = await pruneEmptiedContainers({
+		operations: [...operations, ...typePrune],
+		query,
+		pending: writes.pending,
+		gone: writes.gone,
+	})
+	return {
+		operations: pruned.operations,
+		state: { containers: [...(state.containers ?? []), ...pruned.containers] },
+	}
 }
 
 /**

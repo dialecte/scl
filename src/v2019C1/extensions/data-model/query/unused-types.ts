@@ -61,15 +61,17 @@ export async function collectUnusedTypes(params: {
 	gone: ReadonlySet<string>
 	/** The reads to use, shared between calls on a document that does not change meanwhile (a report); default: new ones. */
 	reads?: TypeReads
+	/** Records written beside the staged state (the commit's earlier steps): a referrer is read as they left it. */
+	pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 }): Promise<UnusedTypes> {
-	const { query, names } = params
+	const { query, names, pending } = params
 	const goneIds = new Set(params.gone)
 	const reads = params.reads ?? createTypeReads(query)
 	const trees: PrunedTypeTree[] = []
 
 	let judged = lostToNames(names)
 	while (judged.size > 0) {
-		const unused = await findUnusedTypes({ reads, judged, goneIds })
+		const unused = await findUnusedTypes({ reads, judged, goneIds, pending })
 		if (unused.length === 0) break
 		const subtree = await readSubtreeRecords(query, { records: unused })
 		const round = groupByRoot({ roots: unused, subtree })
@@ -149,8 +151,9 @@ async function findUnusedTypes(params: {
 	reads: TypeReads
 	judged: NamesByTarget
 	goneIds: ReadonlySet<string>
+	pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 }): Promise<Scl.TrackedRecord<Scl.ElementsOf>[]> {
-	const { reads, judged, goneIds } = params
+	const { reads, judged, goneIds, pending } = params
 	const { perf } = reads.query
 
 	perf.start(UNUSED_TYPES_RESOLVE_PERF_SPAN)
@@ -165,7 +168,7 @@ async function findUnusedTypes(params: {
 	perf.start(UNUSED_TYPES_REFERRERS_PERF_SPAN)
 	let named: NamesByTarget
 	try {
-		named = await readNamedTypes({ reads, candidates, goneIds })
+		named = await readNamedTypes({ reads, candidates, goneIds, pending })
 	} finally {
 		perf.stop(UNUSED_TYPES_REFERRERS_PERF_SPAN)
 	}
@@ -200,8 +203,9 @@ async function readNamedTypes(params: {
 	reads: TypeReads
 	candidates: readonly TypeCandidate[]
 	goneIds: ReadonlySet<string>
+	pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
 }): Promise<NamesByTarget> {
-	const { reads, candidates, goneIds } = params
+	const { reads, candidates, goneIds, pending } = params
 	const judged: NamesByTarget = new Map()
 	for (const { record, typeId } of candidates) {
 		addNames({ names: judged, targets: new Set([record.tagName as TypeIdTarget]), name: typeId })
@@ -210,7 +214,8 @@ async function readNamedTypes(params: {
 	const named: NamesByTarget = new Map()
 	for (const [target, ids] of judged) {
 		for (const referrer of TYPE_ID_REFERRERS_BY_TARGET.get(target) ?? []) {
-			for (const record of await readByTag({ reads, tagName: referrer.refTagName })) {
+			const read = await readByTag({ reads, tagName: referrer.refTagName })
+			for (const record of referrersOfTag({ read, tagName: referrer.refTagName, pending })) {
 				if (goneIds.has(record.id)) continue
 				const name = readAttribute({ record, name: referrer.attribute, defaults: 'none' })
 				if (name && ids.has(name)) addNames({ names: named, targets: new Set([target]), name })
@@ -218,6 +223,25 @@ async function readNamedTypes(params: {
 		}
 	}
 	return named
+}
+
+/**
+ * The referrers of a tag as the caller's own writes leave them: a record read that `pending` holds is taken from it,
+ * and a record of that tag `pending` holds that the read does not (one written beside the staged state) is added.
+ */
+function referrersOfTag(params: {
+	read: readonly Scl.RawRecord<Scl.ElementsOf>[]
+	tagName: string
+	pending?: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+}): Scl.RawRecord<Scl.ElementsOf>[] {
+	const { read, tagName, pending } = params
+	if (!pending || pending.size === 0) return [...read]
+	const seen = new Set(read.map((record) => record.id))
+	const written = read.map((record) => pending.get(record.id) ?? record)
+	const added = [...pending.values()].filter(
+		(record) => record.tagName === tagName && !seen.has(record.id),
+	)
+	return [...written, ...added]
 }
 
 /** Every record of a tag, read once for the pass. */

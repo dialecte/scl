@@ -1,14 +1,17 @@
 import type { Scl } from '@/v2019C1/config'
+import type { MoveRemoval } from '@/v2019C1/hooks/before-commit/moves.types'
 import type {
 	PrunedEffect,
 	PruneReason,
 } from '@/v2019C1/hooks/before-commit/prune-emptied-containers.types'
+import type { ReleasedLNodeBinding } from '@/v2019C1/hooks/before-commit/release-deleted-logical-nodes.types'
+import type { NamedIdentity } from '@/v2019C1/hooks/shared/element-identity.types'
 
 /** An element by its tag and record id. */
 export type CommitPrunedElement = { tagName: Scl.ElementsOf; id: string }
 
 /** What names an element for a person, where its tag has it. */
-export type CommitPrunedIdentity = { name?: string; uuid?: string; type?: string }
+export type CommitPrunedIdentity = NamedIdentity
 
 /** A container the commit removes, with what it holds and what goes with it. */
 export type CommitPrunedContainer = {
@@ -45,4 +48,8 @@ export type CommitPrune = {
 	stagedCount: number
 	containers: CommitPrunedContainer[]
 	types: CommitPrunedType[]
+	/** Each element the commit's moves remove, with why it goes. */
+	moves: MoveRemoval[]
+	/** Each LNode the commit releases from a logical node the transaction deleted. */
+	released: ReleasedLNodeBinding[]
 }

@@ -13,6 +13,8 @@ export type OrphanedRef = {
 	effect: 'deleted' | 'cleared'
 	/** The uuid, path and companion attributes naming the subtrees. */
 	attributes: ReadonlySet<string>
+	/** The record of the deleted subtrees it names: why it goes. Absent on a reference built outside a delete. */
+	cause?: string
 }
 
 /**
@@ -24,6 +26,11 @@ export type OrphanedRef = {
  */
 export type DeleteCascade = {
 	gone: ReadonlySet<string>
+	/**
+	 * Per record the cascade takes or clears beyond the roots' subtrees, the record of those subtrees it goes with:
+	 * a reference the record named, walked back through the rounds to the subtree that started it.
+	 */
+	causeById: ReadonlyMap<string, string>
 	deleted: Scl.TrackedRecord<Scl.ElementsOf>[]
 	within: Scl.RawRecord<Scl.ElementsOf>[]
 	cleared: OrphanedRef[]

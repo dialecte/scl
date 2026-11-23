@@ -2,6 +2,7 @@ import {
 	LNODE_BINDING_PAIR,
 	LOGICAL_NODE_TAG_NAMES,
 } from './release-deleted-logical-nodes.constants'
+import { LNODE_BINDING_ATTRIBUTES, LNODE_TAG } from './release-deleted-logical-nodes.constants'
 import { readAncestries } from './tuple-names'
 
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -15,11 +16,14 @@ import {
 	reconcileMappedDataOfLNodes,
 	reconcileSignalAddressesOfLNodes,
 } from '@/v2019C1/hooks/shared'
+import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
 import type {
 	DeletedLogicalNodes,
+	LNodeBinding,
 	ReleaseLNodesOfDeletedLogicalNodesParams,
+	ReleasedLNodeBinding,
 } from './release-deleted-logical-nodes.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -154,4 +158,54 @@ function isBoundToDeleted(params: { lnode: AnyRawRecord; deleted: DeletedLogical
 	if (lnUuid) return deleted.uuids.has(lnUuid)
 	const address = referrerTupleAddress({ pair: LNODE_BINDING_PAIR, record: lnode, ancestry: [] })
 	return address !== undefined && deleted.addresses.has(address)
+}
+
+/**
+ * The LNodes a release left with another binding, read from the operations it staged: each updated `LNode` whose
+ * binding changed, with the binding it had (`from`) and the one it is left with (`to`). The attributes are the
+ * registry's ({@link LNODE_BINDING_ATTRIBUTES}); a part the LNode does not carry is absent. Reads the operations held,
+ * nothing else.
+ */
+export function releasedLNodeBindings(params: {
+	operations: readonly Scl.Operation[]
+}): ReleasedLNodeBinding[] {
+	const released: ReleasedLNodeBinding[] = []
+	for (const operation of params.operations) {
+		if (operation.status !== 'updated' || operation.newRecord.tagName !== LNODE_TAG) continue
+		const from = bindingOf({ record: operation.oldRecord })
+		const to = bindingOf({ record: operation.newRecord })
+		if (!bindingChanged({ from, to })) continue
+		released.push({
+			element: { tagName: operation.newRecord.tagName, id: operation.newRecord.id },
+			identity: identityOf({ record: operation.newRecord }),
+			from,
+			to,
+		})
+	}
+	return released
+}
+
+/** The binding an LNode carries: each part it names, read from the attribute the registry gives that part. */
+function bindingOf(params: { record: Scl.RawRecord<Scl.ElementsOf> }): LNodeBinding {
+	const { record } = params
+	const binding: LNodeBinding = {}
+	for (const [part, attribute] of Object.entries(LNODE_BINDING_ATTRIBUTES)) {
+		if (!attribute) continue
+		const value = readAttribute({
+			record,
+			name: attribute,
+			defaults: 'none',
+			fullObject: true,
+		})?.value
+		if (value) binding[part as keyof LNodeBinding] = value
+	}
+	return binding
+}
+
+/** Whether a release left an LNode naming something else: any part of its binding written, changed or removed. */
+function bindingChanged(params: { from: LNodeBinding; to: LNodeBinding }): boolean {
+	const { from, to } = params
+	return Object.keys(LNODE_BINDING_ATTRIBUTES).some(
+		(part) => from[part as keyof LNodeBinding] !== to[part as keyof LNodeBinding],
+	)
 }
