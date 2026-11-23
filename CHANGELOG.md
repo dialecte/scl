@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-23
+
+The engine says which lifecycle scenario applies. `query.lifecycle.scenarioOf` answers the scenario of an IED placement or update, or the refusal the verbs would throw, from one check the verbs share; `info.search` hits name their ancestors as refs; reference lookups and signal naming make fewer reads; scl runs on `@dialecte/core` 0.14.0.
+
+Breaking: requires `@dialecte/core` 0.14.0, pinned exactly (an app reading through the engine directly gets its changes: `getTree`'s `depth`, a transaction's cache dropped on another view's commit, undo or reimport).
+
+### Added
+
+- `query.lifecycle.scenarioOf.ied({ sourceQuery, ref, targetInstance? })` tells which scenario an IED operation runs with, before anything is reported: placed (no `targetInstance`), an ISD instance's IED is a `fork` and any other a new IED (`instantiate`); updated, on an open ISD another version of its file or another ISD instance is a `fork`, any other source the `template` the IED was placed from. It answers `{ scenario, sameFile }`, or `{ refused: { code, reason, meta, detail } }` carrying the error the report, apply and update verbs throw for that scenario (`NOT_A_VERSION_OF_FILE`, `OPTION_NOT_AVAILABLE`, `TARGET_INSTANCE_REQUIRED`), same key and meta: the query and the verbs read one check. A source extension no IED is read from is the report's to refuse: apply and update are given the file type.
+- `query.lifecycle.scenarioOf.fsd` / `.asd` / `.ssd({ sourceQuery })` tell whether the source is a version of the open document's file (`{ sameFile }`), with no scenario: for these verbs the consumer states it.
+- Public types `IedScenario`, `IedScenarioOfParams`, `LayerScenario`, `LayerScenarioOfParams`, `LifecycleRefusal`, `LifecycleRefusalCode`, `LifecycleRefusalReason`, `LifecycleRefused`.
+- `info.search` hits name their ancestors as refs: `SearchHit.ancestors` lists `{ tagName, id }` (`SearchAncestor`, exported) from the root down, the same ancestors in the same order as `ancestorIds` (which stays), so `info.ofEach(hit.ancestors)` titles a hit's path in one call. No new store read.
+
+### Changed
+
+- **Breaking**: requires `@dialecte/core` 0.14.0 (pinned exactly, was 0.12.1). An app that reads through the engine directly gets its changes: `getTree`'s `depth` counts the levels the caller sees (a hoisted transparent element no longer uses one up), a transaction drops everything it has cached once another view's commit, an undo or a reimport of the document is told (not only what changed), and a copy of the library at another version no longer shares its storage kinds. Imports of types and the clean-up of orphan references make fewer store reads (a tag looked up often is read once per transaction).
+- An element signature resolving its references (`signature.elementSignature` with `resolveReferences`) looks up the references of each tree it signs together: one lookup per target tag for the ids that tree names, and for its uuids one lookup per target tag and round (a uuid is asked of its pair's next tag only when the tags before did not hold it). Before, each reference was one lookup. The signature is the same text. A caller signing many elements over one document, with no write between the calls, may pass the same `referenceCache` to every call (as `signatureCache`): a value answered once is not looked up again. Importing data types signs the source types and the project's types this way.
+- The hooks' path follows (`scl::followAncestry`), uuid lookups (`scl::findRecordByUuid`) and a signature's reference lookups (`scl::elementSignature::resolveReferences`) are timed as perf spans.
+- **Naming many signals of one parent counts the parent's signals once.** The signals (`SourceRef`, `ControlRef`) of one parent now share one frozen sibling list per call, so their names (`Trip` or `Trip(1)`) are worked out from one count of the parent's signals instead of one count per signal. `info.of` / `info.ofEach`, `info.search` and the element paths of signals answer as before, faster on a parent with many signals; the store reads are unchanged.
+
 ## [0.24.0] - 2026-11-20
 
 Moves and the fork update of an open ISD. A commit follows an `LN` or `LDevice` moved within its IED; an update shows and writes an element that changed parent as one `moved` change with `tx.move`, in any tree it pairs, a function or application changing level included. Another version of an open ISD updates its IED as a fork, with its `Communication` and its specification; a fork of the file itself re-targets the references the other version points elsewhere.
