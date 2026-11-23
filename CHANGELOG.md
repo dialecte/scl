@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-23
+
+The engine stages the ISD of an IED built from logical nodes: `tx.specification.stageIsd` writes, in an empty document, the logical nodes with their frame, reset to their specification, and the IED built from them on a shell IED, ready for `extract.ied` with the project as its source. Nothing breaking.
+
+### Added
+
+- `tx.specification.stageIsd`: stage, in an empty document, the logical nodes of a specification with their frame and types, reset to their specification, and the IED built from them on a shell IED, ready for `extract.ied` with the project as `provenanceQuery`. Refusals use the new key `SPECIFICATION_STAGE_REFUSED` (`SCL2014`).
+
 ## [0.26.0] - 2026-11-23
 
 The engine builds a specification IED from logical nodes. `tx.specification.buildIed` (and its plan, `query.specification.planIed`) writes the logical devices, logical nodes, LLN0, LPHD and the specified values, values the standard leaves open coming from the caller's `openValues` rules or refused; `query.specification.roleLNodes` lists an allocation role's logical nodes and who implements them, `query.specification.toImplement` what is left to implement on a real IED; `extract.ied` records the document an ISD was staged from; process-section updates read their primaries in batches; the commit's prune preview lists every removal it does, and its type prune reads the commit's own writes. Nothing breaking.
