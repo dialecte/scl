@@ -1,6 +1,8 @@
 import type { BoundLNodes } from './bound-logical-nodes.types'
 import type { MovePlaces, MovedRef } from './moved-roots.types'
+import type { MoveRemoval } from './moves.types'
 import type { PrunedContainer } from './prune-emptied-containers.types'
+import type { ReleasedLNodeBinding } from './release-deleted-logical-nodes.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -13,8 +15,9 @@ export type CommitStepName =
 	| 'pathReferences'
 	| 'moves'
 	| 'releasedLNodes'
-	| 'unusedTypes'
 	| 'emptiedContainers'
+	| 'unusedTypes'
+	| 'emptiedTypeContainers'
 	| 'noChildLeftBehind'
 
 /** What a step adds to the commit's state for the steps after it. */
@@ -25,8 +28,12 @@ export type CommitState = {
 	movePlaces?: MovePlaces
 	/** The moved elements no other moved element holds: the roots whose paths the commit follows. */
 	targetRoots?: readonly MovedRef[]
-	/** The containers the prune step removes. */
+	/** The containers the prune steps remove, the first pass then the one after the type prune. */
 	containers?: readonly PrunedContainer[]
+	/** The elements the moves of the commit remove, with why each goes. */
+	moveRemovals?: readonly MoveRemoval[]
+	/** The LNodes the commit released from a logical node the transaction deleted. */
+	released?: readonly ReleasedLNodeBinding[]
 }
 
 /** What the commit's steps read as they run, in order: a step may add to `state` what a later step reads. */
@@ -61,10 +68,15 @@ export type CommitStep = {
 	run: (params: CommitStepParams) => Promise<CommitStepResult>
 }
 
-/** What the commit stages beyond the transaction's own operations, in order, and the containers its prune removes. */
+/**
+ * What the commit stages beyond the transaction's own operations, in order, and what it removes beside the edits: the
+ * containers its prune removes, the elements its moves remove, and the LNodes it releases.
+ */
 export type PlannedCommit = {
 	staged: Scl.Operation[]
 	/** What each step staged, by its name, in run order. */
 	stagedBy: ReadonlyMap<CommitStepName, readonly Scl.Operation[]>
 	containers: PrunedContainer[]
+	moveRemovals: MoveRemoval[]
+	released: ReleasedLNodeBinding[]
 }

@@ -50,6 +50,8 @@ export async function planCommit(params: {
 		staged: [...staged.values()].flat(),
 		stagedBy: staged,
 		containers: [...(state.containers ?? [])],
+		moveRemovals: [...(state.moveRemovals ?? [])],
+		released: [...(state.released ?? [])],
 	}
 }
 

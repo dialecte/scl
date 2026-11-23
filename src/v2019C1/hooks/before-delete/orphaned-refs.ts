@@ -88,6 +88,12 @@ export async function collectDeleteCascade(
 		for (const record of rootSubtree) if (!rootIds.has(record.id)) within.set(record.id, record)
 	}
 	const cleared = new Map<string, OrphanedRef>()
+	const causeById = new Map<string, string>()
+	/** The record of the roots' subtrees a record goes with: the cause walked back through the earlier rounds. */
+	function recordCause(id: string, causeId: string | undefined): void {
+		if (!causeId || causeById.has(id)) return
+		causeById.set(id, causeById.get(causeId) ?? causeId)
+	}
 	let roundSubtree: readonly Scl.RawRecord<Scl.ElementsOf>[] = rootSubtree
 	while (roundSubtree.length > 0) {
 		// what goes in this round is named by references in turn: a relation a deleted equipment took has its own
@@ -97,15 +103,20 @@ export async function collectDeleteCascade(
 			const { id } = orphaned.record
 			if (gone.has(id)) continue
 			if (orphaned.effect === 'cleared') {
+				recordCause(id, orphaned.cause)
 				mergeCleared({ cleared, orphaned })
 				continue
 			}
 			gone.add(id)
+			recordCause(id, orphaned.cause)
 			deleted.set(id, orphaned.record)
 			references.push(orphaned.record)
 			if (emptiesContainers) {
 				const emptied = await collectEmptiedAbove(query, { record: orphaned.record, gone, kept })
-				for (const container of emptied) deleted.set(container.id, container)
+				for (const container of emptied) {
+					deleted.set(container.id, container)
+					recordCause(container.id, causeById.get(id) ?? id)
+				}
 				containers.push(...emptied)
 			}
 		}
@@ -116,6 +127,10 @@ export async function collectDeleteCascade(
 			gone.add(record.id)
 			within.set(record.id, record)
 		}
+		// read roots first, level by level: a record's parent carries its cause before its turn comes
+		for (const record of referenceSubtree) {
+			if (record.parent) recordCause(record.id, causeById.get(record.parent.id))
+		}
 		// a container emptied takes what it still holds, nothing else naming it (an `Authentication`, a `Private`)
 		const leftovers = (await readSubtreeRecords(query, { records: containers })).filter(
 			(record) => !gone.has(record.id) && !deleted.has(record.id),
@@ -123,6 +138,7 @@ export async function collectDeleteCascade(
 		for (const record of leftovers) {
 			gone.add(record.id)
 			within.set(record.id, record)
+			if (record.parent) recordCause(record.id, causeById.get(record.parent.id))
 		}
 		roundSubtree = [...referenceSubtree, ...containers, ...leftovers]
 	}
@@ -130,6 +146,7 @@ export async function collectDeleteCascade(
 	const stillThere = [...cleared.values()].filter((orphaned) => !gone.has(orphaned.record.id))
 	return {
 		gone,
+		causeById,
 		deleted: [...deleted.values()],
 		within: [...within.values()],
 		cleared: stillThere,
@@ -498,12 +515,13 @@ async function findOrphanedRefsInSubtrees(params: {
 		const refPairs = UUID_REFERENCE_PAIRS[refTagName]
 		for (const refRecord of refRecords) {
 			if (subtreeIds.has(refRecord.id)) continue
-			const attributes = collectOrphanedAttributes({ refPairs, refRecord, subtreeUuids })
+			const { attributes, cause } = collectOrphanedAttributes({ refPairs, refRecord, byUuid })
 			if (attributes.size === 0) continue
 			orphaned.push({
 				record: refRecord,
 				effect: orphanEffectOf({ tagName: refTagName }),
 				attributes,
+				...(cause ? { cause } : {}),
 			})
 		}
 	}
@@ -571,10 +589,11 @@ export function orphanEffectOf(params: { tagName: string }): OrphanedRef['effect
 function collectOrphanedAttributes(params: {
 	refPairs: RefPairs
 	refRecord: Scl.TrackedRecord<Scl.ElementsOf>
-	subtreeUuids: Set<string>
-}): Set<string> {
-	const { refPairs, refRecord, subtreeUuids } = params
+	byUuid: ReadonlyMap<string, Scl.RawRecord<Scl.ElementsOf>>
+}): { attributes: Set<string>; cause: string | undefined } {
+	const { refPairs, refRecord, byUuid } = params
 	const attributesToClear = new Set<string>()
+	let cause: string | undefined
 
 	for (const pair of refPairs) {
 		const uuidValue = readAttribute({
@@ -582,8 +601,10 @@ function collectOrphanedAttributes(params: {
 			name: pair.attribute.uuid,
 			defaults: 'none',
 		})
-		if (!uuidValue || !subtreeUuids.has(uuidValue)) continue
+		const target = uuidValue ? byUuid.get(uuidValue) : undefined
+		if (!target) continue
 
+		cause ??= target.id
 		attributesToClear.add(pair.attribute.uuid)
 		attributesToClear.add(pair.attribute.path)
 		for (const companion of pair.companions) {
@@ -591,7 +612,7 @@ function collectOrphanedAttributes(params: {
 		}
 	}
 
-	return attributesToClear
+	return { attributes: attributesToClear, cause }
 }
 
 // ── Operation builders ────────────────────────────────────────────────────────

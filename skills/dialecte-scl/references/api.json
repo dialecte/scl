@@ -899,13 +899,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "() => Promise<CommitPrune>",
-			"summary": "What the commit of this transaction will prune, before it does, without writing: the commit's own steps run over the operations staged so far. Each container comes in document order with its identity, its parent, the element a reference path names at or above it (`owner`), why it goes, every record it holds (another tool's data included) and what goes with it outside (a data set's control blocks, `cleared` and `revised`); then the types the commit removes as unused, with their records.",
+			"summary": "What the commit of this transaction will prune, before it does, without writing: the commit's own steps run over the operations staged so far. Each container comes in document order with its identity, its parent, the element a reference path names at or above it (`owner`), why it goes, every record it holds (another tool's data included) and what goes with it outside (a data set's control blocks, the references naming it, `cleared` and `revised`); then the types the commit removes as unused with their records, what the commit's moves remove with why each goes, and the LNodes it releases with the binding each had and is left with. Together they name every record the commit removes beyond the transaction's own edits, each once.",
 			"intents": [
 				"preview what the commit will remove",
 				"warn before a commit prunes a container",
 				"list what a commit deletes beyond the edits"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/commit-prune.ts:35"
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/commit-prune.ts:34"
 		},
 		{
 			"path": "tx.cleanUp.orphanUuidRefs",
