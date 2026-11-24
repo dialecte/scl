@@ -1,7 +1,9 @@
 import { planBuild, serverOf } from '../build/plan-build'
 import { readBuildInput } from '../build/read-build-input'
+import { rebuildWritesOf } from './plan-rebuild'
 
 import type { IedBuildPlan, PlanIedParams } from './plan-ied.types'
+import type { RebuildWrites } from './plan-rebuild.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -36,7 +38,12 @@ export async function planIed(
 export async function planWithServer(
 	query: Core.Query<Config>,
 	params: PlanIedParams,
-): Promise<{ plan: IedBuildPlan; server?: Scl.Ref<'Server'>; contextTypeIds: string[] }> {
+): Promise<{
+	plan: IedBuildPlan
+	server?: Scl.Ref<'Server'>
+	contextTypeIds: string[]
+	rebuildWrites: RebuildWrites
+}> {
 	const input = await readBuildInput(query, params)
 	const options = {
 		...(params.server && { server: params.server }),
@@ -44,6 +51,7 @@ export async function planWithServer(
 		openValues: params.openValues ?? {},
 		excludeFunctionalConstraints: params.excludeFunctionalConstraints ?? [],
 		ldNameAlsoFits: params.ldNameAlsoFits ?? [],
+		rederiveLDevices: params.rederiveLDevices ?? false,
 	}
 	const server = serverOf({ input, options })
 	const plan = planBuild({ input, options })
@@ -55,5 +63,10 @@ export async function planWithServer(
 		...plan.added,
 	].map((planned) => planned.lnType)
 	const contextTypeIds = [...new Set(used.filter((id) => contextOnly.has(id)))]
-	return { plan, ...(server && { server }), contextTypeIds }
+	const rebuildWrites = rebuildWritesOf({
+		input,
+		report: plan.rebuild,
+		logicalNodes: plan.logicalNodes,
+	})
+	return { plan, ...(server && { server }), contextTypeIds, rebuildWrites }
 }

@@ -1,4 +1,5 @@
-import { FUNCTION_LIKES } from './build.constants'
+import { FUNCTION_LIKES, LN_CONTENT_IN_USE } from './build.constants'
+import { readUsers, specNamingsOf } from './read-rebuild'
 import { readHeldValues, readValueTypes, specifiedValuesOf } from './read-values'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -58,9 +59,30 @@ export async function readBuildInput(
 		nodes: section.nodes,
 		lnodeIds: new Set(asked.map((lnode) => lnode.id)),
 	})
+	const lDevices = targetLDevicesOf({
+		lDevices: subtree.LDevice ?? [],
+		logicalNodes: [...(subtree.LN0 ?? []), ...(subtree.LN ?? [])],
+	})
+	const lnTypeOfLn = new Map(
+		lDevices.flatMap((lDevice) =>
+			lDevice.logicalNodes.map((logicalNode) => [logicalNode.ref.id, logicalNode.lnType] as const),
+		),
+	)
+	const retyped = new Set(
+		asked.flatMap(function retypedLNode(lnode, position) {
+			const implementation = implementations.get(lnode.id)
+			if (!implementation || implementation.ied.id !== params.ied.id) return []
+			const { lnType } = readAttributes({
+				record: lnodeRecords[position] as AnyRawRecord,
+				defaults: 'none',
+			})
+			return lnType && lnType !== lnTypeOfLn.get(implementation.ln.id ?? '') ? [lnode.id] : []
+		}),
+	)
 	const heldValues = await readHeldValues(query, {
 		logicalNodes: [...implementations].flatMap(([lnodeId, implementation]) =>
-			implementation.ied.id === params.ied.id && specifiedValues.has(lnodeId)
+			implementation.ied.id === params.ied.id &&
+			(specifiedValues.has(lnodeId) || retyped.has(lnodeId))
 				? [implementation.ln]
 				: [],
 		),
@@ -71,17 +93,29 @@ export async function readBuildInput(
 		types,
 		lnClasses: new Set(
 			lnodeRecords.flatMap((record, position) =>
-				specifiedValues.has(asked[position]?.id ?? '')
-					? [readAttributes({ record: record as AnyRawRecord, defaults: 'none' }).lnClass ?? '']
+				specifiedValues.has(asked[position]?.id ?? '') || retyped.has(asked[position]?.id ?? '')
+					? classesOf({ record: record as AnyRawRecord, types })
+					: [],
+			),
+		),
+	})
+	const boundLNodeOf = boundLNodesOf({
+		iedName: readAttributes({ record: iedRecord, defaults: 'none' }).name ?? '',
+		lDevices,
+		lnodes: [...section.lnodes.values()],
+	})
+	const usersOf = await readUsers(query, {
+		uuids: lDevices.flatMap((lDevice) =>
+			lDevice.logicalNodes.flatMap((logicalNode) =>
+				logicalNode.ref.tagName === 'LN' &&
+				logicalNode.uuid &&
+				!boundLNodeOf.has(logicalNode.ref.id)
+					? [logicalNode.uuid]
 					: [],
 			),
 		),
 	})
 
-	const lDevices = targetLDevicesOf({
-		lDevices: subtree.LDevice ?? [],
-		logicalNodes: [...(subtree.LN0 ?? []), ...(subtree.LN ?? [])],
-	})
 	return {
 		ied: {
 			ref: params.ied,
@@ -103,16 +137,14 @@ export async function readBuildInput(
 				implementation: implementations.get(ref.id),
 			}
 		}),
-		boundLNodeOf: boundLNodesOf({
-			iedName: readAttributes({ record: iedRecord, defaults: 'none' }).name ?? '',
-			lDevices,
-			lnodes: [...section.lnodes.values()],
-		}),
+		boundLNodeOf,
 		clashSet: contextSection.nodes.filter(isFunctionLike),
 		types,
 		specifiedValues,
 		heldValues,
 		valueTypes,
+		specNamingOf: specNamingsOf({ nodes: section.nodes }),
+		usersOf,
 	}
 }
 
@@ -143,6 +175,11 @@ function targetLogicalNodeOf(record: AnyRawRecord): TargetLogicalNode {
 		},
 		lnType: attributes.lnType ?? '',
 		uuid: attributes.uuid ?? '',
+		holds: record.children.flatMap((child) =>
+			LN_CONTENT_IN_USE.has(child.tagName)
+				? [{ tagName: child.tagName, id: child.id } as Scl.Ref<Scl.ElementsOf>]
+				: [],
+		),
 	}
 }
 
@@ -254,4 +291,11 @@ function candidateOf(params: {
 		lnClass: attributes.lnClass ?? '',
 		inTargetDocument: params.inTargetDocument,
 	}
+}
+
+/** The classes whose types a value check of an LNode needs: its own, and its type's (a retype may change the class). */
+function classesOf(params: { record: AnyRawRecord; types: readonly TypeCandidate[] }): string[] {
+	const { lnClass, lnType } = readAttributes({ record: params.record, defaults: 'none' })
+	const typeClass = params.types.find((type) => type.id === lnType)?.lnClass
+	return [lnClass ?? '', ...(typeClass ? [typeClass] : [])]
 }

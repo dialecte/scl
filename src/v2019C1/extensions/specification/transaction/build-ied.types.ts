@@ -1,3 +1,4 @@
+import type { IedRebuildReport } from '../query/plan-rebuild.types'
 import type {
 	BUILD_OPEN_POINTS,
 	BUILD_REFUSAL_REASONS,
@@ -58,6 +59,11 @@ export type BuildIedParams = {
 	 * limit): the longest of the target IED's name and these counts. For a build whose IED is renamed afterwards.
 	 */
 	ldNameAlsoFits?: readonly string[]
+	/**
+	 * Re-derive the logical device of every LNode built before from its function (default: a built logical node stays in
+	 * the logical device it is in): logical nodes whose logical device changes are moved.
+	 */
+	rederiveLDevices?: boolean
 	/** Values whose functional constraint is one of these are left out (`valuesLeftOut`). Default: none. */
 	excludeFunctionalConstraints?: readonly string[]
 }
@@ -135,6 +141,8 @@ export type IedBuildPlan = {
 	values: IedValuePlan[]
 	/** Specified values not written, and why: the build goes on. */
 	valuesLeftOut: ValueLeftOut[]
+	/** What a rebuild of an IED built before changes and keeps. */
+	rebuild: IedRebuildReport
 	/** Why the build cannot be written; empty when it can. */
 	refusals: BuildRefusal[]
 }

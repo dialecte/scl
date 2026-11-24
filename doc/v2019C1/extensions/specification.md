@@ -133,6 +133,7 @@ type BuildIedParams = {
   contextQuery?: Core.Query<Config>   // the document deciding name clashes and offering types; default the one built in
   ldNameAlsoFits?: readonly string[] // other IED names each logical device name must fit too (an IED renamed later)
   excludeFunctionalConstraints?: readonly string[] // values of these functional constraints left out (see Values)
+  rederiveLDevices?: boolean          // a rebuild moves built logical nodes to the logical device their function now gives
 }
 type IedBuildResult = {
   plan: IedBuildPlan
@@ -295,6 +296,37 @@ await isd.transaction((tx) =>
 	}),
 )
 ```
+
+### Rebuilding
+
+`buildIed` given at least one LNode already bound to the IED is a rebuild: it pairs each such LNode with the logical
+node its binding names, and reports in `plan.rebuild` what changes and what it keeps. A build given new LNodes only is
+a first build: its report is empty and it removes nothing.
+
+- **Logical devices** — a built logical node stays in the logical device it is in, even when its function was renamed
+  or it was moved by hand; a new LNode of a function already built joins that function's logical device. With
+  `rederiveLDevices: true`, every logical node goes to the logical device its function now gives: those that change
+  are `moved` (what names them follows) and their LNode's specification naming takes the new `sLdInst`; an `ldInst`
+  written in the specification before the first build is not kept. An LN0 never moves: the new logical device's LN0
+  takes the binding: the LN0 of a logical device already there, or a new one built with the new logical device.
+- **Renamed and retyped** — the specification naming (`sPrefix`, `sLnClass`, `sLnInst`) differing from the logical
+  node's identity renames it in place (`renamed`, its uuid kept, what names it following); an `lnClass` the LNode's
+  type does not have is refused `type-mismatch`. The LNode's `lnType` differing from the logical node's retypes it
+  (`retyped`), the DAIs whose data the new type does not hold removed and listed. A typeless LNode keeps its logical
+  node's type, no rule asked again.
+- **Orphans** — in the logical devices the rebuild builds, a logical node (not an LN0, not an LPHD) no LNode binds is
+  `removed` when nothing names it by uuid and it holds no control block, data set, log or inputs, else `keptInUse`
+  with what uses it. An orphan whose LNode a real IED implements now (left out, its specification naming still naming
+  the orphan) is also listed in `implementedElsewhere`, with that IED and its name. A logical device outside the rebuild
+  whose logical nodes are all orphans is listed in `orphanLDevices`, not removed. A logical device this run empties is
+  removed: its LN0 and LPHD left, holding nothing in use and bound by no LNode that stays.
+- **Untouched** — logical nodes bound by LNodes the rebuild was not given (`boundOutsideScope`), and LNodes whose own
+  names differ from their logical node's (`drift`): listed, not acted on.
+- **Order** — orphans are removed first, then renames and retypes, then adds, then moves, then values, then the
+  emptied logical devices: a rename onto an identity a removal frees is applied; one onto an identity another logical
+  node keeps is refused `ln-collision`.
+- **Values** — `rebuild.values` counts the values planned on logical nodes built before: new DAIs and changed ones.
+- No revision number is raised.
 
 ## Open values
 

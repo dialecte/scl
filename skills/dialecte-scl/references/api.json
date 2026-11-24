@@ -880,7 +880,7 @@
 			"signature": "(params: PlanIedParams) => Promise<IedBuildPlan>",
 			"summary": "What building the data model of a specification IED from these logical nodes would create, bind, leave out or refuse, without writing: the plan `tx.specification.buildIed` writes, values (`values`, `valuesLeftOut`) included. Every refusal is listed in `refusals`; the values the caller's `openValues` rules gave are listed in `openValuesUsed`. A fixed number of reads, whatever the number of logical nodes; nothing is kept after the call.",
 			"intents": ["what building an S-IED from these logical nodes would create"],
-			"declaredAt": "src/v2019C1/extensions/specification/query/plan-ied.ts:22"
+			"declaredAt": "src/v2019C1/extensions/specification/query/plan-ied.ts:24"
 		},
 		{
 			"path": "doc.query.specification.roleLNodes",
@@ -1379,7 +1379,7 @@
 			"signature": "(params: BuildIedParams) => Promise<IedBuildResult>",
 			"summary": "Build the data model of a specification IED from logical nodes, and bind each logical node to its own: one logical device per function (or equipment function, or subfunction holding subfunctions; an LNode's own `ldInst` wins), its name normalised from the function's and decided over the whole document; one LN per LNode, its identity and type the LNode's; the LN0 and the LPHD a logical device lacks, added. LNodes another IED implements are left out and listed. Values the standard leaves open (a missing type, the type of an added LN0 or LPHD, a caller's logical device name) come from `openValues` rules, are judged like the engine's own, and are listed; without a rule the build is refused. The values the LNodes specify (a DAS with a `Val`) are written on the DOI, SDI and DAI of their logical nodes (`plan.values`); those the type does not hold, or of an excluded functional constraint, are listed in `plan.valuesLeftOut`. Building again what is built writes nothing.",
 			"intents": ["build the data model of a specification IED from logical nodes"],
-			"declaredAt": "src/v2019C1/extensions/specification/transaction/build-ied.ts:43",
+			"declaredAt": "src/v2019C1/extensions/specification/transaction/build-ied.ts:44",
 			"example": "const { plan, created } = await tx.specification.buildIed({\n\tied,\n\tlnodes,\n\topenValues: { lnType: firstOf(sameClassInTargetIed, firstOfClass) },\n})"
 		},
 		{
