@@ -1393,7 +1393,7 @@
 				"export an ISD of an allocation role",
 				"build an IED from logical nodes in a staging document"
 			],
-			"declaredAt": "src/v2019C1/extensions/specification/transaction/stage-isd.ts:53"
+			"declaredAt": "src/v2019C1/extensions/specification/transaction/stage-isd.ts:56"
 		}
 	]
 }
