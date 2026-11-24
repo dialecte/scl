@@ -3,6 +3,7 @@ import { COMMIT_STEPS } from './commit-steps.constants'
 
 import type {
 	CommitPlan,
+	CommitRefusal,
 	CommitState,
 	CommitStepName,
 	PlannedCommit,
@@ -31,20 +32,28 @@ export async function beforeCommit(params: {
  * The commit's steps ({@link COMMIT_STEPS}) run in order over the transaction's operations, each given what every step
  * before it wrote when it reads them, and adding to the state what a later step reads: what they stage, in order, and
  * the containers the prune removes. Writes nothing itself.
+ *
+ * With `collect`, the moves the commit does not follow (`MOVE_NOT_FOLLOWED`) and the incoherent uuid references
+ * (`REFERENCE_INCOHERENT`) are listed in `refusals`, in the order the commit judges them, instead of throwing the first;
+ * every other refusal still throws. The rest of the plan then reads the commit as if the refused moves and references
+ * were accepted. Without it (the commit), `refusals` is empty: the first throws.
  */
 export async function planCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
+	collect?: boolean
 }): Promise<PlannedCommit> {
-	const { operations, query } = params
+	const { operations, query, collect = false } = params
 	const staged = new Map<CommitStepName, readonly Scl.Operation[]>()
+	const refusals: CommitRefusal[] = []
 	let state: CommitState = {}
 	for (const step of COMMIT_STEPS) {
-		const plan: CommitPlan = { operations, query, staged, state }
+		const plan: CommitPlan = { operations, query, staged, state, collect }
 		const writes = step.readsEarlier ? writesOf({ staged }) : NO_WRITES
 		const result = await step.run({ plan, writes })
 		staged.set(step.name, result.operations)
 		state = { ...state, ...result.state }
+		refusals.push(...(result.refusals ?? []))
 	}
 	return {
 		staged: [...staged.values()].flat(),
@@ -52,6 +61,7 @@ export async function planCommit(params: {
 		containers: [...(state.containers ?? [])],
 		moveRemovals: [...(state.moveRemovals ?? [])],
 		released: [...(state.released ?? [])],
+		refusals,
 	}
 }
 

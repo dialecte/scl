@@ -9,7 +9,12 @@ import { readAttribute } from '@/v2019C1/helpers'
 import { planCommit } from '@/v2019C1/hooks/before-commit/before-commit'
 import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 
-import type { CommitPrune, CommitPrunedContainer, CommitPrunedType } from './commit-prune.types'
+import type {
+	CommitPrune,
+	CommitPruneOptions,
+	CommitPrunedContainer,
+	CommitPrunedType,
+} from './commit-prune.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { PrunedContainer } from '@/v2019C1/hooks/before-commit/prune-emptied-containers.types'
 import type * as Core from '@dialecte/core'
@@ -26,14 +31,20 @@ import type { AnyRawRecord } from '@dialecte/core'
  *
  * A preview holds only for the staged state it read (`stagedCount` operations): call it last, after every write, then
  * commit or discard. A step the commit gains later is seen here without a change. A transaction the commit refuses
- * throws the same error. The ids of records the commit creates (a `Private` wrapping an element of the extension
+ * throws the same error; with `{ collect: true }`, every move the commit does not follow (`MOVE_NOT_FOLLOWED`) and every
+ * incoherent uuid reference (`REFERENCE_INCOHERENT`) is listed in `refusals` instead, in the order the commit judges
+ * them (the commit refuses with the first), and the rest of the preview reads the commit as if they were accepted; every
+ * other refusal still throws. The ids of records the commit creates (a `Private` wrapping an element of the extension
  * namespace, on a move or a create) are not part of the preview; the ids of the containers it prunes are stable.
  *
  * @intent preview what the commit will remove, warn before a commit prunes a container, list what a commit deletes beyond the edits
  */
-export async function commitPrune(tx: Core.Transaction<Config>): Promise<CommitPrune> {
+export async function commitPrune(
+	tx: Core.Transaction<Config>,
+	options: CommitPruneOptions = {},
+): Promise<CommitPrune> {
 	const operations = tx.getStagedOperations()
-	const planned = await planCommit({ operations, query: tx })
+	const planned = await planCommit({ operations, query: tx, collect: options.collect ?? false })
 	const containers = await describeContainers(tx, { containers: planned.containers })
 	return {
 		stagedCount: operations.length,
@@ -41,6 +52,7 @@ export async function commitPrune(tx: Core.Transaction<Config>): Promise<CommitP
 		types: describeTypes({ operations: planned.stagedBy.get('unusedTypes') ?? [] }),
 		moves: planned.moveRemovals,
 		released: planned.released,
+		refusals: planned.refusals,
 	}
 }
 

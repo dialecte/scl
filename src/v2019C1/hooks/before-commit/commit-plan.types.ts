@@ -3,7 +3,9 @@ import type { MovePlaces, MovedRef } from './moved-roots.types'
 import type { MoveRemoval } from './moves.types'
 import type { PrunedContainer } from './prune-emptied-containers.types'
 import type { ReleasedLNodeBinding } from './release-deleted-logical-nodes.types'
+import type { UuidReferenceRefusalReason } from './uuid-references.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { SCL_ERRORS } from '@/v2019C1/errors'
 import type * as Core from '@dialecte/core'
 
 /** The name of a step of the commit. */
@@ -44,12 +46,19 @@ export type CommitPlan = {
 	/** What each step before staged, by its name, in run order. */
 	readonly staged: ReadonlyMap<CommitStepName, readonly Scl.Operation[]>
 	readonly state: CommitState
+	/**
+	 * Whether a step lists the moves the commit does not follow and the incoherent uuid references in its `refusals` and
+	 * goes on, instead of throwing the first.
+	 */
+	readonly collect: boolean
 }
 
 /** What a step stages, and what it adds to the state. */
 export type CommitStepResult = {
 	operations: readonly Scl.Operation[]
 	state?: CommitState
+	/** What the step refuses, listed in collect mode (`CommitPlan.collect`). */
+	refusals?: readonly CommitRefusal[]
 }
 
 /** The writes of the steps before a step: the record each left (a delete left out), and the ids they deleted. */
@@ -80,4 +89,25 @@ export type PlannedCommit = {
 	containers: PrunedContainer[]
 	moveRemovals: MoveRemoval[]
 	released: ReleasedLNodeBinding[]
+	/** Every refusal the steps listed in collect mode, in run order; empty otherwise. */
+	refusals: CommitRefusal[]
 }
+
+/**
+ * A refusal of the commit as data, with the key, code, meta and detail the commit throws it with: a move it does not
+ * follow (`MOVE_NOT_FOLLOWED`, SCL4003), or a uuid reference the transaction writes that cannot be named coherently
+ * (`REFERENCE_INCOHERENT`, SCL4004). Only these two are collected; every other refusal of the commit still throws.
+ */
+export type CommitRefusal =
+	| {
+			key: 'MOVE_NOT_FOLLOWED'
+			code: (typeof SCL_ERRORS)['MOVE_NOT_FOLLOWED']['code']
+			meta: { moved: MovedRef; parent: MovedRef }
+			detail: string
+	  }
+	| {
+			key: 'REFERENCE_INCOHERENT'
+			code: (typeof SCL_ERRORS)['REFERENCE_INCOHERENT']['code']
+			meta: { reference: MovedRef; uuidAttribute: string; reason: UuidReferenceRefusalReason }
+			detail: string
+	  }
