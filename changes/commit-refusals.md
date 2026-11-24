@@ -1,3 +1,4 @@
 ### Added
 
 - `tx.cleanUp.commitPrune({ collect: true })` lists, in a new `refusals` field, every move the commit does not follow (`MOVE_NOT_FOLLOWED`, `SCL4003`, one per move and cause) and every incoherent uuid reference the transaction writes (`REFERENCE_INCOHERENT`, `SCL4004`), in the order the commit judges them, each with the `key`, `code`, `meta` and `detail` the commit throws it with, instead of throwing the first. The rest of the preview then reads the commit as if they were accepted; every other refusal still throws. Without `collect` nothing changes: the preview throws what the commit refuses, and `refusals` is empty. The commit itself still refuses with the first of them, same error.
+- The preview's types are exported from the package entry: `CommitPrune`, `CommitPruneOptions`, `CommitPrunedContainer`, `CommitPrunedElement`, `CommitPrunedIdentity`, `CommitPrunedType`, `CommitRefusal` and `CommitRefusalElement`.

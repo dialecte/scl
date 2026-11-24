@@ -1,3 +1,4 @@
+import { planCommit } from './before-commit'
 import severalRefusalsXml from './fixtures/commit-refusals-incoherent-references.xml?raw'
 
 import { toDialecteError } from '@dialecte/core'
@@ -115,6 +116,67 @@ describe('the commit and the default preview refuse with the first refusal the c
 			defaultPreview: committed,
 			listed: committed,
 		})
+	}
+
+	runSclTestCases.withoutExport({ testCases, act })
+})
+
+// In collect mode the commit goes on past a refused uuid reference without naming it: a reference out of reach is left
+// without a path, one in reach keeps the path its create wrote.
+describe('planCommit({ collect: true }) - a refused uuid reference gets no path, the others theirs', () => {
+	type PathsCase = SclTest.BaseXmlTestCase & {
+		write: (tx: Scl.Transaction) => Promise<void>
+		/** The ids of the references left holding a `dataName` once the plan ran, in id order. */
+		named: string[]
+	}
+
+	const testCases: SclTest.TestCases<PathsCase> = {
+		// CSWI1 is in F2, out of FB's reach; XCBR1 is in SF1 of F1, in its reach; both written without their path
+		'one variable out of reach and one in reach, both written without a path → only the one in reach named':
+			{
+				sourceXml: severalRefusalsXml,
+				write: async function writeTwoVariables(tx) {
+					await tx.any.addChild(FUNCTION_BEHAVIOUR, {
+						tagName: 'OutputVar',
+						id: 'out-of-reach',
+						attributes: { varName: 'out', lnodeUuid: 'cswi', doName: 'Pos' },
+					})
+					await tx.any.addChild(FUNCTION_BEHAVIOUR, {
+						tagName: 'OutputVar',
+						id: 'in-reach',
+						attributes: { varName: 'in', lnodeUuid: 'xcbr', doName: 'Pos', daName: 'stVal' },
+					})
+				},
+				named: ['in-reach'],
+			},
+	}
+
+	async function act({ testCase, source }: SclTest.ActParams<PathsCase>): Promise<void> {
+		let named: string[] | undefined
+		await source
+			.prepare(async function writeThenPlan(tx) {
+				await testCase.write(tx)
+				const planned = await planCommit({
+					operations: tx.getStagedOperations(),
+					query: tx,
+					collect: true,
+				})
+				// each record as the transaction and the plan leave it, the plan's writes last
+				const left = new Map<string, Scl.RawRecord<Scl.ElementsOf>>()
+				for (const operation of [...tx.getStagedOperations(), ...planned.staged]) {
+					if (operation.status !== 'deleted') left.set(operation.newRecord.id, operation.newRecord)
+				}
+				named = ['out-of-reach', 'in-reach']
+					.filter((id) =>
+						left.get(id)?.attributes.some((attribute) => attribute.name === 'dataName'),
+					)
+					.sort()
+			})
+			.then(
+				(prepared) => prepared.discard(),
+				() => undefined,
+			)
+		expect(named).toEqual(testCase.named)
 	}
 
 	runSclTestCases.withoutExport({ testCases, act })

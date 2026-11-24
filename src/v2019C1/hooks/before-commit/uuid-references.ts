@@ -51,31 +51,18 @@ import type { AnyRawRecord } from '@dialecte/core'
  * the hooks' to write. A uuid naming
  * no element is left to the routes that write it. The mirror of `writePathReferencesAtCommit` (a path to its uuid):
  * this step reads a uuid to its path. Nothing outlives the call.
+ *
+ * Without `collect` the first refusal throws where it is found. With it, every refusal is listed in the order the
+ * commit judges them (the groups and data of each written reference in the transaction's order, then the reach of those
+ * left without a path), the references refused are left out of the paths written, and the step goes on.
  */
-export async function checkUuidReferencesAtCommit(params: {
+export async function planUuidReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
 	pending: ReadonlyMap<string, AnyRawRecord>
 	/** The records the commit's earlier steps removed. */
 	gone?: ReadonlySet<string>
 	/** The elements of the subtrees the transaction moved, as the move step read them (`movedBy`, `read`). */
-	moved?: MovedElements
-}): Promise<Scl.Operation[]> {
-	const { operations } = await planUuidReferencesAtCommit({ ...params, collect: false })
-	return operations
-}
-
-/**
- * What {@link checkUuidReferencesAtCommit} stages, and every uuid reference it refuses (`REFERENCE_INCOHERENT`), in the
- * order it judges them: the groups and data of each written reference in the transaction's order, then the reach of
- * those left without a path. Without `collect` the first refusal throws where it is found; with it each is listed, the
- * references refused left out of the paths written, and the step goes on.
- */
-export async function planUuidReferencesAtCommit(params: {
-	operations: ReadonlyArray<Scl.Operation>
-	query: Core.Query<Config>
-	pending: ReadonlyMap<string, AnyRawRecord>
-	gone?: ReadonlySet<string>
 	moved?: MovedElements
 	/** List every refusal instead of throwing the first. */
 	collect: boolean
@@ -142,7 +129,7 @@ function movedBehaviourPairsOf(params: {
 	})
 }
 
-/** The pairs of a reference the transaction wrote (see {@link checkUuidReferencesAtCommit}), each holding its uuid. */
+/** The pairs of a reference the transaction wrote (see {@link planUuidReferencesAtCommit}), each holding its uuid. */
 function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	const { change } = params
 	const { before, after } = change

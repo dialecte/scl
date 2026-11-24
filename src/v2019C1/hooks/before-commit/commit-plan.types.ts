@@ -93,6 +93,9 @@ export type PlannedCommit = {
 	refusals: CommitRefusal[]
 }
 
+/** An element a refusal of the commit names: its tag and record id. */
+export type CommitRefusalElement = { tagName: string; id: string }
+
 /**
  * A refusal of the commit as data, with the key, code, meta and detail the commit throws it with: a move it does not
  * follow (`MOVE_NOT_FOLLOWED`, SCL4003), or a uuid reference the transaction writes that cannot be named coherently
@@ -102,12 +105,16 @@ export type CommitRefusal =
 	| {
 			key: 'MOVE_NOT_FOLLOWED'
 			code: (typeof SCL_ERRORS)['MOVE_NOT_FOLLOWED']['code']
-			meta: { moved: MovedRef; parent: MovedRef }
+			meta: { moved: CommitRefusalElement; parent: CommitRefusalElement }
 			detail: string
 	  }
 	| {
 			key: 'REFERENCE_INCOHERENT'
 			code: (typeof SCL_ERRORS)['REFERENCE_INCOHERENT']['code']
-			meta: { reference: MovedRef; uuidAttribute: string; reason: UuidReferenceRefusalReason }
+			meta: {
+				reference: CommitRefusalElement
+				uuidAttribute: string
+				reason: UuidReferenceRefusalReason
+			}
 			detail: string
 	  }

@@ -77,6 +77,14 @@ describe('tx.cleanUp.commitPrune({ collect: true }) - every refusal of the commi
 					'MOVE_NOT_FOLLOWED SCL4003 LDevice ld4 under Server b-server',
 				],
 			},
+		// CTRL moves within its IED to AP2, connected nowhere: judged on its address only, never on what it holds (its LLN0 and
+		// PositionGoose), so one move cannot hit both causes
+		'a logical device moved to an access point of its IED with no connection for its address → one refusal, the address':
+			{
+				sourceXml: severalRefusalsXml,
+				write: moving([CTRL_TO_UNCONNECTED_AP2]),
+				refusals: ['MOVE_NOT_FOLLOWED SCL4003 LDevice ctrl under Server a-server2'],
+			},
 		// LD4 holds itself, its LLN0, GGIO1 and its data instance: what references name by its place, four records
 		'one move holding several records the commit does not follow → one refusal, for that move': {
 			sourceXml: severalRefusalsXml,
