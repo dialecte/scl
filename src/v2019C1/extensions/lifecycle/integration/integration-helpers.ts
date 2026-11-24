@@ -1,6 +1,8 @@
-import { BAY_PATH_TAGS, DESCRIBED_TARGET_TAGS } from './integration-helpers.constants'
-
-import { CUSTOM_RECORD_ID_ATTRIBUTE_NAME } from '@dialecte/core/helpers'
+import {
+	BAY_PATH_TAGS,
+	DESCRIBED_TARGET_TAGS,
+	RECORD_ID_SUFFIX,
+} from './integration-helpers.constants'
 
 import { apply } from '@/v2019C1/extensions/lifecycle/apply'
 import { CROSS_CUTTING_SATELLITE_CONTAINERS } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.constants'
@@ -18,9 +20,6 @@ import type {
 import type { Config, Scl } from '@/v2019C1/config'
 import type { DiffNode, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type * as Core from '@dialecte/core'
-
-/** What the attributes holding a record id end with: the one a test writes, the one an export adds. */
-const RECORD_ID_SUFFIX = CUSTOM_RECORD_ID_ATTRIBUTE_NAME
 
 /**
  * Report, then apply that report in one transaction, through the public two-track surface — what a consumer does. The
@@ -200,7 +199,9 @@ export async function describeSatellites(query: Core.Query<Config>): Promise<str
 	for (const tagName of CROSS_CUTTING_SATELLITE_CONTAINERS) {
 		for (const satellite of await query.getRecordsByTagName(tagName)) {
 			const name = await query.any.getAttribute(satellite, { name: 'name' })
-			const [, holder] = await query.any.findAncestors(satellite)
+			// the satellite's Private is walked through: its holder comes first
+			// dialecte-allow query-in-loop: a test helper describing a handful of satellites, its reads unmeasured
+			const [holder] = await query.any.findAncestors(satellite)
 			const holderName = holder ? await query.any.getAttribute(holder, { name: 'name' }) : undefined
 			const targets: string[] = []
 			const tree = await query.any.getTree(satellite)

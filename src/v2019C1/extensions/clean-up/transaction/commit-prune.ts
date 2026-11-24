@@ -59,7 +59,8 @@ async function describeContainers(
 			detail: 'commitPrune: a container the commit prunes is not in the document',
 		})
 	}
-	const ancestries = await tx.findAncestorsOfEach(records, { order: 'top-down' })
+	// the parent of a pruned container is read from its chain, a Private included
+	const ancestries = await tx.findAncestorsOfEach(records, { order: 'top-down', unwrap: [] })
 	const described = containers.map(function describeContainer(container, index) {
 		const record = records[index]
 		const ancestry = ancestries[index] ?? []

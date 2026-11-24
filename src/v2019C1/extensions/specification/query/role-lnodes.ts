@@ -187,7 +187,8 @@ async function sortInDocumentOrder(
 	const { records } = params
 	const ancestorsOfEach = await query.findAncestorsOfEach(
 		records as Scl.TrackedRecord<Scl.ElementsOf>[],
-		{ order: 'top-down' },
+		// the child positions are read level by level: a Private keeps its level
+		{ order: 'top-down', unwrap: [] },
 	)
 	const positioned = records.map(function positionOf(record, index) {
 		const chain = [...(ancestorsOfEach[index] as AnyTrackedRecord[]), record]

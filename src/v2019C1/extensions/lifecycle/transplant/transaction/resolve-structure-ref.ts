@@ -59,7 +59,11 @@ export function createAncestryResolver(context: {
 	const { sourceQuery, structure, cloneIndex } = context
 
 	return async function (ref) {
-		const ancestors = await sourceQuery.findAncestors(ref, { stopAtTagName: 'Substation' })
+		// a satellite held in a cloned Private lands in that Private's clone, whatever its type: the chain keeps it
+		const ancestors = await sourceQuery.findAncestors(ref, {
+			stopAtTagName: 'Substation',
+			unwrap: [],
+		})
 
 		for (const ancestor of ancestors) {
 			const cloned = cloneIndex.get(ancestor.id)

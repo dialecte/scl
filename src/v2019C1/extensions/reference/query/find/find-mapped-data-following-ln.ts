@@ -59,7 +59,8 @@ export async function findMappedDataFollowingLn(
 	const subtrees = descendants as unknown as DataUnderRoot[]
 	// no data under any root: nothing can follow the logical node, and no ancestor is read
 	if (!subtrees.some(holdsData)) return []
-	const ancestries = await query.findAncestorsOfEach(roots)
+	// the chains are followed by `record.parent`: a root's Private stays in them
+	const ancestries = await query.findAncestorsOfEach(roots, { unwrap: [] })
 	const records = await readRecords({ query, roots, subtrees, ancestries })
 	const source = createRecordSource({ query, records, mappedLNodes })
 
@@ -120,7 +121,9 @@ async function readRecords(params: {
 		return record !== undefined && climbsOut({ records, record })
 	})
 	if (unclimbed.length === 0) return records
-	const filled = await query.findAncestorsOfEach(unclimbed as Scl.TrackedRecord<Scl.ElementsOf>[])
+	const filled = await query.findAncestorsOfEach(unclimbed as Scl.TrackedRecord<Scl.ElementsOf>[], {
+		unwrap: [],
+	})
 	return indexById([...records.values(), ...filled.flat()])
 }
 
