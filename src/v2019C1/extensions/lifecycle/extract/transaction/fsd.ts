@@ -5,6 +5,8 @@ import { postExtractionCleanup } from './post-extraction-cleanup'
 
 import { history } from '@/v2019C1/extensions/history'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
+import { EXTRACT_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import {
 	cloneFunction,
 	cloneFunctionCategories,
@@ -14,6 +16,10 @@ import { removeOwnProvenance } from '@/v2019C1/extensions/reference/transaction'
 
 import type { FsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type {
+	EnterPhase,
+	ExtractProgressPhaseKey,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type { ResolvedMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -35,6 +41,21 @@ export async function fsd(
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
 	} & FsdExtractOptions,
 ): Promise<void> {
+	return await withProgressPhases(tx, {
+		phases: EXTRACT_PROGRESS_PHASES,
+		run: async function extractInPhases(enter) {
+			return await extractFsdInPhases(tx, { params, enter })
+		},
+	})
+}
+
+/** Extract a function, entering each progress phase as it starts. */
+async function extractFsdInPhases(
+	tx: Core.Transaction<Config>,
+	context: { params: Parameters<typeof fsd>[1]; enter: EnterPhase<ExtractProgressPhaseKey> },
+): Promise<void> {
+	const { params, enter } = context
+	enter('header')
 	const { sourceQuery, functionRef, tool, who, nameStructure, sections } = params
 	const { as = 'new', templateLink = 'keep', placement = 'source-level' } = params
 	const omit = omitOfSections({ sections })
@@ -68,6 +89,7 @@ export async function fsd(
 		})
 	}
 
+	enter('copy')
 	const { parent, structure, asTemplate } = await placeFunction(tx, {
 		sourceQuery,
 		functionRef,
@@ -99,6 +121,7 @@ export async function fsd(
 	// its instance lose it, a subfunction placed from another FSD keeps its own; the cloned uuid refs (e.g.
 	// FunctionCatRef -> the cloned Function) are repointed across ALL clones of this operation, before cleanup reads
 	// them to detect orphans
+	enter('identity')
 	const unlinked =
 		templateLink === 'break'
 			? await readInstanceContent(sourceQuery, { roots: [functionRef] })
@@ -113,5 +136,6 @@ export async function fsd(
 	const root = functionMappings.find((mapping) => mapping.source.id === functionRef.id)?.target
 	if (root && templateLink === 'break') await removeOwnProvenance(tx, { element: root })
 
+	enter('cleanup')
 	await postExtractionCleanup(tx)
 }

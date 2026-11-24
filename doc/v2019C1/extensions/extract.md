@@ -233,6 +233,17 @@ The three template extracts take `as` and `templateLink` (`ExtractOptions`); `ex
 
 - `templateLink` — whether the element extracted stays an instance of the template it was made from. `'keep'` (default): it keeps its `templateUuid` and `originUuid`, and the file reference it records — a copy of an instance is still one. `'break'`: it loses them, and so does what came with its instance (the elements below it, and for an application the functions it composes, unless an element records a source file of its own: a subfunction placed from another FSD, an application or a function placed from its file keeps its lineage and file reference, with what it holds). The `TEMPLATE` levels of an SSD carry no lineage either way.
 
+### Progress
+
+Each extract reports one progress plan on the transaction (`doc.state.progress`), whose main bar only moves forward;
+the clones and type imports it runs show as the sub-bar (`step`), with their caption when they have one:
+
+- `fsd`, `asd`, `ssd`: `Starting the file…` 1/20, `Copying the scope…` 15/20, `Linking copied elements…` 3/20,
+  `Cleaning up…` 1/20.
+- `ied`: `Checking the IED…` 1/20, `Reading the IED…` 4/20, `Writing the export…` 15/20.
+
+The plan is closed when the extract returns or throws; the commit that follows runs with its own plan.
+
 ### `ensureSubstationTemplateStructure`
 
 Ensures the mandatory `TEMPLATE` hierarchy exists under the root `SCL`, creating each level if absent. Idempotent — safe to call multiple times.
