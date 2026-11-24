@@ -1,5 +1,6 @@
 import { runUnsubscribeCases } from './__tests__/unsubscribe-cases'
 import unsubscribeGooseOtherLn from './fixtures/unsubscribe/unsubscribe-goose-other-ln.xml?raw'
+import unsubscribeReportPureAndTwoClients from './fixtures/unsubscribe/unsubscribe-report-pure-and-two-clients.xml?raw'
 import unsubscribeReportPureClient from './fixtures/unsubscribe/unsubscribe-report-pure-client.xml?raw'
 import unsubscribeReportTwoClients from './fixtures/unsubscribe/unsubscribe-report-two-clients.xml?raw'
 
@@ -44,6 +45,21 @@ describe('unsubscribe - the last ExtRef, by kind of control block', () => {
 					registrations: [{ element: 'clientln-s-ggio1', effect: 'deleted' }],
 				},
 				expectedQueries: ['//default:ClientLN[@iedName="S"][@lnClass="GGIO"][@lnInst="2"]'],
+				unexpectedQueries: ['//default:ClientLN[@iedName="S"][@lnClass="GGIO"][@lnInst="1"]'],
+			},
+		// S's GGIO1 and GGIO2 receive rcb; S's clients: IHMI1 (no ExtRef), GGIO2, GGIO1 (the last client)
+		'report: GGIO1’s ExtRef ended beside a pure client of S → GGIO1’s ClientLN removed, IHMI1’s and GGIO2’s stay':
+			{
+				sourceXml: unsubscribeReportPureAndTwoClients,
+				extRefs: ['ext-s-ggio1-report'],
+				result: {
+					unbound: ['ext-s-ggio1-report'],
+					registrations: [{ element: 'clientln-s-ggio1', effect: 'deleted' }],
+				},
+				expectedQueries: [
+					'//default:ClientLN[@iedName="S"][@lnClass="IHMI"][@lnInst="1"]',
+					'//default:ClientLN[@iedName="S"][@lnClass="GGIO"][@lnInst="2"]',
+				],
 				unexpectedQueries: ['//default:ClientLN[@iedName="S"][@lnClass="GGIO"][@lnInst="1"]'],
 			},
 	}

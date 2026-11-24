@@ -1,4 +1,5 @@
 import { runUnsubscribeCases } from './__tests__/unsubscribe-cases'
+import unsubscribeOneClearedOneDeleted from './fixtures/unsubscribe/unsubscribe-one-cleared-one-deleted.xml?raw'
 import unsubscribeOneLnRegistered from './fixtures/unsubscribe/unsubscribe-one-ln-registered.xml?raw'
 import unsubscribeThreeLns from './fixtures/unsubscribe/unsubscribe-three-lns.xml?raw'
 
@@ -39,6 +40,21 @@ describe('unsubscribe - a registration naming a logical node whose ExtRefs end',
 					`${GCB}/default:IEDName[.="S"][@lnInst="1" or @lnInst="3"]`,
 					`${GCB}/default:IEDName[.="S"][not(@lnClass)]`,
 				],
+			},
+		// S's GGIO1, GGIO2 and GGIO3 subscribe to gcb, GGIO1 and GGIO3 registered at their logical node, GGIO2 nowhere
+		'GGIO1’s and GGIO3’s ExtRefs ended, GGIO2’s registered nowhere → GGIO1’s IEDName cleared to S, GGIO3’s removed':
+			{
+				sourceXml: unsubscribeOneClearedOneDeleted,
+				extRefs: ['ext-s-general', 'ext-s-ggio3'],
+				result: {
+					unbound: ['ext-s-general', 'ext-s-ggio3'],
+					registrations: [
+						{ element: 'iedname-s-ggio1', effect: 'cleared' },
+						{ element: 'iedname-s-ggio3', effect: 'deleted' },
+					],
+				},
+				expectedQueries: [`${GCB}/default:IEDName[.="S"][not(@ldInst or @lnClass or @lnInst)]`],
+				unexpectedQueries: [`${GCB}/default:IEDName[.="S"][@lnClass]`],
 			},
 	}
 

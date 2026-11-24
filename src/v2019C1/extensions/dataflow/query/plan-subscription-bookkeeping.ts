@@ -12,16 +12,19 @@ import { readSubscriber } from './read-subscriber'
 import { registrationPrecision } from './registration-precision'
 import { resolveControlBlock } from './resolve-control-block'
 
+import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
+import { iedNameOf } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-name-of'
 import { readAttribute } from '@/v2019C1/helpers'
 import { SUBSCRIBER_DEVICE_PART_ATTRIBUTES_BY_TAG } from '@/v2019C1/hooks/before-delete/orphaned-refs.constants'
 
 import type { DataflowContext } from './dataflow-context.types'
-import type { ControlBlockNode, IedNode } from './ied-section.types'
+import type { ControlBlockNode, IedNode, IedSection } from './ied-section.types'
 import type {
 	EndedSubscription,
 	PlanSubscriptionBookkeepingParams,
 	SubscriptionBookkeeping,
 } from './plan-subscription-bookkeeping.types'
+import type { Subscriber } from './resolve-registration.types'
 import type { Scl } from '@/v2019C1/config'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -41,6 +44,7 @@ export async function planSubscriptionBookkeeping(
 	params: PlanSubscriptionBookkeepingParams,
 ): Promise<SubscriptionBookkeeping> {
 	const { context, ending } = params
+	const iedSection = await context.iedSection()
 	const byControlBlock = await context.extRefsByControlBlock()
 	const supervisionIndex = await context.supervisionIndex()
 	const endingIds = new Set(ending.map((extRef) => extRef.record.id))
@@ -56,10 +60,11 @@ export async function planSubscriptionBookkeeping(
 
 		if (remaining.length === 0) {
 			// a GOOSE / SV subscriber is its IED, a report client the logical node an ending ExtRef sits in
-			const subscribers = subscribesAsIed(controlBlock)
-				? await logicalNodesOf({ context, ied: subscriber })
+			const nodes = subscribesAsIed(controlBlock)
+				? logicalNodesOf({ iedSection, ied: subscriber })
 				: extRefs
-			const named = await registrationsNaming({ context, controlBlock, nodes: subscribers })
+			const subscribers = nodes.map((node) => readSubscriber({ extRef: node, iedSection }))
+			const named = await registrationsNaming({ context, controlBlock, subscribers })
 			for (const registration of named) {
 				if (publisherFixed)
 					bookkeeping.kept.push({ element: registration.ref, why: 'eng-right-fix' })
@@ -70,11 +75,25 @@ export async function planSubscriptionBookkeeping(
 			continue
 		}
 
-		const named = await registrationsNaming({ context, controlBlock, nodes: extRefs })
-		const stillNamed = await registrationsNaming({ context, controlBlock, nodes: remaining })
+		const endingSubscribers = extRefs.map((extRef) => readSubscriber({ extRef, iedSection }))
+		const remainingSubscribers = remaining.map((extRef) => readSubscriber({ extRef, iedSection }))
+		const named = await registrationsNaming({
+			context,
+			controlBlock,
+			subscribers: endingSubscribers,
+		})
+		const stillNamed = await registrationsNaming({
+			context,
+			controlBlock,
+			subscribers: remainingSubscribers,
+		})
 		const stillNamedIds = new Set(stillNamed.map((registration) => registration.record.id))
 		// one registration at most is cleared to the IED, none when every remaining ExtRef is named already
-		let clearsOne = await anyUnnamed({ context, controlBlock, extRefs: remaining })
+		let clearsOne = await anyUnnamed({
+			context,
+			registrations: stillNamed,
+			subscribers: remainingSubscribers,
+		})
 		for (const registration of named) {
 			if (stillNamedIds.has(registration.record.id)) continue
 			// a client is a logical node: none of its ExtRefs left, it goes as at zero, never cleared to its IED
@@ -138,12 +157,8 @@ function subscribesAsIed(controlBlock: ControlBlockNode): boolean {
 }
 
 /** Every logical node of an IED, each with itself above it, as the subscriber it names. */
-async function logicalNodesOf(params: {
-	context: DataflowContext
-	ied: Scl.Ref<'IED'>
-}): Promise<IedNode[]> {
-	const { logicalNodes } = await params.context.iedSection()
-	return logicalNodes
+function logicalNodesOf(params: { iedSection: IedSection; ied: Scl.Ref<'IED'> }): IedNode[] {
+	return params.iedSection.logicalNodes
 		.filter((logicalNode) => logicalNode.ied.id === params.ied.id)
 		.map((logicalNode) => ({
 			...logicalNode,
@@ -151,35 +166,52 @@ async function logicalNodesOf(params: {
 		}))
 }
 
-/** Whether one of the ExtRefs is named by no registration of the control block. */
+/** Whether one of the subscribers is named by none of the registrations. */
 async function anyUnnamed(params: {
 	context: DataflowContext
-	controlBlock: ControlBlockNode
-	extRefs: readonly IedNode<'ExtRef'>[]
+	registrations: readonly ControlBlockNode['registrations'][number][]
+	subscribers: readonly Subscriber[]
 }): Promise<boolean> {
-	const { context, controlBlock, extRefs } = params
-	for (const extRef of extRefs) {
-		const naming = await registrationsNaming({ context, controlBlock, nodes: [extRef] })
-		if (naming.length === 0) return true
+	const { context, registrations, subscribers } = params
+	for (const subscriber of subscribers) {
+		const naming = await registrationsNamingOne({ context, registrations, subscriber })
+		if (!naming) return true
+	}
+	return false
+}
+
+/** Whether one of the registrations names the subscriber. */
+async function registrationsNamingOne(params: {
+	context: DataflowContext
+	registrations: readonly ControlBlockNode['registrations'][number][]
+	subscriber: Subscriber
+}): Promise<boolean> {
+	const { context, registrations, subscriber } = params
+	for (const registration of registrations) {
+		const ied = namedIed(registration)
+		if (ied !== undefined && ied !== subscriber.ied) continue
+		if ((await registrationPrecision({ context, registration, subscriber })) !== undefined)
+			return true
 	}
 	return false
 }
 
 /**
- * The registrations of a control block naming the subscriber of at least one of the nodes (an ExtRef, or a logical node
- * with itself above it), in document order.
+ * The registrations of a control block naming at least one of the subscribers, in document order. A registration
+ * naming its IED by name only is compared on that name first.
  */
 async function registrationsNaming(params: {
 	context: DataflowContext
 	controlBlock: ControlBlockNode
-	nodes: readonly IedNode[]
+	subscribers: readonly Subscriber[]
 }): Promise<ControlBlockNode['registrations'][number][]> {
-	const { context, controlBlock, nodes } = params
-	const iedSection = await context.iedSection()
-	const subscribers = nodes.map((node) => readSubscriber({ extRef: node, iedSection }))
+	const { context, controlBlock, subscribers } = params
 	const named: ControlBlockNode['registrations'][number][] = []
 	for (const registration of controlBlock.registrations) {
-		for (const subscriber of subscribers) {
+		const ied = namedIed(registration)
+		const candidates =
+			ied === undefined ? subscribers : subscribers.filter((subscriber) => subscriber.ied === ied)
+		for (const subscriber of candidates) {
 			const precision = await registrationPrecision({ context, registration, subscriber })
 			if (precision === undefined) continue
 			named.push(registration)
@@ -187,6 +219,21 @@ async function registrationsNaming(params: {
 		}
 	}
 	return named
+}
+
+/**
+ * The IED a registration names by name, read from the records it holds; `undefined` when one of its references holds a
+ * uuid (the uuid wins, so only its precision tells), or it names none.
+ */
+function namedIed(registration: ControlBlockNode['registrations'][number]): string | undefined {
+	const { record, ancestry } = registration
+	const pairs = TUPLE_REFERENCE_PAIRS[record.tagName as keyof typeof TUPLE_REFERENCE_PAIRS] ?? []
+	const [first] = pairs
+	if (!first) return undefined
+	const holdsUuid = pairs.some((pair) =>
+		Boolean(readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })),
+	)
+	return holdsUuid ? undefined : iedNameOf({ role: first.tuple.ied, record, ancestry })
 }
 
 /**
