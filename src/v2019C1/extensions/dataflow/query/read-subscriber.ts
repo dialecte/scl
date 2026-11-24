@@ -15,11 +15,11 @@ import type { IedNode, IedSection } from './ied-section.types'
 import type { Subscriber } from './resolve-registration.types'
 import type { AnyRawRecord } from '@dialecte/core'
 
-/** What names an ExtRef, as the subscriber of a control block: its IED, access point, logical device and logical node. */
-export function readSubscriber(params: {
-	extRef: IedNode<'ExtRef'>
-	iedSection: IedSection
-}): Subscriber {
+/**
+ * What names an ExtRef, as the subscriber of a control block: its IED, access point, logical device and logical node,
+ * read from the records above it (for any element of an IED, the logical node holding it).
+ */
+export function readSubscriber(params: { extRef: IedNode; iedSection: IedSection }): Subscriber {
 	const { extRef, iedSection } = params
 	const { ancestry } = extRef
 	const accessPoint = nearest({ ancestry, tagNames: ACCESS_POINT_TAGS })

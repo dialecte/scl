@@ -230,6 +230,14 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The signal cannot be implemented by an element of this kind',
 	},
 	/**
+	 * An unsubscribe that would change an IED whose engineering right is `fix` (exported to, or from, another project):
+	 * nothing is written. `meta: { reason: 'eng-right-fix', ied: { tagName, id } }`
+	 */
+	DATAFLOW_UNSUBSCRIBE_REFUSED: {
+		code: 'SCL3002',
+		message: 'The subscription cannot be ended: its IED may not be changed in this project',
+	},
+	/**
 	 * A commit deletes a record and leaves one of its children in the store without a parent: a bug of a hook that
 	 * staged a delete without the subtree. `meta: { record: { tagName, id }, child: { tagName, id } }` — the first
 	 * pair found.

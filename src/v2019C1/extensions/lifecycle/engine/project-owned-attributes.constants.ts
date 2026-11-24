@@ -106,8 +106,9 @@ export const CONF_REV_ONLY_RISES: ProjectOwnedAttributes = {
 
 /**
  * An input or output of an IED the project bound to a source: the source it names (the data and the control block
- * sending it) is the system configuration's, kept against a template, each difference listed as kept. Its internal
- * address, description, service and expected data (`pXxx`) are the template's.
+ * sending it) and the service it receives it by are the system configuration's, kept against a template, each
+ * difference listed as kept. Its internal address, description and expected data (`pXxx`, the expected service
+ * `pServT` included) are the template's.
  */
 export const BOUND_INPUT_OWNED_ATTRIBUTES: ReadonlyMap<string, ProjectOwnedAttributes> = new Map(
 	[...SOURCE_ATTRIBUTES_BY_TAG].map(([tagName, names]): [string, ProjectOwnedAttributes] => [
