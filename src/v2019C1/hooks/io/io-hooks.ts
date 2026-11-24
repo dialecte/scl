@@ -3,7 +3,6 @@ import { createImportStepProgress } from './import-step-progress'
 import { LOCAL_NAME_RESOLUTIONS } from './io-hooks.constants'
 
 import {
-	EXCLUSIVE_REFERENCE_TAGS,
 	REFERENCE_TAG_NAMES,
 	TARGET_ELEMENT_TYPES,
 	UUID_REFERENCE_PAIRS,
@@ -41,6 +40,7 @@ import {
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
+import { exclusiveGroupsHeld } from '@/v2019C1/hooks/shared/exclusive-groups'
 
 import type {
 	AttributeChanges,
@@ -695,29 +695,6 @@ function withoutPath(params: { pending: PendingResolution }): PendingResolution 
 			(attribute) => attribute.name !== pending.pair.attribute.path,
 		),
 	}
-}
-
-/**
- * The reference attributes `record` holds, pair by pair in the registry's order (path, uuid, data names), when its tag
- * names its target by the attributes of one pair only (`EXCLUSIVE_REFERENCE_TAGS`) and it holds those of two;
- * `undefined` otherwise.
- */
-function exclusiveGroupsHeld(params: {
-	record: AnyRawRecord
-	pairs: readonly ReferencePair[]
-}): string[] | undefined {
-	const { record, pairs } = params
-	if (!EXCLUSIVE_REFERENCE_TAGS.has(record.tagName)) return undefined
-	const groups = pairs
-		.map((pair) =>
-			[
-				pair.attribute.path,
-				pair.attribute.uuid,
-				...pair.companions.map((companion) => companion.name),
-			].filter((name) => readAttribute({ record, name, defaults: 'none' })),
-		)
-		.filter((held) => held.length > 0)
-	return groups.length > 1 ? groups.flat() : undefined
 }
 
 /**

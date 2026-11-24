@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Function F1 holds a behaviour FB, the LNode PTRC1 (with a behaviour LB, an input Trip and a control CTL1) and the
+     sub-function SF1 holding the LNode XCBR1 (with a control CTL2). Function F2 holds the LNode CSWI1. FB holds a
+     variable naming XCBR1's data by path and uuid (stored-data), one naming its control CTL2 (stored-control), and two stored ones the commit no longer accepts when
+     written: `stored-no-do` names XCBR1 by uuid with no data object, `stored-both` names data and the input Trip. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="S1" dev:db-id="s1">
+        <Function name="F1" uuid="f1" dev:db-id="f1">
+            <Private type="eIEC61850-6-100" dev:db-id="f1-private">
+                <eIEC61850-6-100:BehaviorDescription name="FB" dev:db-id="fb">
+                    <eIEC61850-6-100:OutputVar varName="data" dataName="SF1/XCBR1.Pos.stVal" lnodeUuid="xcbr" doName="Pos" daName="stVal" dev:db-id="stored-data"/>
+                    <eIEC61850-6-100:OutputVar varName="control" outputName="SF1/XCBR1.CTL2" outputUuid="ctl2" dev:db-id="stored-control"/>
+                    <eIEC61850-6-100:InputVar varName="noDo" dataName="SF1/XCBR1" lnodeUuid="xcbr" dev:db-id="stored-no-do"/>
+                    <eIEC61850-6-100:InputVar varName="both" dataName="PTRC1.Op.general" lnodeUuid="ptrc" doName="Op" daName="general" inputName="PTRC1.Trip" inputUuid="trip" dev:db-id="stored-both"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </Private>
+            <LNode iedName="None" lnClass="PTRC" lnInst="1" lnType="PTRC_T" uuid="ptrc" dev:db-id="ptrc">
+                <Private type="eIEC61850-6-100" dev:db-id="ptrc-private">
+                    <eIEC61850-6-100:LNodeInputs dev:db-id="ptrc-inputs">
+                        <eIEC61850-6-100:SourceRef input="Trip" uuid="trip" dev:db-id="trip"/>
+                    </eIEC61850-6-100:LNodeInputs>
+                    <eIEC61850-6-100:LNodeOutputs dev:db-id="ptrc-outputs">
+                        <eIEC61850-6-100:ControlRef output="CTL1" uuid="ctl1" dev:db-id="ctl1"/>
+                    </eIEC61850-6-100:LNodeOutputs>
+                    <eIEC61850-6-100:BehaviorDescription name="LB" dev:db-id="lb"/>
+                </Private>
+            </LNode>
+            <SubFunction name="SF1" uuid="sf1" dev:db-id="sf1">
+                <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="xcbr" dev:db-id="xcbr">
+                    <Private type="eIEC61850-6-100" dev:db-id="xcbr-private">
+                        <eIEC61850-6-100:LNodeOutputs dev:db-id="xcbr-outputs">
+                            <eIEC61850-6-100:ControlRef output="CTL2" uuid="ctl2" dev:db-id="ctl2"/>
+                        </eIEC61850-6-100:LNodeOutputs>
+                    </Private>
+                </LNode>
+            </SubFunction>
+        </Function>
+        <Function name="F2" uuid="f2" dev:db-id="f2">
+            <LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="CSWI_T" uuid="cswi" dev:db-id="cswi"/>
+        </Function>
+    </Substation>
+    <DataTypeTemplates dev:db-id="templates">
+        <LNodeType id="PTRC_T" lnClass="PTRC" dev:db-id="ptrc-type">
+            <DO name="Op" type="ACT_T" dev:db-id="op"/>
+        </LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type">
+            <DO name="Pos" type="DPC_T" dev:db-id="pos"/>
+        </LNodeType>
+        <LNodeType id="CSWI_T" lnClass="CSWI" dev:db-id="cswi-type">
+            <DO name="Pos" type="DPC_T" dev:db-id="cswi-pos"/>
+        </LNodeType>
+        <DOType id="ACT_T" cdc="ACT" dev:db-id="act-type">
+            <DA name="general" bType="BOOLEAN" fc="ST" dev:db-id="general"/>
+        </DOType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dpc-type">
+            <DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="st-val"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>
