@@ -61,7 +61,7 @@ export async function wrapWithPrivateElementIfNeeded<
 	// No Private of its type — check if a matching Private ancestor already wraps this context.
 	// Walk up from parent: if any ancestor is Private with matching type, the element can be
 	// placed directly without creating a new wrapper.
-	const ancestors = await query.findAncestors(parentRecord)
+	const ancestors = await query.findAncestors(parentRecord, { unwrap: [] })
 	const hasMatchingAncestor = ancestors.some(
 		(ancestor) =>
 			ancestor.tagName === 'Private' &&

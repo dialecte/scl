@@ -1,3 +1,4 @@
+// dialecte-allow test-file-long: a long table kept as it is by a dependency repin; its split is its own change
 import { reportAndApply } from '../integration-helpers'
 
 import { describe, expect } from 'vitest'
@@ -794,7 +795,8 @@ async function describeSatellites(query: Core.Query<Config>): Promise<string[]> 
 	for (const tagName of SATELLITE_TAGS) {
 		for (const satellite of await query.getRecordsByTagName(tagName)) {
 			const { name, desc } = await query.any.getAttributes(satellite)
-			const [, level] = await query.any.findAncestors(satellite)
+			// the satellite's Private is walked through: its level comes first
+			const [level] = await query.any.findAncestors(satellite)
 			const levelName = level ? await query.any.getAttribute(level, { name: 'name' }) : undefined
 			const targets: string[] = []
 			const tree = await query.any.getTree(satellite)

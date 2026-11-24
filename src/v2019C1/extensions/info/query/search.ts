@@ -59,7 +59,8 @@ export async function search(
 	const placed = omitted.size === 0 && cap !== undefined ? matched.slice(0, cap) : matched
 	const ancestorsOfEach = await query.findAncestorsOfEach(
 		placed.map(({ record }) => record as Scl.TrackedRecord<Scl.ElementsOf>),
-		{ order: 'top-down' },
+		// an omitted Private leaves out the hits below it: the chain keeps it
+		{ order: 'top-down', unwrap: [] },
 	)
 	const hits: SearchHit[] = []
 	for (let index = 0; index < placed.length; index++) {
