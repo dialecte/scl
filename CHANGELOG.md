@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-24
+
+Unlocking an LNode no longer deletes the IED tool's data: `tx.dataModel.unlockLNode` removes only the values the system tool owns and answers what it removed and kept. An import gives a reference read with its uuid and its path the data names it carries, a reference never keeps another element's path, the commit refuses a uuid reference it cannot name coherently, and `buildIed` rebuilds a specification IED after its specification changed.
+
+Breaking: a transaction writing an incoherent uuid reference now fails at commit with `REFERENCE_INCOHERENT` (`SCL4004`); see Changed.
+
+### Added
+
+- Import diagnostic `exclusive-reference-groups` (`warning`, type `ExclusiveReferenceGroupsDiagnostic`): a behaviour variable naming data and its input or output at once (the two groups are never set together) is reported, each group still read as written; `meta.attributes` lists the reference attributes it holds. `EXCLUSIVE_REFERENCE_TAGS` names the reference tags whose pairs are exclusive groups; `BEHAVIOR_DATA_HOLDER_TAG` the element whose behaviour names its own data alone.
+- `unlockLNode` answers `{ removed, kept }`: the elements it removed, and each `DAI` whose value stays with why (`not-imported`, `not-one-value`, `setting-group`, `no-specified-value`, `value-changed`). Types `UnlockLNodeParams`, `UnlockLNodeResult`, `RemovedData`, `KeptValue`, `KeptValueReason`.
+- `readValueImport({ instance, dataAttribute })`: a `DAI`'s effective `valImport` (its own, else its `DA` / `BDA`'s, else `false`), the one reader the unlock and the lifecycle's settable values use (type `ReadValueImportParams`).
+- `buildIed` / `planIed` rebuild an IED built before: each LNode is paired with its logical node through its binding; new logical nodes are added (a new LNode of a function already built joins that function's logical device), renamed or retyped ones updated in place (the values the new type does not hold removed), logical nodes no LNode specifies any more removed from the logical devices it builds when nothing uses them, else kept and listed; a logical device stays as it is unless `rederiveLDevices` moves its logical nodes to the logical device their function now gives. The plan's `rebuild` report lists every change and what was kept (logical nodes bound by other LNodes, logical devices left with orphans only, LNodes whose own names drifted from their logical node). Nothing bumps a revision.
+
+### Changed
+
+- **Breaking: the commit refuses a uuid reference it cannot name coherently** (`REFERENCE_INCOHERENT`, `SCL4004`, `meta: { reference, uuidAttribute, reason }`). A reference the transaction writes (creates holding its uuid, gives a uuid, or whose data names it changes) is refused when:
+  - `data-missing`: it holds an LNode uuid without the data object the registry requires beside it (`SourceRef` / `ProcessEcho` `sourceDoName`, `ControlRef` `controlledDoName`, `InputVar` / `OutputVar` / `LNodeDataRef` `doName`);
+  - `groups-together`: a behaviour variable (`InputVar`, `OutputVar`) holds its data group and its input or output group at once;
+  - `out-of-scope`: a behaviour variable names an element its local path cannot reach, not at or below the level holding its `BehaviorDescription`. Before, such a variable was stored with its uuid and no path.
+
+  A copy (`deepClone`, a lifecycle copy) carrying such a stored reference is refused too. A rename, a move or a delete that only rewrites or clears paths is not. Whether a uuid names an element is not checked yet, except for a behaviour variable left without its path. A behaviour variable written while its element was out of reach, then moved into its reach in the same transaction (its holder or its element moved), gets its local path at the commit.
+
+### Fixed
+
+- On import, a reference carrying both an LNode's uuid and a path naming that LNode's data (a `SourceRef`, `ControlRef`, `ProcessEcho`, `LNodeDataRef`, an `InputVar` / `OutputVar` `dataName`) gets the data names its path carries beside the uuid (`sourceDoName` / `sourceDaName`, `doName` / `daName`), as one carrying the path alone already did. When the data model of the file does not split them (a path stopping at the LNode included, a data object being required beside the uuid), it is left as read with a `data-path-not-split` warning. Before, such a reference kept its uuid without its data names.
+- On import, a behaviour variable of a `BehaviorDescription` held by a Function (or any level other than an LNode) reads its `dataName` from that level down to the LNode, then the data (`SF1/XCBR1.Pos.stVal`): it gets the LNode's uuid and its data names. Before, the path was read as data of the Function itself: the variable got no uuid, or kept its uuid with an `incoherent-reference` warning.
+- On import, a reference whose path and uuid name two elements is written again from the element its uuid names without the data the path named on the other element (`S1/F1/SF1/XCBR1`, not `S1/F1/SF1/XCBR1.Op.general`).
+- `tx.dataModel.unlockLNode` no longer removes the IED tool's data. For each `DAS` of the LNode it removes only the `Val` the system tool owns: the `DAI`'s effective `valImport` is true, it holds one `Val` without `sGroup`, and that `Val` equals the `DAS`'s (else the type default). The `DAI`, `SDI` and `DOI` above it go only when nothing else is left on them; an `sAddr`, a `desc` or another value keeps them. Before, every `DOI` / `SDI` / `DAI` the specification named was deleted.
+- A reference whose uuid names an element never keeps the path of another one. When that element gives it no path (out of the reach of a path read from its own place, or with no address of its own), the path it held is removed (a mapped data name, `DOS` / `SDS` / `DAS`, is never removed by this rule), on an update, a copy (`deepClone`, a lifecycle copy) and `applyUuidRemap` alike; a path the definition requires is kept. A behaviour variable left so is refused at the commit (`REFERENCE_INCOHERENT`, `out-of-scope`) unless the transaction moves it into reach, where it gets its local path. Before, it kept the former element's path.
+- A move rewrites the local paths of the behaviour variables it carries: a `BehaviorDescription` moved from a Function into its sub-function names `XCBR1.Pos.stVal`, no longer `SF1/XCBR1.Pos.stVal`.
+- `resolveReferencePath` (and `resolveReferencePaths`) of a behaviour variable's `dataName` held by a Function's (or any non-LNode level's) `BehaviorDescription` answers the data after the LNode as `qualifier` (`Pos.stVal`), as the import reads it, not the whole path.
+
 ## [0.27.0] - 2026-11-23
 
 The engine stages the ISD of an IED built from logical nodes: `tx.specification.stageIsd` writes, in an empty document, the logical nodes with their frame, reset to their specification, and the IED built from them on a shell IED, ready for `extract.ied` with the project as its source. Nothing breaking.
