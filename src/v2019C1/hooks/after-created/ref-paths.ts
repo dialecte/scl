@@ -13,6 +13,7 @@ import {
 	updatedOperation,
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared'
+import { stalePathRemoved } from '@/v2019C1/hooks/shared/stale-path-removed'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { AttributeList } from '@/v2019C1/hooks/shared/record-ops'
@@ -71,7 +72,10 @@ async function setPathAttributesOfCreated<GenericElement extends Scl.ElementsOf>
 			: undefined
 		if (!target) continue
 		const values = await buildReferenceAttributes(query, { reference, target })
-		attributes = withAttributeValues(attributes, values)
+		attributes = withAttributeValues(attributes, [
+			...values,
+			...stalePathRemoved({ record, pathAttribute: pair.pathAttr, values }),
+		])
 	}
 
 	const ownValues = await buildOwnDerivedAttributes(query, { element: reference })

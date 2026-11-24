@@ -14,6 +14,7 @@ import {
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
 import { findTargetByUuid } from '@/v2019C1/hooks/shared/ref-entry-ops'
+import { stalePathRemoved } from '@/v2019C1/hooks/shared/stale-path-removed'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
@@ -66,7 +67,10 @@ export async function reconcileReferrerRefPaths(params: {
 		if (!target) continue
 
 		const values = await buildReferenceAttributes(query, { reference, target })
-		attributes = withAttributeValues(attributes, values)
+		attributes = withAttributeValues(attributes, [
+			...values,
+			...stalePathRemoved({ record: newRecord, pathAttribute: pair.attribute.path, values }),
+		])
 	}
 	if (attributes === newRecord.attributes) return []
 	return [updatedOperation(newRecord, attributes)]
