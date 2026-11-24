@@ -30,13 +30,32 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 			updates: [{ ref: { tagName: 'Function', id: 'f1' }, attributes: { name: 'F9' } }],
 			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
-		// stored-data names XCBR1 (an LNode), stored-control names CTL1 (a ControlRef): both keep their paths
-		'two references rebound, each holding its path → nothing read': {
+		// stored-data's daName edited, its path held: no lookup. stored-data's twin (stored-no-do, given its doName) and
+		// stored-data retargeted to PTRC1, stored-control to CTL1: two LNode uuids, one ControlRef
+		'references retargeted, each holding its path → one lookup per target tag, no ancestor read': {
 			sourceXml: behaviours,
 			updates: [
-				{ ref: { tagName: 'OutputVar', id: 'stored-data' }, attributes: { daName: 'q' } },
+				{
+					ref: { tagName: 'OutputVar', id: 'stored-data' },
+					attributes: { lnodeUuid: 'ptrc', doName: 'Op' },
+				},
+				{
+					ref: { tagName: 'InputVar', id: 'stored-no-do' },
+					attributes: { lnodeUuid: 'ptrc', doName: 'Op' },
+				},
 				{ ref: { tagName: 'OutputVar', id: 'stored-control' }, attributes: { outputUuid: 'ctl1' } },
 			],
+			expected: {
+				outcome: 'committed',
+				written: [],
+				lookedUp: ['ControlRef', 'LNode'],
+				ancestorReads: 0,
+			},
+		},
+		// stored-data's data names edited, its uuid and path kept: no retarget, no pathless variable
+		'a reference whose data names change, its path held → nothing read': {
+			sourceXml: behaviours,
+			updates: [{ ref: { tagName: 'OutputVar', id: 'stored-data' }, attributes: { daName: 'q' } }],
 			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
 		// stored-data and stored-no-do (given its doName) both rebound to CSWI1 of F2 with no path: two LNode uuids
