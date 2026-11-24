@@ -122,8 +122,10 @@ async function resolveOne(params: {
 
 	// Fast path: resolve via UUID when available (exact, no ambiguity)
 	const uuidResolved = await resolveByUuidWith({ reads, record, pair })
-	if (uuidResolved)
-		return { record: uuidResolved, qualifier: parseQualifier({ pair, pathAttribute, pathValue }) }
+	if (uuidResolved) {
+		const qualifier = await qualifierOf({ reads, record, pair, pathAttribute, pathValue })
+		return { record: uuidResolved, qualifier }
+	}
 
 	// Fallback: path-based resolution
 	return resolveByPath({ query, reads, record, pair, pathAttribute, pathValue, cache })
@@ -385,6 +387,31 @@ async function resolveByUuidWith(params: {
 	}
 
 	return undefined
+}
+
+/**
+ * The data a path names after its element, read as the import reads it. A behaviour's `dataName` is read from where it
+ * sits (the ancestors read once, batched): its data alone below an LNode, the data after the LNode below any other
+ * level. Every other path needs no ancestor ({@link parseQualifier}).
+ */
+async function qualifierOf(params: {
+	reads: BatchedReads
+	record: Scl.TrackedRecord<Scl.ElementsOf>
+	pair: ReferencePair
+	pathAttribute: string
+	pathValue: string
+}): Promise<string | undefined> {
+	const { reads, record, pair, pathAttribute, pathValue } = params
+	if (pair.resolution !== RESOLUTION_TYPE.behaviorDescription || pathAttribute !== 'dataName')
+		return parseQualifier({ pair, pathAttribute, pathValue })
+	const ancestors = await reads.ancestorsOf(record)
+	const ancestry = [...ancestors].reverse().map((ancestor) => toRawRecord(ancestor) as AnyRawRecord)
+	return parseReferencePath({
+		resolution: pair.resolution as ResolutionType,
+		pathAttribute,
+		pathValue,
+		ancestry,
+	})?.qualifier
 }
 
 /**

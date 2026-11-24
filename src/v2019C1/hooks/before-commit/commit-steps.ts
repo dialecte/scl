@@ -178,19 +178,21 @@ export async function releasedLNodes({
 
 /**
  * Refuse the commit when a uuid reference the transaction writes cannot be named coherently
- * ({@link checkUuidReferencesAtCommit}), over what the steps before it left; stages the paths it writes for the variables a move put in reach.
+ * ({@link checkUuidReferencesAtCommit}), over what the steps before it left; stages the local paths it writes for the behaviour variables a move put in reach or carried.
  */
 export async function uuidReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
+	const { operations, query, state } = plan
+	const places = state.movePlaces
 	return {
 		operations: await checkUuidReferencesAtCommit({
 			operations,
 			query,
 			pending: writes.pending,
 			gone: writes.gone,
+			moved: places ? { ids: places.movedBy.keys(), read: places.read } : undefined,
 		}),
 	}
 }

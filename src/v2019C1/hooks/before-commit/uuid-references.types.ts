@@ -16,3 +16,6 @@ export type UuidReferenceRefusal = {
 	uuidAttribute: string
 	reason: UuidReferenceRefusalReason
 }
+
+/** The elements of the subtrees a transaction moved, as the move step read them. */
+export type MovedElements = { ids: Iterable<string>; read: ReadonlyMap<string, AnyRawRecord> }
