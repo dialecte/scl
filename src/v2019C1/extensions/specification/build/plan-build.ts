@@ -11,6 +11,7 @@ import {
 	implementedElsewhereOf,
 	orphansOf,
 	pairBound,
+	valuesRemovedOf,
 } from '../query/plan-rebuild'
 import { planValues } from '../query/plan-values'
 import {
@@ -110,6 +111,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 	const logicalNodes: PlannedLogicalNode[] = []
 	const rebound: RequestedLNode[] = []
 	const reboundIds = new Set<string>()
+	const retyped = [...paired.retyped]
 	for (const planned of paired.logicalNodes) {
 		const inst = rederive ? named.instOf.get(planned.lnode.id ?? '') : planned.lDeviceInst
 		if (inst === undefined) continue
@@ -117,18 +119,21 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		else if (planned.kind === 'LN0') {
 			// an LN0 never moves: the new logical device's LN0 takes the binding, built when the logical device is new
 			const lnode = existing.find((entry) => entry.ref.id === planned.lnode.id)
-			const ln0 = input.lDevices
-				.find((lDevice) => lDevice.inst === inst)
-				?.logicalNodes.find((held) => held.ref.tagName === 'LN0')
-			if (ln0)
-				logicalNodes.push({ ...planned, lDeviceInst: inst, lnType: ln0.lnType, existing: ln0.ref })
-			else if (lnode) rebound.push(lnode)
+			const onto = ln0Rebinding({ input, planned, lnode, inst })
+			refusals.push(...onto.refusals)
+			if (onto.logicalNode) logicalNodes.push(onto.logicalNode)
+			else if (lnode && onto.refusals.length === 0) rebound.push(lnode)
+			// the LN0 it leaves keeps its type: a retype is judged on the LN0 it binds now
+			const left = retyped.findIndex((entry) => entry.ln.id === planned.existing?.id)
+			if (left >= 0) retyped.splice(left, 1)
+			if (onto.retype) retyped.push(onto.retype)
 			reboundIds.add(planned.lnode.id ?? '')
 		} else {
 			moved.push({ ln: planned.existing as Scl.Ref<'LN'>, fromLd: planned.lDeviceInst, toLd: inst })
 			logicalNodes.push({ ...planned, lDeviceInst: inst })
 		}
 	}
+	refusals.push(...sharedLn0Refusals({ logicalNodes }))
 	const scope = new Set([
 		...logicalNodes.map((planned) => planned.lDeviceInst),
 		...named.instOf.values(),
@@ -189,7 +194,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		openValuesUsed: [...named.openValuesUsed, ...lnodeTypes, ...additions.openValuesUsed],
 		values: valuesPlanned.values,
 		valuesLeftOut: valuesPlanned.valuesLeftOut,
-		rebuild: rebuilding
+		rebuild: reportsRebuild({ input, rebuilding, leftOut })
 			? {
 					added: {
 						lDevices: [...lDevices.values()]
@@ -201,7 +206,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 					},
 					moved,
 					renamed: paired.renamed,
-					retyped: paired.retyped,
+					retyped,
 					removed: {
 						logicalNodes: orphans.removed,
 						lDevices: emptied.map((lDevice) => lDevice.ref),
@@ -212,16 +217,102 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 						requested: new Set(input.lnodes.map((lnode) => lnode.ref.id)),
 					}),
 					orphanLDevices: orphans.orphanLDevices,
-					implementedElsewhere: implementedElsewhereOf({
-						input,
-						orphans: [...orphans.removed, ...orphans.keptInUse.map((entry) => entry.ln)],
-						leftOut,
-					}),
+					implementedElsewhere: implementedElsewhereOf({ input, leftOut }),
 					drift: paired.drift,
 					values: valueCountsOf({ values: valuesPlanned.values, logicalNodes }),
 				}
 			: emptyRebuild(),
 		refusals,
+	}
+}
+
+/** Two LNodes of the run binding one built LN0 (two re-derived onto it): the second refused `ln-collision`. */
+function sharedLn0Refusals(params: {
+	logicalNodes: readonly PlannedLogicalNode[]
+}): BuildRefusal[] {
+	const claimed = new Map<string, string>()
+	return params.logicalNodes.flatMap(function secondClaim(planned): BuildRefusal[] {
+		const ln0 = planned.kind === 'LN0' ? planned.existing?.id : undefined
+		if (!ln0) return []
+		const first = claimed.get(ln0)
+		if (first === undefined) {
+			claimed.set(ln0, planned.lnode.id ?? '')
+			return []
+		}
+		return [
+			{
+				reason: 'ln-collision',
+				ref: planned.lnode,
+				detail: `the LN0 of ${planned.lDeviceInst} is bound by the LNode ${first} of this build already`,
+			},
+		]
+	})
+}
+
+/**
+ * Whether the run reports as a rebuild: an LNode given stays bound to the IED, or one left out for another IED is still
+ * specified on it (its specification naming names the IED), so what that IED implements now is listed.
+ */
+function reportsRebuild(params: {
+	input: BuildInput
+	rebuilding: boolean
+	leftOut: IedBuildPlan['leftOut']
+}): boolean {
+	const { input, rebuilding, leftOut } = params
+	if (rebuilding) return true
+	return leftOut.some(
+		(entry) => input.specNamingOf.get(entry.lnode.id ?? '')?.iedName === input.ied.name,
+	)
+}
+
+/**
+ * An LLN0 LNode re-derived to a logical device the IED holds already: bound to that logical device's LN0, which takes
+ * the LNode's own type when it names one (a retype judged on that LN0); refused with `ln-collision` when another LNode
+ * binds that LN0 (two LNodes never bind one logical node; one of another function binding it, the logical device is
+ * refused as built from another element first). No LN0 there: nothing planned, it is built new.
+ */
+function ln0Rebinding(params: {
+	input: BuildInput
+	planned: PlannedLogicalNode
+	lnode: RequestedLNode | undefined
+	inst: string
+}): {
+	logicalNode?: PlannedLogicalNode
+	retype?: IedRebuildReport['retyped'][number]
+	refusals: BuildRefusal[]
+} {
+	const { input, planned, lnode, inst } = params
+	const ln0 = input.lDevices
+		.find((lDevice) => lDevice.inst === inst)
+		?.logicalNodes.find((held) => held.ref.tagName === 'LN0')
+	if (!ln0) return { refusals: [] }
+	const binder = input.boundLNodeOf.get(ln0.ref.id)
+	if (binder && binder.record.id !== planned.lnode.id) {
+		return {
+			refusals: [
+				{
+					reason: 'ln-collision',
+					ref: planned.lnode,
+					detail: `the LN0 of ${inst} is bound by the LNode ${binder.record.id} already`,
+				},
+			],
+		}
+	}
+	const own = lnode ? readAttributes({ record: lnode.record, defaults: 'none' }).lnType : undefined
+	const lnType = own || ln0.lnType
+	const retype =
+		lnType === ln0.lnType
+			? undefined
+			: {
+					ln: ln0.ref,
+					from: ln0.lnType,
+					to: lnType,
+					valuesRemoved: valuesRemovedOf({ input, ln: ln0.ref, lnType }),
+				}
+	return {
+		logicalNode: { ...planned, lDeviceInst: inst, lnType, existing: ln0.ref },
+		...(retype && { retype }),
+		refusals: [],
 	}
 }
 

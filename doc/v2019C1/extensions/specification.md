@@ -301,14 +301,18 @@ await isd.transaction((tx) =>
 
 `buildIed` given at least one LNode already bound to the IED is a rebuild: it pairs each such LNode with the logical
 node its binding names, and reports in `plan.rebuild` what changes and what it keeps. A build given new LNodes only is
-a first build: its report is empty and it removes nothing.
+a first build: it removes nothing, and its report is empty unless an LNode left out for a real IED is still specified on
+the IED (see Implemented elsewhere below).
 
 - **Logical devices** — a built logical node stays in the logical device it is in, even when its function was renamed
   or it was moved by hand; a new LNode of a function already built joins that function's logical device. With
   `rederiveLDevices: true`, every logical node goes to the logical device its function now gives: those that change
   are `moved` (what names them follows) and their LNode's specification naming takes the new `sLdInst`; an `ldInst`
   written in the specification before the first build is not kept. An LN0 never moves: the new logical device's LN0
-  takes the binding: the LN0 of a logical device already there, or a new one built with the new logical device.
+  takes the binding: the LN0 of a logical device already there, or a new one built with the new logical device. The
+  LN0 already there takes the LLN0 LNode's own `lnType` when it names one (`retyped` on that LN0, its values judged on
+  it); an LN0 another LNode binds is refused `ln-collision`, and so is one two LNodes of the run would take: two LNodes
+  never bind one logical node.
 - **Renamed and retyped** — the specification naming (`sPrefix`, `sLnClass`, `sLnInst`) differing from the logical
   node's identity renames it in place (`renamed`, its uuid kept, what names it following); an `lnClass` the LNode's
   type does not have is refused `type-mismatch`. The LNode's `lnType` differing from the logical node's retypes it
@@ -316,8 +320,12 @@ a first build: its report is empty and it removes nothing.
   node's type, no rule asked again.
 - **Orphans** — in the logical devices the rebuild builds, a logical node (not an LN0, not an LPHD) no LNode binds is
   `removed` when nothing names it by uuid and it holds no control block, data set, log or inputs, else `keptInUse`
-  with what uses it. An orphan whose LNode a real IED implements now (left out, its specification naming still naming
-  the orphan) is also listed in `implementedElsewhere`, with that IED and its name. A logical device outside the rebuild
+  with what uses it.
+- **Implemented elsewhere** — a logical node of the IED no LNode binds (unbound, wherever it sits, in a logical device
+  the run builds or not) whose LNode a real IED implements now (left out, its specification naming still naming it) is
+  listed in `implementedElsewhere`, with that IED and its name. The run reports as a rebuild for it even when no LNode
+  given stays bound to the IED. The match uses the specification naming as it stands: a naming changed before the run
+  no longer names the logical node, and nothing else links them. A logical device outside the rebuild
   whose logical nodes are all orphans is listed in `orphanLDevices`, not removed. A logical device this run empties is
   removed: its LN0 and LPHD left, holding nothing in use and bound by no LNode that stays.
 - **Untouched** — logical nodes bound by LNodes the rebuild was not given (`boundOutsideScope`), and LNodes whose own

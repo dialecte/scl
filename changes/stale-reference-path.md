@@ -1,5 +1,0 @@
-### Fixed
-
-- A reference whose uuid names an element never keeps the path of another one. When that element gives it no path (out of the reach of a path read from its own place, or with no address of its own), the path it held is removed (a mapped data name, `DOS` / `SDS` / `DAS`, is never removed by this rule), on an update, a copy (`deepClone`, a lifecycle copy) and `applyUuidRemap` alike; a path the definition requires is kept. A behaviour variable left so is refused at the commit (`REFERENCE_INCOHERENT`, `out-of-scope`) unless the transaction moves it into reach, where it gets its local path. Before, it kept the former element's path.
-- A move rewrites the local paths of the behaviour variables it carries: a `BehaviorDescription` moved from a Function into its sub-function names `XCBR1.Pos.stVal`, no longer `SF1/XCBR1.Pos.stVal`.
-- `resolveReferencePath` (and `resolveReferencePaths`) of a behaviour variable's `dataName` held by a Function's (or any non-LNode level's) `BehaviorDescription` answers the data after the LNode as `qualifier` (`Pos.stVal`), as the import reads it, not the whole path.

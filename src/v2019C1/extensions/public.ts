@@ -2,6 +2,7 @@
 // and types each built-in extension exposes for reuse. Runtime extension objects
 // (registered via `createSclProject`) are intentionally not re-exported here.
 
+export * from './clean-up/public'
 export * from './data-model/public'
 export * from './dataflow/public'
 export * from './lifecycle/public'

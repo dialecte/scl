@@ -1,9 +1,16 @@
-import { resolveStructureRef } from './resolve-structure-ref'
+import { cloneTree } from './primitives/clone-tree'
+import { createAncestryResolver, resolveStructureRef } from './resolve-structure-ref'
 
-import { describe, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
+import {
+	ALL_XMLNS_NAMESPACES,
+	CUSTOM_RECORD_ID_ATTRIBUTE,
+	createSclTestProject,
+	runSclTestCases,
+} from '@/v2019C1/test'
 
+import type { TargetStructure } from './structure.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
@@ -111,4 +118,67 @@ describe('resolveStructureRef', () => {
 			expect(result.tagName).toBe(testCase.expectedTagName)
 		},
 	})
+})
+
+describe('createAncestryResolver - a satellite directly in a cloned function’s Private', () => {
+	/** The function's Private of that type holds the variable; the project holds the function's clone and its Private. */
+	function placement(params: { privateType: string }) {
+		const { privateType } = params
+		return {
+			sourceXml: /* xml */ `
+				<SCL ${ns} ${id}="root-s" version="2007" revision="C" release="5">
+					<Substation ${id}="sub-s" name="TEMPLATE" uuid="sub-s-uuid">
+						<VoltageLevel ${id}="vl-s" name="TEMPLATE" uuid="vl-s-uuid">
+							<Bay ${id}="bay-s" name="TEMPLATE" uuid="bay-s-uuid">
+								<Function ${id}="fn-s" name="Prot" uuid="fn-s-uuid">
+									<Private ${id}="priv-s" type="${privateType}">
+										<eIEC61850-6-100:Variable ${id}="var-s" name="PICKUP" value="1.2" uuid="var-s-uuid"/>
+									</Private>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+			targetXml: /* xml */ `
+				<SCL ${ns} ${id}="root-t" version="2007" revision="C" release="5">
+					<Substation ${id}="sub-t" name="S1" uuid="sub-t-uuid">
+						<VoltageLevel ${id}="vl-t" name="V1" uuid="vl-t-uuid">
+							<Bay ${id}="bay-t" name="B1" uuid="bay-t-uuid">
+								<Function ${id}="fn-t" name="Prot" uuid="fn-t-uuid">
+									<Private ${id}="priv-t" type="${privateType}"/>
+								</Function>
+							</Bay>
+						</VoltageLevel>
+					</Substation>
+				</SCL>
+			`,
+		}
+	}
+
+	for (const privateType of ['eIEC61850-6-100', 'ACME-Settings']) {
+		it(`a Private of type ${privateType} → the variable lands in the clone of that Private, no other Private made`, async () => {
+			const { source, target } = await createSclTestProject(placement({ privateType }))
+			if (!target) throw new Error('target required')
+			const sourceQuery = source.document.query as Core.Query<Config>
+			const resolve = createAncestryResolver({
+				sourceQuery,
+				structure: {} as TargetStructure,
+				cloneIndex: new Map<string, Scl.Ref<Scl.ElementsOf>>([
+					['fn-s', { tagName: 'Function', id: 'fn-t' }],
+					['priv-s', { tagName: 'Private', id: 'priv-t' }],
+				]),
+			})
+			await target.document.transaction(async function place(tx) {
+				const ref = { tagName: 'Variable', id: 'var-s' } as Scl.Ref<'Variable'>
+				const targetParent = await resolve(ref)
+				await cloneTree(tx, { sourceQuery, ref, targetParent })
+			})
+
+			const [variable] = await target.document.query.getRecordsByTagName('Variable')
+			const privates = await target.document.query.getRecordsByTagName('Private')
+			expect(variable?.parent?.id).toBe('priv-t')
+			expect(privates.map((record) => record.id)).toEqual(['priv-t'])
+		})
+	}
 })

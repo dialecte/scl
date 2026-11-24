@@ -81,7 +81,7 @@ if (preview && preview.containers.length > 0 && !(await confirmed(preview))) pre
 else await prepared.commit()
 ```
 
-`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types, moves, released }`:
+`tx.cleanUp.commitPrune(options?: { collect?: boolean })` returns `{ stagedCount, containers, types, moves, released, refusals }`:
 
 - `containers`: each container the commit removes, in document order:
   - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
@@ -108,6 +108,10 @@ else await prepared.commit()
 - `released`: each `LNode` the commit released from a logical node the transaction deleted, with its `identity` and
   the binding it had (`from`) and is left with (`to`): `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` and
   `lnUuid`, each where the LNode names it.
+- `refusals`: with `{ collect: true }`, every refusal of the commit it lists as data, in the order the commit judges
+  them, each with the `key`, `code`, `meta` and `detail` the commit throws it with: each move the commit does not
+  follow (`MOVE_NOT_FOLLOWED`, `SCL4003`; one per move and cause, however many records it holds) and each incoherent
+  uuid reference the transaction writes (`REFERENCE_INCOHERENT`, `SCL4004`). Empty without `collect`.
 - `stagedCount`: the number of staged operations the preview read.
 
 Together they name every record the commit removes beyond the transaction's own edits, each once: a record a
@@ -115,7 +119,20 @@ container or a type holds is listed under it, not on its own, and nothing the co
 
 A preview holds only for the staged state it read: a write staged after it is not in it. Call it last, after every
 write. A container the transaction deletes itself is not listed: it is a delete, not a prune. A transaction the commit
-refuses throws the same error (a move the commit does not follow: `MOVE_NOT_FOLLOWED`). The ids of records the commit
+refuses throws the same error (a move the commit does not follow: `MOVE_NOT_FOLLOWED`). With `{ collect: true }` the
+moves it does not follow and the incoherent uuid references are listed in `refusals` instead, and the commit refuses
+with the first of them; every other refusal still throws. The rest of the preview then reads the commit as if the
+refused moves and references were accepted: show the refusals first, and the side effects only when there are none.
+
+```ts
+await doc.prepare(async (tx) => {
+	await tx.any.move(ref, { parent })
+	const preview = await tx.cleanUp.commitPrune({ collect: true })
+	if (preview.refusals.length > 0) showRefusals(preview.refusals)
+})
+```
+
+The ids of records the commit
 creates (a `Private` wrapping an element of the extension namespace, on a move or a create) are not part of the
 preview; the ids of the containers it prunes are stable.
 

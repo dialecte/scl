@@ -1,3 +1,4 @@
+import { refuseWith } from './commit-refusal'
 import { foldChanges } from './tuple-reference-changes'
 import { UUID_REFERENCES_PERF_SPAN } from './uuid-references.constants'
 
@@ -21,6 +22,7 @@ import {
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
 
+import type { CommitRefusal } from './commit-plan.types'
 import type { RecordChange } from './tuple-references.types'
 import type {
 	BoundPair,
@@ -49,8 +51,12 @@ import type { AnyRawRecord } from '@dialecte/core'
  * the hooks' to write. A uuid naming
  * no element is left to the routes that write it. The mirror of `writePathReferencesAtCommit` (a path to its uuid):
  * this step reads a uuid to its path. Nothing outlives the call.
+ *
+ * Without `collect` the first refusal throws where it is found. With it, every refusal is listed in the order the
+ * commit judges them (the groups and data of each written reference in the transaction's order, then the reach of those
+ * left without a path), the references refused are left out of the paths written, and the step goes on.
  */
-export async function checkUuidReferencesAtCommit(params: {
+export async function planUuidReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
 	pending: ReadonlyMap<string, AnyRawRecord>
@@ -58,32 +64,45 @@ export async function checkUuidReferencesAtCommit(params: {
 	gone?: ReadonlySet<string>
 	/** The elements of the subtrees the transaction moved, as the move step read them (`movedBy`, `read`). */
 	moved?: MovedElements
-}): Promise<Scl.Operation[]> {
-	const { operations, query, pending, gone, moved } = params
+	/** List every refusal instead of throwing the first. */
+	collect: boolean
+}): Promise<{ operations: Scl.Operation[]; refusals: CommitRefusal[] }> {
+	const { operations, query, pending, gone, moved, collect } = params
 	const changes = [...foldChanges({ operations, pending }).values()].filter(
 		(change) => !gone?.has(change.after.id),
 	)
 	const boundByChange = changes.map((change) => boundPairsOf({ change }))
-	// the first reference the transaction wrote that holds a problem, its groups first, then its data
-	const [first] = changes.flatMap(function refusalsOf(change, index) {
+	// each reference the transaction wrote that holds a problem, its groups first, then its data
+	const incoherent = changes.flatMap(function refusalsOf(change, index) {
 		return [
 			...groupsTogetherOf({ change }),
 			...boundByChange[index].flatMap((bound) => dataMissingOf({ bound })),
 		]
 	})
-	if (first) refuse({ refusal: first })
-	const pathless = boundByChange.flat().filter(isPathlessBehaviourPair)
-	const carried = moved ? movedBehaviourPairsOf({ moved, pending, gone, written: pathless }) : []
-	if (pathless.length === 0 && carried.length === 0) return []
+	const written = incoherent.map((refusal) => toCommitRefusal(refusal))
+	const [first] = written
+	if (first && !collect) refuseWith({ refusal: first })
+	// a reference refused is not named: its path is not written
+	const refused = new Set(incoherent.map((refusal) => refusal.record.id))
+	const pathless = boundByChange
+		.flat()
+		.filter((bound) => isPathlessBehaviourPair(bound) && !refused.has(bound.record.id))
+	const carried = moved
+		? movedBehaviourPairsOf({ moved, pending, gone, written: pathless }).filter(
+				(bound) => !refused.has(bound.record.id),
+			)
+		: []
+	if (pathless.length === 0 && carried.length === 0) return { operations: [], refusals: written }
 
 	query.perf.start(UUID_REFERENCES_PERF_SPAN)
 	try {
 		const unnamed = await unnamedPairsOf({ query, pathless: [...pathless, ...carried] })
-		if (unnamed.length > 0) return await localPathsWritten({ query, unnamed })
+		if (unnamed.length === 0) return { operations: [], refusals: written }
+		const named = await localPathsWritten({ query, unnamed, collect })
+		return { operations: named.operations, refusals: [...written, ...named.refusals] }
 	} finally {
 		query.perf.stop(UUID_REFERENCES_PERF_SPAN)
 	}
-	return []
 }
 
 /**
@@ -110,7 +129,7 @@ function movedBehaviourPairsOf(params: {
 	})
 }
 
-/** The pairs of a reference the transaction wrote (see {@link checkUuidReferencesAtCommit}), each holding its uuid. */
+/** The pairs of a reference the transaction wrote (see {@link planUuidReferencesAtCommit}), each holding its uuid. */
 function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	const { change } = params
 	const { before, after } = change
@@ -190,8 +209,9 @@ async function unnamedPairsOf(params: {
 async function localPathsWritten(params: {
 	query: Core.Query<Config>
 	unnamed: readonly UnnamedPair[]
-}): Promise<Scl.Operation[]> {
-	const { query, unnamed } = params
+	collect: boolean
+}): Promise<{ operations: Scl.Operation[]; refusals: CommitRefusal[] }> {
+	const { query, unnamed, collect } = params
 	const paths = await buildElementPaths(query, {
 		refs: unnamed.flatMap((entry) => [
 			toRef(entry.target) as Scl.Ref<Scl.ElementsOf>,
@@ -217,12 +237,19 @@ async function localPathsWritten(params: {
 				: null
 		return { entry, inReach, path }
 	})
-	const outOfReach = composed.find((candidate) => !candidate.inReach)
-	if (outOfReach) {
-		const { record, pair } = outOfReach.entry
-		refuse({ refusal: { record, uuidAttribute: pair.attribute.uuid, reason: 'out-of-scope' } })
-	}
-	return composed.flatMap(function writtenPath({ entry, path }) {
+	const refusals = composed
+		.filter((candidate) => !candidate.inReach)
+		.map(({ entry }) =>
+			toCommitRefusal({
+				record: entry.record,
+				uuidAttribute: entry.pair.attribute.uuid,
+				reason: 'out-of-scope',
+			}),
+		)
+	const [first] = refusals
+	if (first && !collect) refuseWith({ refusal: first })
+	const operations = composed.flatMap(function writtenPath({ entry, path, inReach }) {
+		if (!inReach) return []
 		const record = entry.record as Scl.RawRecord<Scl.ElementsOf>
 		if (!path) {
 			return throwDialecteError('ASSERTION_FAILED', {
@@ -238,6 +265,7 @@ async function localPathsWritten(params: {
 			),
 		]
 	})
+	return { operations, refusals }
 }
 
 /** The element holding a record (its BehaviorDescription, for a behaviour variable). */
@@ -251,10 +279,13 @@ function parentRefOf(params: { record: AnyRawRecord }): Scl.Ref<Scl.ElementsOf> 
 	return toRef(parent) as Scl.Ref<Scl.ElementsOf>
 }
 
-function refuse(params: { refusal: UuidReferenceRefusal }): never {
-	const { record, uuidAttribute, reason } = params.refusal
-	return throwDialecteError(SCL_ERRORS.REFERENCE_INCOHERENT, {
+/** A uuid reference refused, as the commit throws it and lists it. */
+function toCommitRefusal(refusal: UuidReferenceRefusal): CommitRefusal {
+	const { record, uuidAttribute, reason } = refusal
+	return {
+		key: 'REFERENCE_INCOHERENT',
+		code: SCL_ERRORS.REFERENCE_INCOHERENT.code,
 		meta: { reference: { tagName: record.tagName, id: record.id }, uuidAttribute, reason },
 		detail: `the ${record.tagName} "${record.id}" (${uuidAttribute}): ${reason}`,
-	})
+	}
 }
