@@ -6,14 +6,20 @@ import { toRef } from '@dialecte/core/helpers'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
+import { buildElementPaths } from '@/v2019C1/extensions/reference/query/build/build-element-path'
+import { composeReferencePath } from '@/v2019C1/extensions/reference/query/build/compose-reference-path'
 import { dataCompanionsOf } from '@/v2019C1/extensions/reference/query/build/data-companions'
+import { localSegments } from '@/v2019C1/extensions/reference/query/build/local-segments'
 import { toAnyRawRecord } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.helpers'
-import { targetInScope } from '@/v2019C1/extensions/reference/query/resolve/target-in-scope'
 import { readAttribute } from '@/v2019C1/helpers'
 import { exclusiveGroupsHeld, groupAttributeNames } from '@/v2019C1/hooks/shared/exclusive-groups'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
 import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
-import { hasAttributeChange } from '@/v2019C1/hooks/shared/record-ops'
+import {
+	hasAttributeChange,
+	updatedOperation,
+	withAttributeValues,
+} from '@/v2019C1/hooks/shared/record-ops'
 
 import type { RecordChange } from './tuple-references.types'
 import type { BoundPair, UnnamedPair, UuidReferenceRefusal } from './uuid-references.types'
@@ -30,19 +36,20 @@ import type { AnyRawRecord } from '@dialecte/core'
  * - a behaviour variable given an attribute of one of its groups while it holds both (`groups-together`);
  * - a pair holding its uuid without the data object the registry requires beside it (`data-missing`);
  * - a behaviour variable left without its path whose uuid names an element (one lookup per target tag): refused when the
- *   element is out of its reach (`out-of-scope`), the ancestors of those variables and elements read once; in its
- *   reach its path is always written, so an empty one is a hook that missed it (`ASSERTION_FAILED`).
+ *   element is out of its reach (`out-of-scope`), the paths of those elements and of their behaviours read once; in its
+ *   reach (written out of reach, then moved into it), its path is written from the element (the only operations the
+ *   step stages).
  * Nothing is read when every written pair holds its path: the other pairs' paths are the hooks' to write. A uuid naming
  * no element is left to the routes that write it. The mirror of `writePathReferencesAtCommit` (a path to its uuid):
- * this step reads a uuid to its path and stages nothing. Nothing outlives the call.
+ * this step reads a uuid to its path. Nothing outlives the call.
  */
-export async function assertUuidReferencesAtCommit(params: {
+export async function checkUuidReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
 	pending: ReadonlyMap<string, AnyRawRecord>
 	/** The records the commit's earlier steps removed. */
 	gone?: ReadonlySet<string>
-}): Promise<void> {
+}): Promise<Scl.Operation[]> {
 	const { operations, query, pending, gone } = params
 	const changes = [...foldChanges({ operations, pending }).values()].filter(
 		(change) => !gone?.has(change.after.id),
@@ -57,18 +64,19 @@ export async function assertUuidReferencesAtCommit(params: {
 	})
 	if (first) refuse({ refusal: first })
 	const pathless = boundByChange.flat().filter(isPathlessBehaviourPair)
-	if (pathless.length === 0) return
+	if (pathless.length === 0) return []
 
 	query.perf.start(UUID_REFERENCES_PERF_SPAN)
 	try {
 		const unnamed = await unnamedPairsOf({ query, pathless })
-		if (unnamed.length > 0) await assertInReach({ query, unnamed })
+		if (unnamed.length > 0) return await pathsInReach({ query, unnamed })
 	} finally {
 		query.perf.stop(UUID_REFERENCES_PERF_SPAN)
 	}
+	return []
 }
 
-/** The pairs of a reference the transaction wrote (see {@link assertUuidReferencesAtCommit}), each holding its uuid. */
+/** The pairs of a reference the transaction wrote (see {@link checkUuidReferencesAtCommit}), each holding its uuid. */
 function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	const { change } = params
 	const { before, after } = change
@@ -141,40 +149,69 @@ async function unnamedPairsOf(params: {
 
 /**
  * Each behaviour variable left without a path although its uuid names an element: refused when the element is out of
- * its reach, an assertion otherwise. The ancestors of the variables and their elements in one read per level.
+ * its reach (not at or below the level above its BehaviorDescription); in reach (written while its element was out of
+ * reach, then moved into it in the same transaction), its path written from the element, as the hooks compose it, over
+ * the attributes the commit leaves it. The paths of the elements and of the BehaviorDescriptions in one
+ * `buildElementPaths`.
  */
-async function assertInReach(params: {
+async function pathsInReach(params: {
 	query: Core.Query<Config>
 	unnamed: readonly UnnamedPair[]
-}): Promise<void> {
+}): Promise<Scl.Operation[]> {
 	const { query, unnamed } = params
-	const ancestries = await query.findAncestorsOfEach(
-		unnamed.flatMap((entry) => [
-			toRef(entry.record),
-			toRef(entry.target),
-		]) as Scl.Ref<Scl.ElementsOf>[],
-		{ order: 'top-down' },
-	)
-	for (const [index, entry] of unnamed.entries()) {
-		const reachable = targetInScope({
-			pair: entry.pair,
-			referrerAncestry: (ancestries[index * 2] ?? []).map(toAnyRawRecord),
-			target: entry.target,
-			targetAncestry: (ancestries[index * 2 + 1] ?? []).map(toAnyRawRecord),
-		})
-		if (!reachable) {
-			refuse({
-				refusal: {
-					record: entry.record,
-					uuidAttribute: entry.pair.attribute.uuid,
-					reason: 'out-of-scope',
-				},
+	const paths = await buildElementPaths(query, {
+		refs: unnamed.flatMap((entry) => [
+			toRef(entry.target) as Scl.Ref<Scl.ElementsOf>,
+			parentRefOf({ record: entry.record }),
+		]),
+	})
+	const composed = unnamed.map(function composedPath(entry, index) {
+		const targetPath = paths[index * 2]
+		// the level above the BehaviorDescription: its path, the BehaviorDescription's own segment left out
+		const behaviorContext = paths[index * 2 + 1]?.segments.slice(0, -1)
+		const inReach =
+			targetPath !== null &&
+			behaviorContext !== undefined &&
+			localSegments({ context: behaviorContext, segments: targetPath.segments }) !== null
+		const path =
+			inReach && targetPath
+				? composeReferencePath({
+						pair: entry.pair,
+						referenceAttributes: entry.record.attributes,
+						targetPath,
+						behaviorContext,
+					})
+				: null
+		return { entry, inReach, path }
+	})
+	const outOfReach = composed.find((candidate) => !candidate.inReach)
+	if (outOfReach) {
+		const { record, pair } = outOfReach.entry
+		refuse({ refusal: { record, uuidAttribute: pair.attribute.uuid, reason: 'out-of-scope' } })
+	}
+	return composed.map(function writtenPath({ entry, path }) {
+		const record = entry.record as Scl.RawRecord<Scl.ElementsOf>
+		if (!path) {
+			return throwDialecteError('ASSERTION_FAILED', {
+				detail: `uuidReferences: no ${entry.pair.attribute.path} composes for the ${record.tagName} "${record.id}" naming an element in its reach`,
 			})
 		}
-		throwDialecteError('ASSERTION_FAILED', {
-			detail: `uuidReferences: the ${entry.record.tagName} "${entry.record.id}" holds a ${entry.pair.attribute.uuid} naming an element in its reach and no ${entry.pair.attribute.path}`,
+		return updatedOperation(
+			record,
+			withAttributeValues(record.attributes, [{ name: entry.pair.attribute.path, value: path }]),
+		)
+	})
+}
+
+/** The element holding a record (its BehaviorDescription, for a behaviour variable). */
+function parentRefOf(params: { record: AnyRawRecord }): Scl.Ref<Scl.ElementsOf> {
+	const { parent } = params.record
+	if (!parent) {
+		return throwDialecteError('ASSERTION_FAILED', {
+			detail: `uuidReferences: the ${params.record.tagName} "${params.record.id}" has no parent`,
 		})
 	}
+	return toRef(parent) as Scl.Ref<Scl.ElementsOf>
 }
 
 function refuse(params: { refusal: UuidReferenceRefusal }): never {

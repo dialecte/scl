@@ -14,7 +14,7 @@ import {
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
 import { writeTupleReferencesAtCommit } from './tuple-references'
-import { assertUuidReferencesAtCommit } from './uuid-references'
+import { checkUuidReferencesAtCommit } from './uuid-references'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -178,20 +178,21 @@ export async function releasedLNodes({
 
 /**
  * Refuse the commit when a uuid reference the transaction writes cannot be named coherently
- * ({@link assertUuidReferencesAtCommit}), over what the steps before it left; stages nothing.
+ * ({@link checkUuidReferencesAtCommit}), over what the steps before it left; stages the paths it writes for the variables a move put in reach.
  */
 export async function uuidReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query } = plan
-	await assertUuidReferencesAtCommit({
-		operations,
-		query,
-		pending: writes.pending,
-		gone: writes.gone,
-	})
-	return { operations: [] }
+	return {
+		operations: await checkUuidReferencesAtCommit({
+			operations,
+			query,
+			pending: writes.pending,
+			gone: writes.gone,
+		}),
+	}
 }
 
 /**

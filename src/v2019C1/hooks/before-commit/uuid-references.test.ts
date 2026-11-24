@@ -255,6 +255,68 @@ describe('the commit keeps a uuid reference it can name, and the stored referenc
 					'//v2019C1:InputVar[@varName="both"][@dataName="PTRC2.Op.general"][@inputName="PTRC2.Trip"]',
 				],
 			},
+		// stored-data names XCBR1's Pos.stVal; its path removed, uuid and data names kept by the caller
+		'a stored variable whose path is cleared, its uuid kept → committed, the variable unbound': {
+			sourceXml: behaviours,
+			write: async function clearPath(tx) {
+				// `update` removes an attribute given `undefined`; the untyped surface takes string values only
+				await tx.any.update(STORED_DATA, {
+					attributes: { daName: 'q', dataName: undefined } as unknown as Record<string, string>,
+				})
+			},
+			expectedQueries: ['//v2019C1:OutputVar[@varName="data"]'],
+			unexpectedQueries: [
+				'//v2019C1:OutputVar[@varName="data"][@lnodeUuid]',
+				'//v2019C1:OutputVar[@varName="data"][@dataName]',
+			],
+		},
+		// stored-data given PTRC1 (in FB's reach) and its path removed in the same update
+		'a stored variable given a new uuid with its path cleared → committed, its path written from the uuid':
+			{
+				sourceXml: behaviours,
+				write: async function retargetWithoutPath(tx) {
+					await tx.any.update(STORED_DATA, {
+						attributes: {
+							lnodeUuid: 'ptrc',
+							doName: 'Op',
+							daName: 'general',
+							dataName: undefined,
+						} as unknown as Record<string, string>,
+					})
+				},
+				expectedQueries: [
+					'//v2019C1:OutputVar[@varName="data"][@lnodeUuid="ptrc"][@dataName="PTRC1.Op.general"]',
+				],
+			},
+		// FB; a variable created naming XCBR1 with an empty path
+		'a variable created with an empty path → committed, its path written': {
+			sourceXml: behaviours,
+			write: async function addWithEmptyPath(tx) {
+				await tx.any.addChild(FUNCTION_BEHAVIOUR, {
+					tagName: 'OutputVar',
+					attributes: { varName: 'out', lnodeUuid: 'xcbr', doName: 'Pos', dataName: '' },
+				})
+			},
+			expectedQueries: ['//v2019C1:OutputVar[@varName="out"][@dataName="SF1/XCBR1.Pos"]'],
+		},
+		// FB gets a variable naming CSWI1 of F2 (out of reach), then F1's Private holding FB moves into F2
+		'a variable written out of reach, its behaviour then moved into reach → committed with its local path':
+			{
+				sourceXml: behaviours,
+				write: async function addThenMoveIntoReach(tx) {
+					await tx.any.addChild(FUNCTION_BEHAVIOUR, {
+						tagName: 'OutputVar',
+						attributes: { varName: 'out', lnodeUuid: 'cswi', doName: 'Pos' },
+					})
+					await tx.move(
+						{ tagName: 'Private', id: 'f1-private' },
+						{ parent: { tagName: 'Function', id: 'f2' } },
+					)
+				},
+				expectedQueries: [
+					'//v2019C1:OutputVar[@varName="out"][@lnodeUuid="cswi"][@dataName="CSWI1.Pos"]',
+				],
+			},
 		// XCBR1 moved to F2: stored-data and stored-no-do, of F1's FB, lose it from their reach
 		'the LNode named by stored variables moved out of their reach → committed, the variables unbound':
 			{
@@ -280,9 +342,19 @@ describe('the commit keeps a uuid reference it can name, and the stored referenc
 		testCase,
 		source,
 	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
-		await source.transaction(async function writeReferences(tx) {
-			await testCase.write(tx)
-		})
+		const outcome = await source
+			.transaction(async function writeReferences(tx) {
+				await testCase.write(tx)
+			})
+			.then(
+				function committed() {
+					return 'committed'
+				},
+				function refused(error: unknown) {
+					return toDialecteError(error)?.key ?? String(error)
+				},
+			)
+		expect(outcome).toBe('committed')
 		return { assertOn: 'source' }
 	}
 

@@ -1,5 +1,5 @@
 import behaviours from './fixtures/uuid-references/behaviours.xml?raw'
-import { assertUuidReferencesAtCommit } from './uuid-references'
+import { checkUuidReferencesAtCommit } from './uuid-references'
 
 import { toDialecteError } from '@dialecte/core'
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -16,8 +16,11 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 	type TestCase = SclTest.BaseXmlTestCase & {
 		/** Each record updated by the commit's operations, with the attributes set (`''` removes one). */
 		updates: { ref: Scl.Ref<Scl.ElementsOf>; attributes: Record<string, string> }[]
-		/** How the check ends (`committed`, or the refusal's key), the tags looked up by uuid (sorted), and the times the ancestors are read. */
-		expected: { outcome: string; lookedUp: string[]; ancestorReads: number }
+		/**
+		 * How the check ends (`committed`, or the refusal's key), the attributes it writes (`name=value`), the tags looked up
+		 * by uuid (sorted), and the times the ancestors are read.
+		 */
+		expected: { outcome: string; written: string[]; lookedUp: string[]; ancestorReads: number }
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -25,7 +28,7 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 		'no uuid reference written → nothing read': {
 			sourceXml: behaviours,
 			updates: [{ ref: { tagName: 'Function', id: 'f1' }, attributes: { name: 'F9' } }],
-			expected: { outcome: 'committed', lookedUp: [], ancestorReads: 0 },
+			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
 		// stored-data names XCBR1 (an LNode), stored-control names CTL1 (a ControlRef): both keep their paths
 		'two references rebound, each holding its path → nothing read': {
@@ -34,7 +37,7 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 				{ ref: { tagName: 'OutputVar', id: 'stored-data' }, attributes: { daName: 'q' } },
 				{ ref: { tagName: 'OutputVar', id: 'stored-control' }, attributes: { outputUuid: 'ctl1' } },
 			],
-			expected: { outcome: 'committed', lookedUp: [], ancestorReads: 0 },
+			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
 		// stored-data and stored-no-do (given its doName) both rebound to CSWI1 of F2 with no path: two LNode uuids
 		'two variables rebound with no path to LNodes → one LNode lookup, the ancestors read once': {
@@ -49,10 +52,15 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 					attributes: { lnodeUuid: 'cswi', dataName: '', doName: 'Pos' },
 				},
 			],
-			expected: { outcome: 'REFERENCE_INCOHERENT', lookedUp: ['LNode'], ancestorReads: 1 },
+			expected: {
+				outcome: 'REFERENCE_INCOHERENT',
+				written: [],
+				lookedUp: ['LNode'],
+				ancestorReads: 1,
+			},
 		},
-		// stored-data keeps XCBR1, in FB's reach, and loses its path: a hook would have written it
-		'a variable in its reach left with no path → an assertion, after one lookup and one ancestor read':
+		// stored-data keeps XCBR1, in FB's reach, and loses its path: the commit writes it again
+		'a variable in its reach left with no path → its path written, after one lookup and one ancestor read':
 			{
 				sourceXml: behaviours,
 				updates: [
@@ -61,7 +69,12 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 						attributes: { daName: 'q', dataName: '' },
 					},
 				],
-				expected: { outcome: 'ASSERTION_FAILED', lookedUp: ['LNode'], ancestorReads: 1 },
+				expected: {
+					outcome: 'committed',
+					written: ['dataName=SF1/XCBR1.Pos.q'],
+					lookedUp: ['LNode'],
+					ancestorReads: 1,
+				},
 			},
 	}
 
@@ -79,12 +92,14 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 			})
 		})
 		const reads = countQueryReads(source.query)
-		const outcome = await assertUuidReferencesAtCommit({
+		const written: string[] = []
+		const outcome = await checkUuidReferencesAtCommit({
 			operations,
 			query: reads.query,
 			pending: new Map(),
 		}).then(
-			function committed() {
+			function committed(staged) {
+				written.push(...staged.flatMap(writtenAttributesOf))
 				return 'committed'
 			},
 			function refused(error: unknown) {
@@ -93,6 +108,7 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 		)
 		expect({
 			outcome,
+			written,
 			lookedUp: reads.calls
 				.filter((call) => call.method === 'findByAttributes')
 				.map((call) => String((call.args[0] as { tagName: string }).tagName))
@@ -115,4 +131,15 @@ function operationOf(params: {
 		value: value === '' ? undefined : value,
 	}))
 	return updatedOperation(record, withAttributeValues(record.attributes, values))
+}
+
+/** The attributes an operation of the commit writes, as `name=value`. */
+function writtenAttributesOf(operation: Scl.Operation): string[] {
+	if (operation.status !== 'updated') return []
+	const before = new Map(
+		operation.oldRecord.attributes.map((attribute) => [attribute.name, attribute.value]),
+	)
+	return operation.newRecord.attributes
+		.filter((attribute) => before.get(attribute.name) !== attribute.value)
+		.map((attribute) => `${attribute.name}=${attribute.value}`)
 }
