@@ -29,7 +29,7 @@ const SOURCE_XML = /* xml */ `
 		<Header id="output-gate"/>
 		<Substation name="S1">
 			<Private type="eIEC61850-6-100">
-				<eIEC61850-6-100:AllocationRole name="Operator" uuid="${ROLE_UUID}">
+				<eIEC61850-6-100:AllocationRole name="Operator" uuid="${ROLE_UUID}" ${id}="role">
 					<eIEC61850-6-100:FunctionRef functionUuid="${FUNCTION_UUID}" ${id}="function-ref"/>
 				</eIEC61850-6-100:AllocationRole>
 			</Private>
@@ -45,11 +45,11 @@ const SOURCE_XML = /* xml */ `
 	</SCL>
 `
 
-async function pointFunctionRefAtNothing(document: SclTest.TestDocument['document']) {
+async function addFunctionRefNamingNothing(document: SclTest.TestDocument['document']) {
 	await document.transaction(async (tx) => {
-		await tx.update(
-			{ tagName: 'FunctionRef', id: 'function-ref' },
-			{ attributes: { functionUuid: MISSING_UUID } },
+		await tx.addChild(
+			{ tagName: 'AllocationRole', id: 'role' },
+			{ tagName: 'FunctionRef', attributes: { functionUuid: MISSING_UUID } },
 		)
 	})
 }
@@ -133,7 +133,7 @@ describe('withOutputGate', () => {
 	const testCases: Record<string, TestCase> = {
 		'an act that leaves a dangling reference → rejects, naming the case and the document': {
 			gatedCase: { sourceXml: SOURCE_XML },
-			write: pointFunctionRefAtNothing,
+			write: addFunctionRefNamingNothing,
 			expectedMessage: invalidDocumentMessage({
 				label: 'gated case › source',
 				lines: [
@@ -150,7 +150,7 @@ describe('withOutputGate', () => {
 					violations: [{ check: 'references', code: 'dangling' }],
 				},
 			},
-			write: pointFunctionRefAtNothing,
+			write: addFunctionRefNamingNothing,
 			expectedMessage: undefined,
 			expectedError: undefined,
 		},
@@ -175,7 +175,7 @@ describe('withOutputGate', () => {
 		'an act that throws → its own error, never the gate': {
 			gatedCase: { sourceXml: SOURCE_XML },
 			async write(document) {
-				await pointFunctionRefAtNothing(document)
+				await addFunctionRefNamingNothing(document)
 				throw new Error('the act failed')
 			},
 			expectedMessage: 'the act failed',

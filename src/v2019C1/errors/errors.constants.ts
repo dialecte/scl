@@ -276,9 +276,11 @@ export const SCL_ERRORS = defineErrors({
 	 * coherently: `data-missing`, it holds an LNode uuid without the data object the registry requires beside it;
 	 * `groups-together`, a behaviour variable (`InputVar`, `OutputVar`) holds its data group and its input or output group
 	 * at once; `out-of-scope`, a behaviour variable names an element its local path cannot reach (not at or below the
-	 * level holding its `BehaviorDescription`). `meta: { reference: { tagName, id }, uuidAttribute, reason }`; for
-	 * `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the registry's
-	 * order. The commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one.
+	 * level holding its `BehaviorDescription`); `uuid-unresolved`, an existing path reference whose uuid the transaction
+	 * changes to one naming no element of the document (a reference created with such a uuid, a copy's among them, is
+	 * not refused; a reference named by a tuple is not checked). `meta: { reference: { tagName, id }, uuidAttribute,
+	 * reason }`; for `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the
+	 * registry's order. The commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one.
 	 */
 	REFERENCE_INCOHERENT: {
 		code: 'SCL4004',
