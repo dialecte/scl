@@ -125,7 +125,7 @@ function sameIdentity(params: { identity: LnIdentity; other: LnIdentity }): bool
 }
 
 /** The DAIs a logical node holds whose data a type does not hold. */
-function valuesRemovedOf(params: {
+export function valuesRemovedOf(params: {
 	input: BuildInput
 	ln: Scl.Ref<'LN' | 'LN0'>
 	lnType: string
@@ -249,16 +249,22 @@ export function rebuildWritesOf(params: {
 }
 
 /**
- * The orphans whose LNode a real IED implements now: its specification naming still names them (the specification IED,
- * logical device and identity), its own names the real IED.
+ * The logical nodes of the IED whose LNode a real IED implements now: unbound (no LNode binds them by its names or its
+ * `lnUuid`), wherever they sit, and named by that LNode's specification naming as it stands (the specification IED,
+ * logical device and identity), its own names the real IED's. A naming changed before the run no longer names them.
  */
 export function implementedElsewhereOf(params: {
 	input: BuildInput
-	orphans: readonly Scl.Ref<'LN'>[]
 	leftOut: readonly { lnode: Scl.Ref<'LNode'>; ied: Scl.Ref<'IED'> }[]
 }): IedRebuildReport['implementedElsewhere'] {
-	const { input, orphans, leftOut } = params
-	const orphanIds = new Set(orphans.map((ln) => ln.id))
+	const { input, leftOut } = params
+	const orphanIds = new Set(
+		input.lDevices.flatMap((lDevice) =>
+			lDevice.logicalNodes.flatMap((held) =>
+				held.ref.tagName === 'LN' && !input.boundLNodeOf.has(held.ref.id) ? [held.ref.id] : [],
+			),
+		),
+	)
 	return leftOut.flatMap(function namedOrphan(entry) {
 		const naming = input.specNamingOf.get(entry.lnode.id ?? '')
 		if (!naming || naming.iedName !== input.ied.name) return []
