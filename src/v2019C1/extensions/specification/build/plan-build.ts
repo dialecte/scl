@@ -119,7 +119,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		else if (planned.kind === 'LN0') {
 			// an LN0 never moves: the new logical device's LN0 takes the binding, built when the logical device is new
 			const lnode = existing.find((entry) => entry.ref.id === planned.lnode.id)
-			const onto = ln0Rebinding({ input, planned, lnode, inst, instOf: named.instOf })
+			const onto = ln0Rebinding({ input, planned, lnode, inst })
 			refusals.push(...onto.refusals)
 			if (onto.logicalNode) logicalNodes.push(onto.logicalNode)
 			else if (lnode && onto.refusals.length === 0) rebound.push(lnode)
@@ -133,6 +133,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 			logicalNodes.push({ ...planned, lDeviceInst: inst })
 		}
 	}
+	refusals.push(...sharedLn0Refusals({ logicalNodes }))
 	const scope = new Set([
 		...logicalNodes.map((planned) => planned.lDeviceInst),
 		...named.instOf.values(),
@@ -225,6 +226,29 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 	}
 }
 
+/** Two LNodes of the run binding one built LN0 (two re-derived onto it): the second refused `ln-collision`. */
+function sharedLn0Refusals(params: {
+	logicalNodes: readonly PlannedLogicalNode[]
+}): BuildRefusal[] {
+	const claimed = new Map<string, string>()
+	return params.logicalNodes.flatMap(function secondClaim(planned): BuildRefusal[] {
+		const ln0 = planned.kind === 'LN0' ? planned.existing?.id : undefined
+		if (!ln0) return []
+		const first = claimed.get(ln0)
+		if (first === undefined) {
+			claimed.set(ln0, planned.lnode.id ?? '')
+			return []
+		}
+		return [
+			{
+				reason: 'ln-collision',
+				ref: planned.lnode,
+				detail: `the LN0 of ${planned.lDeviceInst} is bound by the LNode ${first} of this build already`,
+			},
+		]
+	})
+}
+
 /**
  * Whether the run reports as a rebuild: an LNode given stays bound to the IED, or one left out for another IED is still
  * specified on it (its specification naming names the IED), so what that IED implements now is listed.
@@ -244,30 +268,26 @@ function reportsRebuild(params: {
 /**
  * An LLN0 LNode re-derived to a logical device the IED holds already: bound to that logical device's LN0, which takes
  * the LNode's own type when it names one (a retype judged on that LN0); refused with `ln-collision` when another LNode
- * that stays binds that LN0 (two LNodes never bind one logical node). No LN0 there: nothing planned, it is built new.
+ * binds that LN0 (two LNodes never bind one logical node; one of another function binding it, the logical device is
+ * refused as built from another element first). No LN0 there: nothing planned, it is built new.
  */
 function ln0Rebinding(params: {
 	input: BuildInput
 	planned: PlannedLogicalNode
 	lnode: RequestedLNode | undefined
 	inst: string
-	instOf: ReadonlyMap<string, string>
 }): {
 	logicalNode?: PlannedLogicalNode
 	retype?: IedRebuildReport['retyped'][number]
 	refusals: BuildRefusal[]
 } {
-	const { input, planned, lnode, inst, instOf } = params
+	const { input, planned, lnode, inst } = params
 	const ln0 = input.lDevices
 		.find((lDevice) => lDevice.inst === inst)
 		?.logicalNodes.find((held) => held.ref.tagName === 'LN0')
 	if (!ln0) return { refusals: [] }
 	const binder = input.boundLNodeOf.get(ln0.ref.id)
-	const binderStays =
-		binder !== undefined &&
-		binder.record.id !== planned.lnode.id &&
-		(instOf.get(binder.record.id) ?? inst) === inst
-	if (binder && binderStays) {
+	if (binder && binder.record.id !== planned.lnode.id) {
 		return {
 			refusals: [
 				{
