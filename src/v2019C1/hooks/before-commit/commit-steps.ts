@@ -3,7 +3,7 @@ import { findLeftChildren } from './left-children'
 import { LEFT_CHILDREN_PERF_SPAN } from './left-children.constants'
 import { readMovePlaces, topmostMovedRoots } from './moved-roots'
 import { movedTargetNameOperations } from './moved-within-an-ied'
-import { assertMovesFollowed, followMovesAtCommit } from './moves'
+import { assertMovesFollowed, followMovesAtCommit, unfollowedMovesOf } from './moves'
 import { writePathReferencesAtCommit } from './path-references'
 import { pruneEmptiedContainers } from './prune-emptied-containers'
 import { pruneUnusedTypes } from './prune-unused-types'
@@ -14,7 +14,7 @@ import {
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
 import { writeTupleReferencesAtCommit } from './tuple-references'
-import { checkUuidReferencesAtCommit } from './uuid-references'
+import { planUuidReferencesAtCommit } from './uuid-references'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -30,14 +30,18 @@ import type { AnyRawRecord } from '@dialecte/core'
 /**
  * The elements the transaction moved ({@link readMovePlaces}): the document read once when there is one, a moved subtree
  * holding what a move does not follow refused first ({@link assertMovesFollowed}), and the roots whose paths the commit
- * follows kept in the state with the places read. Stages nothing; reads nothing without a move.
+ * follows kept in the state with the places read. In collect mode each move it does not follow is listed instead
+ * ({@link unfollowedMovesOf}) and the steps after it run as if the moves were accepted. Stages nothing; reads nothing
+ * without a move.
  */
 export async function movedRoots({ plan }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query } = plan
+	const { operations, query, collect } = plan
 	const movePlaces = await readMovePlaces({ operations, query })
 	if (!movePlaces) return { operations: [] }
+	const state = { movePlaces, targetRoots: topmostMovedRoots(movePlaces) }
+	if (collect) return { operations: [], state, refusals: unfollowedMovesOf(movePlaces) }
 	assertMovesFollowed(movePlaces)
-	return { operations: [], state: { movePlaces, targetRoots: topmostMovedRoots(movePlaces) } }
+	return { operations: [], state }
 }
 
 /**
@@ -178,23 +182,23 @@ export async function releasedLNodes({
 
 /**
  * Refuse the commit when a uuid reference the transaction writes cannot be named coherently
- * ({@link checkUuidReferencesAtCommit}), over what the steps before it left; stages the local paths it writes for the behaviour variables a move put in reach or carried.
+ * ({@link planUuidReferencesAtCommit}), over what the steps before it left; stages the local paths it writes for the
+ * behaviour variables a move put in reach or carried. In collect mode each refusal is listed and the step goes on.
  */
 export async function uuidReferences({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
-	const { operations, query, state } = plan
+	const { operations, query, state, collect } = plan
 	const places = state.movePlaces
-	return {
-		operations: await checkUuidReferencesAtCommit({
-			operations,
-			query,
-			pending: writes.pending,
-			gone: writes.gone,
-			moved: places ? { ids: places.movedBy.keys(), read: places.read } : undefined,
-		}),
-	}
+	return await planUuidReferencesAtCommit({
+		operations,
+		query,
+		pending: writes.pending,
+		gone: writes.gone,
+		moved: places ? { ids: places.movedBy.keys(), read: places.read } : undefined,
+		collect,
+	})
 }
 
 /**

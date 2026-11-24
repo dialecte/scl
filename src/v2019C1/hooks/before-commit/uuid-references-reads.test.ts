@@ -1,5 +1,5 @@
 import behaviours from './fixtures/uuid-references/behaviours.xml?raw'
-import { checkUuidReferencesAtCommit } from './uuid-references'
+import { planUuidReferencesAtCommit } from './uuid-references'
 
 import { toDialecteError } from '@dialecte/core'
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -93,12 +93,13 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 		})
 		const reads = countQueryReads(source.query)
 		const written: string[] = []
-		const outcome = await checkUuidReferencesAtCommit({
+		const outcome = await planUuidReferencesAtCommit({
 			operations,
 			query: reads.query,
 			pending: new Map(),
+			collect: false,
 		}).then(
-			function committed(staged) {
+			function committed({ operations: staged }) {
 				written.push(...staged.flatMap(writtenAttributesOf))
 				return 'committed'
 			},
