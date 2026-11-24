@@ -1,3 +1,4 @@
+import twoAccessPointsXml from './fixtures/an-ied-with-two-connected-access-points.xml?raw'
 import twoBaysXml from './fixtures/two-bays-and-two-voltage-levels.xml?raw'
 
 import { describe, expect } from 'vitest'
@@ -121,6 +122,26 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 				nothingToMove: false,
 			},
 		},
+		// an-ied-with-two-connected-access-points.xml: CTRL (sending PositionGoose) goes from AP1 to AP2 of its IED, both
+		// connected on N1: the address goes to AP2's connection as it is, the connections' children change, no reference
+		// names anything else
+		'CTRL to the server of AP2 → three records carried, no reference following: the address carried as it is':
+			{
+				sourceXml: twoAccessPointsXml,
+				move: { ref: ref('LDevice', 'ctrl'), parent: ref('Server', 'a-server2') },
+				expected: {
+					move: 'LDevice ctrl from Server a-server1 to Server a-server2: 3 records, 0 references follow',
+					nameTaken: undefined,
+					node: 'moved LDevice instance ctrl source ctrl applied ctrl from a-server1 to a-server2',
+					rootRef: 'ctrl',
+					group: 'moved accept',
+					shape: 'upToDate false, linked false, mappings 0, template instances 0, children 0',
+					moved: 1,
+					needsDecisions: false,
+					refusals: [],
+					nothingToMove: false,
+				},
+			},
 		// F7 goes before F1 in B3: only the order of B3's children changes
 		'F7 before F1 in B3 → a reorder: moved from B3 to B3, nothing follows': {
 			sourceXml: twoBaysXml,

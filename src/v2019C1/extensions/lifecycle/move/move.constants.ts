@@ -7,7 +7,6 @@ export const MOVE_ANCHOR_REFUSAL_KEYS = [
 	'MOVE_INTO_OWN_SUBTREE',
 	'MOVE_BEFORE_NOT_SIBLING',
 	'PROTECTED_ROOT',
-	'ELEMENT_NOT_FOUND',
 ] as const
 
 /** The steps of the commit whose writes are the references following a move. */

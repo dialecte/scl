@@ -1,13 +1,14 @@
 import { judgeMovedName } from './move-name'
 import { FOLLOWING_STEPS, MOVE_ANCHOR_REFUSAL_KEYS } from './move.constants'
 
-import { createDialecteError, throwDialecteError, toDialecteError } from '@dialecte/core'
+import { ERROR_CATALOG, throwDialecteError, toDialecteError } from '@dialecte/core'
 import { toRef } from '@dialecte/core/helpers'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints/classify-attribute'
 import { REFERENCE_ATTRIBUTES_BY_TAG } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 import { planCommit } from '@/v2019C1/hooks/before-commit/before-commit'
+import { hasAttributeChange } from '@/v2019C1/hooks/shared/record-ops'
 
 import type { MovedElement, MoveRefusal, MoveReport, ReportMoveParams } from './move.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -26,6 +27,9 @@ import type * as Core from '@dialecte/core'
  * the name the engine proposes, and every refusal up front (core's refusal of the anchors, a move the commit does not
  * follow, an all-identity key the element shares there). The commit's side effects are not in it: the preview after
  * `applyMove` lists them.
+ *
+ * The instance's `title` is the element's name (its tag when it has none: no description is read), and `upToDate` holds
+ * only when there is nothing to move.
  *
  * It stages the move in the transaction it is given, which must hold nothing staged (`ASSERTION_FAILED` otherwise):
  * the caller discards that transaction (core keeps no savepoint) and writes the move with `applyMove` in another.
@@ -90,7 +94,7 @@ export async function reportMove(
 function anchorRefusalOf(error: unknown): MoveRefusal {
 	const refused = toDialecteError(error)
 	const key = MOVE_ANCHOR_REFUSAL_KEYS.find((anchorKey) => anchorKey === refused?.key)
-	if (!refused || !key || key === 'ELEMENT_NOT_FOUND') throw error
+	if (!refused || !key) throw error
 	return { key, code: refused.code, meta: refused.meta, detail: refused.detail }
 }
 
@@ -103,24 +107,18 @@ async function missingAnchor(
 	const index = records.findIndex((record) => !record)
 	const missing = params.refs[index]
 	if (index < 0 || !missing) return undefined
-	const element = { tagName: missing.tagName, id: missing.id }
-	const refused = toDialecteError(
-		createDialecteError('ELEMENT_NOT_FOUND', {
-			meta: { element },
-			detail: `reportMove: the document holds no ${missing.tagName} "${missing.id}"`,
-		}),
-	)
 	return {
 		key: 'ELEMENT_NOT_FOUND',
-		code: refused?.code ?? '',
-		meta: { element },
-		detail: refused?.detail ?? '',
+		code: ERROR_CATALOG.ELEMENT_NOT_FOUND.code,
+		meta: { element: { tagName: missing.tagName, id: missing.id } },
+		detail: `reportMove: the document holds no ${missing.tagName} "${missing.id}"`,
 	}
 }
 
 /**
- * The references the commit rewrites to follow the move: the distinct records the steps following references write a
- * reference attribute of, those the move removes or clears left out.
+ * The references the commit rewrites to follow the move: the distinct records whose reference attributes (their uuid,
+ * path or names) the steps following references change, those the move removes or clears left out. A reference the
+ * commit only carries elsewhere (an address following its control block), or whose children change, is not counted.
  */
 function followingReferencesOf(params: { planned: PlannedCommit }): number {
 	const { planned } = params
@@ -128,9 +126,11 @@ function followingReferencesOf(params: { planned: PlannedCommit }): number {
 	const following = new Set<string>()
 	for (const step of FOLLOWING_STEPS) {
 		for (const operation of planned.stagedBy.get(step) ?? []) {
-			if (operation.status !== 'updated') continue
-			const { id, tagName } = operation.newRecord
-			if (REFERENCE_ATTRIBUTES_BY_TAG.has(tagName) && !removed.has(id)) following.add(id)
+			if (operation.status !== 'updated' || removed.has(operation.newRecord.id)) continue
+			const names = REFERENCE_ATTRIBUTES_BY_TAG.get(operation.newRecord.tagName)
+			if (names && hasAttributeChange({ ...operation, names: [...names] })) {
+				following.add(operation.newRecord.id)
+			}
 		}
 	}
 	return following.size

@@ -28,12 +28,14 @@ else prepared.discard()
 `tx.lifecycle.reportMove({ ref, parent, before? })` stages the move in its transaction, which must hold nothing staged
 (`ASSERTION_FAILED` otherwise), and returns a `MoveReport`: a `DiffReport` a merge review renders as it is, with
 
-- one instance (`rootRef` the element, `linked: false`), whose `tree` is one `moved` node (`instanceRef`, `sourceRef`
+- one instance (`rootRef` the element, `title` its name, or its tag when it has none, `linked: false`, `upToDate: false`:
+  only a report with nothing to move is up to date), whose `tree` is one `moved` node (`instanceRef`, `sourceRef`
   and `appliedRef` the element itself, `movedFrom`, `movedTo`, no children) and one group (`change: 'moved'`,
   `suggestedAction: 'accept'`, the element's `editableAttributes`); `summary.moved` is 1, `mappings` and
   `templateInstances` are empty;
 - `move`: the `element`, `from`, `to`, `subtreeSize` (the records it carries, itself included, a `Private` wrapper left
-  out), `followingReferences` (the references the commit rewrites to follow it, those it clears left out),
+  out), `followingReferences` (the references whose uuid, path or names the commit rewrites to follow it, those it clears
+  left out; an address only carried along with its control block is not one),
   `reordered: true` when it only changes place among its parent's children, and `nameTaken` when a sibling at the new
   parent holds its name: the `attribute`, `value`, `constraint`, `collidesWith` and the `proposed` name, numbered as
   `tx.lifecycle.makeUnique` numbers (`F1` -> `F1_1`). A name taken sets `needsDecisions`; it is never a refusal;

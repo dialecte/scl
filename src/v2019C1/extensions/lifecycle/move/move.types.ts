@@ -54,12 +54,13 @@ export type MoveAnchorRefusalKey = (typeof MOVE_ANCHOR_REFUSAL_KEYS)[number]
 
 /**
  * Why a move is refused, as the error it is thrown with: a refusal of the commit (`CommitRefusal`), core's refusal of
- * the anchors, or an all-identity key the element shares at its new parent (`IDENTITY_COLLISION`).
+ * the anchors, the element or its new parent the document does not hold (`ELEMENT_NOT_FOUND`), or an all-identity key
+ * the element shares at its new parent (`IDENTITY_COLLISION`).
  */
 export type MoveRefusal =
 	| CommitRefusal
 	| {
-			key: MoveAnchorRefusalKey | 'IDENTITY_COLLISION'
+			key: MoveAnchorRefusalKey | 'ELEMENT_NOT_FOUND' | 'IDENTITY_COLLISION'
 			code: string
 			meta?: Record<string, unknown>
 			detail: string

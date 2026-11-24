@@ -1265,7 +1265,7 @@
 				"review a cut and paste before it is written",
 				"report a move of an element to another parent"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/move/report-move.ts:35"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/move/report-move.ts:39"
 		},
 		{
 			"path": "tx.lifecycle.transplant.deep",
