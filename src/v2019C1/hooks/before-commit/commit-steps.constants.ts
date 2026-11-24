@@ -10,6 +10,7 @@ import {
 	tupleNames,
 	tupleReferences,
 	unusedTypes,
+	uuidReferences,
 } from './commit-steps'
 
 import type { CommitStep } from './commit-plan.types'
@@ -29,6 +30,7 @@ export const COMMIT_STEPS: readonly CommitStep[] = [
 	{ name: 'pathReferences', readsEarlier: true, run: pathReferences },
 	{ name: 'moves', readsEarlier: true, run: moves },
 	{ name: 'releasedLNodes', readsEarlier: true, run: releasedLNodes },
+	{ name: 'uuidReferences', readsEarlier: true, run: uuidReferences },
 	{ name: 'emptiedContainers', readsEarlier: true, run: emptiedContainers },
 	{ name: 'unusedTypes', readsEarlier: true, run: unusedTypes },
 	{ name: 'emptiedTypeContainers', readsEarlier: true, run: emptiedTypeContainers },

@@ -15,6 +15,7 @@ export type CommitStepName =
 	| 'pathReferences'
 	| 'moves'
 	| 'releasedLNodes'
+	| 'uuidReferences'
 	| 'emptiedContainers'
 	| 'unusedTypes'
 	| 'emptiedTypeContainers'

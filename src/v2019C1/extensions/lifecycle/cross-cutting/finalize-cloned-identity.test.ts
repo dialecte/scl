@@ -35,7 +35,7 @@ const sourceXml = /* xml */ `
 							<LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="breaker-lnode-uuid" templateUuid="breaker-template" ${id}="source-breaker-lnode">
 								<Private type="eIEC61850-6-100" ${id}="source-breaker-private">
 									<eIEC61850-6-100:LNodeInputs ${id}="source-inputs">
-										<eIEC61850-6-100:SourceRef input="Trip" source="S1/V1/B1/Prot/Sub/PTRC1" sourceLNodeUuid="trip-lnode-uuid" uuid="source-ref-uuid" templateUuid="source-ref-template" ${id}="source-source-ref"/>
+										<eIEC61850-6-100:SourceRef input="Trip" source="S1/V1/B1/Prot/Sub/PTRC1" sourceLNodeUuid="trip-lnode-uuid" sourceDoName="Op" uuid="source-ref-uuid" templateUuid="source-ref-template" ${id}="source-source-ref"/>
 									</eIEC61850-6-100:LNodeInputs>
 								</Private>
 							</LNode>

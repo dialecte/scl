@@ -262,4 +262,17 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL4003',
 		message: 'The moved element is named by references a move does not follow yet',
 	},
+	/**
+	 * A transaction writes a uuid reference (creates it, gives it a uuid, or changes its data names) that cannot be named
+	 * coherently: `data-missing`, it holds an LNode uuid without the data object the registry requires beside it;
+	 * `groups-together`, a behaviour variable (`InputVar`, `OutputVar`) holds its data group and its input or output group
+	 * at once; `out-of-scope`, a behaviour variable names an element its local path cannot reach (not at or below the
+	 * level holding its `BehaviorDescription`). `meta: { reference: { tagName, id }, uuidAttribute, reason }`; for
+	 * `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the registry's
+	 * order.
+	 */
+	REFERENCE_INCOHERENT: {
+		code: 'SCL4004',
+		message: 'A uuid reference the transaction writes cannot be named coherently',
+	},
 })
