@@ -42,19 +42,22 @@ import type { AnyRawRecord } from '@dialecte/core'
  * order, nothing read for the first two:
  * - a behaviour variable given an attribute of one of its groups while it holds both (`groups-together`);
  * - a pair holding its uuid without the data object the registry requires beside it (`data-missing`);
- * - a behaviour variable left without its path whose uuid names an element (one lookup per target tag): refused when the
- *   element is out of its reach (`out-of-scope`), the paths of those elements and of their behaviours read once; in its
- *   reach (written out of reach, then moved into it), its path is written from the element.
+ * - an existing path reference whose uuid the transaction changes to one naming no element of the document
+ *   (`uuid-unresolved`; an element the transaction creates counts). A reference created with a uuid naming nothing (a
+ *   copy keeps the uuids of another document's elements by design) is not refused, and is not looked up;
+ * - a behaviour variable left without its path whose uuid names an element: refused when the element is out of its
+ *   reach (`out-of-scope`), the paths of those elements and of their behaviours read once; in its reach (written out
+ *   of reach, then moved into it), its path is written from the element.
+ * The retargeted uuids, the pathless variables and the carried ones are looked up together, one lookup per target tag.
  * A behaviour variable a move carries (its local path is read from where it sits) gets its local path written again
  * when it changes. The paths written are the only operations the step stages.
- * Nothing is read when every written pair holds its path and no behaviour variable moved: the other pairs' paths are
- * the hooks' to write. A uuid naming
- * no element is left to the routes that write it. The mirror of `writePathReferencesAtCommit` (a path to its uuid):
- * this step reads a uuid to its path. Nothing outlives the call.
+ * Nothing is read when the transaction retargets no uuid, leaves no behaviour variable without its path and moves
+ * none. The mirror of `writePathReferencesAtCommit` (a path to its uuid): this step reads a uuid to its path. Nothing
+ * outlives the call.
  *
  * Without `collect` the first refusal throws where it is found. With it, every refusal is listed in the order the
- * commit judges them (the groups and data of each written reference in the transaction's order, then the reach of those
- * left without a path), the references refused are left out of the paths written, and the step goes on.
+ * commit judges them (the groups and data of each written reference in the transaction's order, then the retargets
+ * naming nothing, then the reach of those left without a path), the references refused are left out of the paths written, and the step goes on.
  */
 export async function planUuidReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
@@ -84,6 +87,9 @@ export async function planUuidReferencesAtCommit(params: {
 	if (first && !collect) refuseWith({ refusal: first })
 	// a reference refused is not named: its path is not written
 	const refused = new Set(incoherent.map((refusal) => refusal.record.id))
+	const retargets = boundByChange
+		.flat()
+		.filter((bound) => bound.retargeted && !refused.has(bound.record.id))
 	const pathless = boundByChange
 		.flat()
 		.filter((bound) => isPathlessBehaviourPair(bound) && !refused.has(bound.record.id))
@@ -92,14 +98,41 @@ export async function planUuidReferencesAtCommit(params: {
 				(bound) => !refused.has(bound.record.id),
 			)
 		: []
-	if (pathless.length === 0 && carried.length === 0) return { operations: [], refusals: written }
+	if (retargets.length === 0 && pathless.length === 0 && carried.length === 0)
+		return { operations: [], refusals: written }
 
 	query.perf.start(UUID_REFERENCES_PERF_SPAN)
 	try {
-		const unnamed = await unnamedPairsOf({ query, pathless: [...pathless, ...carried] })
-		if (unnamed.length === 0) return { operations: [], refusals: written }
+		// a create (a copy's included) keeps the uuids of another document's elements by design: only a retarget to
+		// nothing is refused
+		const targets = await findTargetsByUuid(query, {
+			sought: [...retargets, ...pathless, ...carried].map((entry) => ({
+				uuid: entry.uuid,
+				targetTagNames: entry.pair.target,
+			})),
+		})
+		const unresolved = retargets
+			.filter((_, index) => !targets[index])
+			.map((entry) =>
+				toCommitRefusal({
+					record: entry.record,
+					uuidAttribute: entry.pair.attribute.uuid,
+					reason: 'uuid-unresolved',
+				}),
+			)
+		const [firstUnresolved] = unresolved
+		if (firstUnresolved && !collect) refuseWith({ refusal: firstUnresolved })
+		const dangling = new Set(
+			retargets.filter((_, index) => !targets[index]).map((entry) => entry.record.id),
+		)
+		const unnamed = unnamedPairsOf({
+			toName: [...pathless, ...carried],
+			targets: targets.slice(retargets.length),
+		}).filter((entry) => !dangling.has(entry.record.id))
+		const refusals = [...written, ...unresolved]
+		if (unnamed.length === 0) return { operations: [], refusals }
 		const named = await localPathsWritten({ query, unnamed, collect })
-		return { operations: named.operations, refusals: [...written, ...named.refusals] }
+		return { operations: named.operations, refusals: [...refusals, ...named.refusals] }
 	} finally {
 		query.perf.stop(UUID_REFERENCES_PERF_SPAN)
 	}
@@ -124,7 +157,7 @@ function movedBehaviourPairsOf(params: {
 		return (PATH_PAIRS_BY_TAG.get(record.tagName) ?? []).flatMap(function carriedPair(pair) {
 			if (pair.resolution !== RESOLUTION_TYPE.behaviorDescription) return []
 			const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
-			return uuid ? [{ record, pair, uuid }] : []
+			return uuid ? [{ record, pair, uuid, retargeted: false }] : []
 		})
 	})
 }
@@ -136,14 +169,23 @@ function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	return (PATH_PAIRS_BY_TAG.get(after.tagName) ?? []).flatMap(function boundPair(pair) {
 		const uuid = readAttribute({ record: after, name: pair.attribute.uuid, defaults: 'none' })
 		if (!uuid) return []
+		const retargeted = changedOn({ change, names: [pair.attribute.uuid] })
 		const written =
 			!before ||
-			hasAttributeChange({
-				oldRecord: before as Scl.RawRecord<Scl.ElementsOf>,
-				newRecord: after as Scl.RawRecord<Scl.ElementsOf>,
-				names: [pair.attribute.uuid, ...pair.companions.map((companion) => companion.name)],
-			})
-		return written ? [{ record: after, pair, uuid }] : []
+			retargeted ||
+			changedOn({ change, names: pair.companions.map((companion) => companion.name) })
+		return written ? [{ record: after, pair, uuid, retargeted }] : []
+	})
+}
+
+/** Whether the transaction changed one of `names` on a record it did not create. */
+function changedOn(params: { change: RecordChange; names: readonly string[] }): boolean {
+	const { change, names } = params
+	if (!change.before) return false
+	return hasAttributeChange({
+		oldRecord: change.before as Scl.RawRecord<Scl.ElementsOf>,
+		newRecord: change.after as Scl.RawRecord<Scl.ElementsOf>,
+		names: [...names],
 	})
 }
 
@@ -185,16 +227,13 @@ function isPathlessBehaviourPair(bound: BoundPair): boolean {
 	)
 }
 
-/** The behaviour variables to name (pathless, or carried by a move) whose uuid names an element: one lookup per target tag. */
-async function unnamedPairsOf(params: {
-	query: Core.Query<Config>
-	pathless: readonly BoundPair[]
-}): Promise<UnnamedPair[]> {
-	const { query, pathless } = params
-	const targets = await findTargetsByUuid(query, {
-		sought: pathless.map((entry) => ({ uuid: entry.uuid, targetTagNames: entry.pair.target })),
-	})
-	return pathless.flatMap(function unnamedPair(entry, index) {
+/** The behaviour variables to name (pathless, or carried by a move), each with the element its uuid names, `targets` in their order. */
+function unnamedPairsOf(params: {
+	toName: readonly BoundPair[]
+	targets: readonly (Scl.TrackedRecord<Scl.ElementsOf> | undefined)[]
+}): UnnamedPair[] {
+	const { toName, targets } = params
+	return toName.flatMap(function unnamedPair(entry, index) {
 		const target = targets[index]
 		return target ? [{ ...entry, target: toAnyRawRecord(target) }] : []
 	})
