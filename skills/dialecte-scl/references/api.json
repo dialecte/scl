@@ -1093,6 +1093,18 @@
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
+			"path": "tx.lifecycle.applyMove",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: ApplyMoveParams) => Promise<Scl.RawRecord<Scl.ElementsOf>>",
+			"summary": "Write a move as `reportMove` reported it: the move, then the refusal of an all-identity key the element shares at its new parent (`IDENTITY_COLLISION`), then the editable attributes `rename` gives (the others ignored) with the name numbered when taken there; without a name given, the name the report proposed is written. The commit follows the move and refuses what `reportMove` listed (a move it does not follow).",
+			"intents": [
+				"write a cut and paste after its review",
+				"move an element to another parent with a new name"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/move/apply-move.ts:20"
+		},
+		{
 			"path": "tx.lifecycle.extract.asd",
 			"root": "tx",
 			"otherRoutes": [],
@@ -1242,6 +1254,18 @@
 			],
 			"declaredAt": "src/v2019C1/extensions/lifecycle/constraints/make-unique.ts:20",
 			"example": "await tx.lifecycle.makeUnique({ ref })"
+		},
+		{
+			"path": "tx.lifecycle.reportMove",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "(params: ReportMoveParams) => Promise<MoveReport>",
+			"summary": "Report a move of an element within its document for a merge review, before it is written: the element, where from and where to, how many records it carries and how many references follow it, a name taken at its new parent with the name the engine proposes, and every refusal up front (core's refusal of the anchors, a move the commit does not follow, an all-identity key the element shares there). The commit's side effects are not in it: the preview after `applyMove` lists them.",
+			"intents": [
+				"review a cut and paste before it is written",
+				"report a move of an element to another parent"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/move/report-move.ts:35"
 		},
 		{
 			"path": "tx.lifecycle.transplant.deep",
