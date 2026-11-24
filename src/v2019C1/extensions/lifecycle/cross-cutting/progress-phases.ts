@@ -13,12 +13,15 @@ export async function withProgressPhases<GenericKey extends string, GenericResul
 	params: ProgressPhasesParams<GenericKey, GenericResult>,
 ): Promise<GenericResult> {
 	const { phases, run } = params
-	// a phase is at least one step: one of none would leave the next phase a step late
-	const weightless = phases.find(function weighsNothing(phase) {
-		return phase.weight < 1
+	// a phase is a whole number of steps, at least one: one of none, or of a fraction, would leave a later phase off its step
+	const unweighable = phases.find(function weighsNoWholeStep(phase) {
+		return !Number.isInteger(phase.weight) || phase.weight < 1
 	})
-	if (weightless)
-		throw new Error(`progress phase "${weightless.key}" weighs ${weightless.weight}: at least 1`)
+	if (unweighable) {
+		throw new Error(
+			`progress phase "${unweighable.key}" weighs ${unweighable.weight}: a whole number of steps, at least 1`,
+		)
+	}
 	const total = phases.reduce(function addWeight(sum, phase) {
 		return sum + phase.weight
 	}, 0)

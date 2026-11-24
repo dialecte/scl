@@ -211,6 +211,10 @@ export type TakeOvers = 'all' | readonly TakeOver[]
  * itself what to do with them (how to name them, what to wire them to). The engine knows nothing
  * of it; to tell a name apart from a taken one it calls `tx.lifecycle.makeUnique`. Not run when
  * nothing is written (decisions still to take).
+ *
+ * It runs inside apply's progress plan, as its last phase: a progress plan it opens on `tx.progress` it closes in a
+ * `finally`, whether it returns or throws. Left open, apply's last step would advance it, and apply would close it in
+ * place of its own.
  */
 export type AfterApplyHook = (
 	tx: Scl.Transaction,

@@ -1,6 +1,7 @@
 import applicationNamingF1 from './fixtures/application-naming-f1-and-a-variable-of-f3.xml?raw'
 import selectedIedWithSelfReferences from './fixtures/selected-ied-with-self-references.xml?raw'
 
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -163,4 +164,25 @@ describe('tx.lifecycle.extract - one progress plan, forward only', () => {
 			expect(document.state.progress).toBeNull()
 		})
 	}
+
+	it('extract.ied of an IED the source does not hold, caught in the prepare body → refused, progress null once caught', async () => {
+		const { document, sourceQuery } = await openExtract({ extractCase: CASES.ied })
+		let refusal: unknown
+		let afterCatch: unknown = 'not read'
+		const prepared = await document.prepare(async function extract(tx) {
+			try {
+				await CASES.ied.extract(tx, {
+					sourceQuery,
+					scope: { tagName: 'IED', id: 'not-held' } as Scl.Ref<Scl.ElementsOf>,
+				})
+			} catch (error) {
+				refusal = toDialecteError(error)
+			}
+			afterCatch = document.state.progress
+		})
+		prepared.discard()
+
+		expect((refusal as { key?: string } | undefined)?.key).toBe('ELEMENT_NOT_FOUND')
+		expect(afterCatch).toBeNull()
+	})
 })

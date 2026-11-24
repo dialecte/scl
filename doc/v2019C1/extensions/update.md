@@ -845,9 +845,9 @@ await prepared.commit() // or prepared.discard()
 | `Releasing implementation links…` | 1/20  | what was written naming an implementation the project lacks         |
 | `Running the consumer step…`      | 1/20  | `resolution.afterApply`, when given                                 |
 
-A clone's caption, when it has one (`Importing <type>`), shows instead of the phase's. The plan is closed when `apply`
-returns or throws. A `resolution.afterApply` that opens a plan of its own closes it before it returns: left open, it
-would take apply's last step.
+A nested op's caption, when it has one (a type import's `Importing <type>`), shows instead of the phase's. The plan
+is closed when `apply` returns or throws. A `resolution.afterApply` that opens a plan of its own closes it in a
+`finally`, whether it returns or throws: left open, it would take apply's last step.
 
 The commit runs after the transaction body, with its own plan: alone in a transaction, apply's bar ends and the
 commit's starts. To keep both in one bar, open a plan in the body around `apply`: apply and the commit then nest under
