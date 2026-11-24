@@ -90,8 +90,8 @@ export function pairBound(params: {
 	return paired
 }
 
-/** An LNode naming an LNodeType neither document holds: refused `type-missing`, as a new LNode is. */
-function typeMissingOf(params: {
+/** An LNode naming an LNodeType neither document holds: refused `type-missing`, new or bound. */
+export function typeMissingOf(params: {
 	input: BuildInput
 	lnode: RequestedLNode
 	lnType: string | undefined

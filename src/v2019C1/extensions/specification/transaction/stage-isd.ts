@@ -38,9 +38,10 @@ import type * as Core from '@dialecte/core'
  *
  * Refuses with `SPECIFICATION_STAGE_REFUSED` before any write (`meta: { reason, stage: 'stageIsd', ref? }`): a staging
  * document already holding an IED or a process part (`target-not-empty`); no LNode (`no-lnodes`); an IED name the
- * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); an LNode the project does not hold
- * or holds outside its substations, lines and processes (`lnode-outside-process`); checked in that order, the first
- * refusing. An LNode given twice is staged once. The build's own refusals pass through
+ * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); a logical node of the shell IED
+ * naming an LNodeType the shell document lacks (`type-missing`); an LNode the project does not hold or holds outside its
+ * substations, lines and processes (`lnode-outside-process`); an LNode naming an LNodeType the project lacks
+ * (`type-missing`); checked in that order, the first refusing. An LNode given twice is staged once. The build's own refusals pass through
  * (`SPECIFICATION_BUILD_REFUSED`).
  *
  * @intent stage an ISD built from logical nodes for a supplier, export an ISD of an allocation role, build an IED from logical nodes in a staging document
