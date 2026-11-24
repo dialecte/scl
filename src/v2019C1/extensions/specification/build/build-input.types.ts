@@ -14,6 +14,8 @@ export type TargetLogicalNode = {
 	identity: { prefix: string; lnClass: string; inst: string }
 	lnType: string
 	uuid: string
+	/** What it holds that uses it: control blocks, data sets, logs, inputs. */
+	holds: Scl.Ref<Scl.ElementsOf>[]
 }
 
 /** A logical device of the target IED with its logical nodes. */
@@ -59,6 +61,20 @@ export type BuildInput = {
 	heldValues: ReadonlyMap<string, HeldValue[]>
 	/** Read only when a value is specified. */
 	valueTypes: ValueTypes
+	/** The specification naming of each LNode asked for that has one, by LNode id. */
+	specNamingOf: ReadonlyMap<string, SpecNaming>
+	/** What names each unbound logical node of the target IED by its uuid (an LNode aside), by uuid. */
+	usersOf: ReadonlyMap<string, Scl.Ref<Scl.ElementsOf>[]>
+}
+
+/** The specification naming of an LNode: its record and the logical node identity it specifies. */
+export type SpecNaming = {
+	ref: Scl.Ref<'LNodeSpecNaming'>
+	prefix: string
+	lnClass: string
+	inst: string
+	ldInst: string
+	iedName: string
 }
 
 /** A value an LNode specifies: a DAS with at least one `Val`, and where it sits below the LNode. */
@@ -73,6 +89,8 @@ export type SpecifiedValue = {
 /** A value a logical node of the target IED already holds: a DAI with its values, and where it sits. */
 export type HeldValue = {
 	dai: Scl.Ref<'DAI'>
+	/** The DOI the value sits below. */
+	doi: Scl.Ref<'DOI'>
 	path: ValuePath
 	vals: { value: string; sGroup?: string }[]
 	valKind?: string

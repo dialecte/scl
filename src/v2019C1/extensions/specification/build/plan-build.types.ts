@@ -16,6 +16,8 @@ export type BuildOptions = {
 	excludeFunctionalConstraints: readonly string[]
 	/** Other IED names each logical device name must also fit. */
 	ldNameAlsoFits: readonly string[]
+	/** Re-derive the logical device of every LNode built before from its function. */
+	rederiveLDevices: boolean
 }
 
 /** Where an LNode's logical device comes from: the element holding it, or its own `ldInst`. */

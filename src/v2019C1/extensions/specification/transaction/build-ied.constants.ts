@@ -1,5 +1,6 @@
 import { DEFINITION } from '@/v2019C1/definition'
 
+import type { IedRebuildReport } from '../query/plan-rebuild.types'
 import type { Scl } from '@/v2019C1/config'
 
 /** The elements that hold logical nodes and become logical devices: functions, equipment functions and their subfunctions. */
@@ -50,3 +51,18 @@ export const BUILD_OPEN_POINTS = ['ldInst', 'lnType'] as const
 
 /** Why a specified value is not written: the logical node's type holds no such data, or its functional constraint is excluded. */
 export const VALUE_LEFT_OUT_REASONS = ['path-not-in-type', 'functional-constraint'] as const
+
+/** The report of a build that changes nothing in logical nodes built before. */
+export const EMPTY_REBUILD_REPORT = {
+	added: { lDevices: [], logicalNodes: [] },
+	moved: [],
+	renamed: [],
+	retyped: [],
+	removed: { logicalNodes: [], lDevices: [] },
+	keptInUse: [],
+	boundOutsideScope: [],
+	orphanLDevices: [],
+	implementedElsewhere: [],
+	drift: [],
+	values: { added: 0, changed: 0 },
+} as const satisfies IedRebuildReport

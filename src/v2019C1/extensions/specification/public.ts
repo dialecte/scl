@@ -1,5 +1,6 @@
 export { BUILD_REFUSAL_REASONS, VALUE_LEFT_OUT_REASONS } from './transaction/build-ied.constants'
 export { firstOfClass, sameClassInTargetIed } from './build/open-value-rules'
+export type { IedRebuildReport, LnIdentity } from './query/plan-rebuild.types'
 export { OPEN_VALUE_RULES } from './build/open-value-rules.constants'
 export { STAGE_REFUSAL_REASONS } from './transaction/stage-isd.constants'
 export type {

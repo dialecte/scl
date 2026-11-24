@@ -113,11 +113,13 @@ function heldValuesBelow(params: {
 			parent = parent.parent ? byId.get(parent.parent.id) : undefined
 		}
 		const path = pathOf({ steps })
-		if (!path) return []
+		const doi = steps[0]
+		if (!path || !doi) return []
 		const attributes = readAttributes({ record, defaults: 'none' })
 		return [
 			{
 				dai: { tagName: 'DAI', id: record.id },
+				doi: { tagName: 'DOI', id: doi.id },
 				path,
 				vals: record.children.flatMap((child) => {
 					const val = byId.get(child.id)

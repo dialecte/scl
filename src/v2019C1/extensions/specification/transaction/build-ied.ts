@@ -8,6 +8,7 @@ import { SCL_ERRORS } from '@/v2019C1/errors'
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction/import-types'
 import { readAttributes } from '@/v2019C1/helpers'
 
+import type { RebuildWrites } from '../query/plan-rebuild.types'
 import type {
 	BuildIedParams,
 	IedBuildPlan,
@@ -44,7 +45,7 @@ export async function buildIed(
 	tx: Core.Transaction<Config>,
 	params: BuildIedParams,
 ): Promise<IedBuildResult> {
-	const { plan, server, contextTypeIds } = await planWithServer(tx, params)
+	const { plan, server, contextTypeIds, rebuildWrites } = await planWithServer(tx, params)
 	const [first] = plan.refusals
 	if (first || !server) {
 		throwDialecteError(SCL_ERRORS.SPECIFICATION_BUILD_REFUSED, {
@@ -53,7 +54,13 @@ export async function buildIed(
 		})
 	}
 	const typeIds = await importContextTypes({ tx, params, contextTypeIds })
-	return writePlan({ tx, plan: withWrittenTypes({ plan, typeIds }), server, typeIds })
+	return writePlan({
+		tx,
+		plan: withWrittenTypes({ plan, typeIds }),
+		server,
+		typeIds,
+		rebuildWrites,
+	})
 }
 
 /**
@@ -107,8 +114,10 @@ async function writePlan(params: {
 	server: Scl.Ref<'Server'>
 	/** The id each imported type has in the document built in. */
 	typeIds: ReadonlyMap<string, string>
+	rebuildWrites: RebuildWrites
 }): Promise<IedBuildResult> {
-	const { tx, plan, server, typeIds } = params
+	const { tx, plan, server, typeIds, rebuildWrites } = params
+	const { rebuild } = plan
 	const created: IedBuildResult['created'] = { lDevices: [], logicalNodes: [] }
 	const bound: Scl.Ref<'LNode'>[] = []
 	const logicalNodeOf = new Map(
@@ -116,9 +125,38 @@ async function writePlan(params: {
 			logicalNode.existing ? [[logicalNode.lnode.id ?? '', logicalNode.existing] as const] : [],
 		),
 	)
+	// orphans first (their identities free), then renames and retypes, before any add
+	for (const ln of rebuild.removed.logicalNodes) await tx.delete(ln)
+	for (const entry of rebuild.renamed)
+		await tx.update(entry.ln, {
+			attributes: {
+				prefix: entry.to.prefix || undefined,
+				lnClass: entry.to.lnClass,
+				inst: entry.to.inst,
+			},
+		})
+	for (const entry of rebuild.retyped)
+		await tx.update(entry.ln as Scl.Ref<'LN'>, {
+			attributes: { lnType: typeIds.get(entry.to) ?? entry.to },
+		})
+	for (const removal of rebuildWrites.valueRemovals) await tx.delete(removal)
+	// the new logical devices first, then the moves, then the adds: no add meets an identity a move frees
+	const lDeviceOf = new Map<string, Scl.Ref<'LDevice'>>()
 	for (const lDevice of plan.lDevices) {
 		const lDeviceRef = lDevice.existing ?? (await addLDevice({ tx, server, inst: lDevice.inst }))
 		if (!lDevice.existing) created.lDevices.push(lDeviceRef)
+		lDeviceOf.set(lDevice.inst, lDeviceRef)
+	}
+	for (const entry of rebuild.moved) {
+		const parent = lDeviceOf.get(entry.toLd)
+		if (parent) await tx.move(entry.ln as Scl.Ref<'LN'>, { parent })
+	}
+	for (const update of rebuildWrites.namingUpdates)
+		await tx.update(update.naming, { attributes: { sLdInst: update.sLdInst } })
+	for (const rebinding of rebuildWrites.rebindings)
+		await tx.update(rebinding.lnode, { attributes: { lnUuid: rebinding.lnUuid } })
+	for (const lDevice of plan.lDevices) {
+		const lDeviceRef = lDeviceOf.get(lDevice.inst) as Scl.Ref<'LDevice'>
 		const fresh = plan.logicalNodes.filter(
 			(logicalNode) => logicalNode.lDeviceInst === lDevice.inst && !logicalNode.existing,
 		)
@@ -152,6 +190,7 @@ async function writePlan(params: {
 		}
 	}
 	await writeValues({ tx, values: plan.values, logicalNodeOf })
+	for (const lDevice of rebuild.removed.lDevices) await tx.delete(lDevice)
 	return { plan, created, bound }
 }
 

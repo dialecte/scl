@@ -133,7 +133,7 @@ describe('the commit refuses a uuid reference it cannot name coherently', () => 
 					const tree = await tx.getTree(FUNCTION_BEHAVIOUR)
 					const copy = await tx.deepClone(
 						{ tagName: 'Private', id: 'f1-private' } as Scl.Ref<Scl.ElementsOf>,
-						tree as Scl.TreeRecord<'BehaviorDescription'>,
+						tree as unknown as Scl.TreeRecord<'BehaviorDescription'>,
 					)
 					const copied = await tx.getChildren(copy.record, 'InputVar')
 					const noDataObject = copied.find((record) =>

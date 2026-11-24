@@ -5,18 +5,28 @@ import {
 	LN_PREFIX_MAX,
 	LN_PREFIX_PATTERN,
 } from '../naming/normalize-ld-inst.constants'
+import {
+	boundOutsideScopeOf,
+	emptiedLDevicesOf,
+	implementedElsewhereOf,
+	orphansOf,
+	pairBound,
+} from '../query/plan-rebuild'
 import { planValues } from '../query/plan-values'
 import {
 	ADDED_LPHD,
 	LDEVICE_NAME_MAX,
 	LN_DERIVED_NAME_MAX,
 	LN_PREFIX_INST_MAX,
+	EMPTY_REBUILD_REPORT,
 	LN0_IDENTITY,
 } from '../transaction/build-ied.constants'
 import { FUNCTION_LIKES, PROCESS_ROOTS, SUB_FUNCTIONS } from './build.constants'
 
 import { readAttributes } from '@/v2019C1/helpers'
 
+import type { PairedLNodes } from '../query/plan-rebuild.types'
+import type { IedRebuildReport } from '../query/plan-rebuild.types'
 import type {
 	BuildRefusal,
 	IedBuildPlan,
@@ -46,6 +56,7 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		openValuesUsed: [],
 		values: [],
 		valuesLeftOut: [],
+		rebuild: emptyRebuild(),
 		refusals: [],
 	}
 	const targetRefusal = refuseTarget({ input, options })
@@ -72,26 +83,87 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		else fresh.push(lnode)
 	}
 
-	const built = planExisting({ input, existing })
-	const known = new Map(built.lDevices.map((lDevice) => [lDevice.inst, lDevice]))
-	const named = nameLDevices({ input, options, lnodes: fresh, known })
+	const rebuilding = existing.length > 0
+	const paired = pairBound({ input, existing })
+	refusals.push(...paired.refusals)
+	const rederive = options.rederiveLDevices
+	// without re-deriving, a built logical node stays in its logical device, and a new LNode of its function joins it
+	const fixedInstOf = new Map<string, string>()
+	if (!rederive)
+		for (const lnode of existing) {
+			const planned = paired.logicalNodes.find((entry) => entry.lnode.id === lnode.ref.id)
+			const key = lDeviceSourceOf({ lnode }).key
+			if (planned && !fixedInstOf.has(key)) fixedInstOf.set(key, planned.lDeviceInst)
+		}
+	const known = rederive
+		? new Map<string, LDeviceDraft>()
+		: lDevicesOfPaired({ input, existing, paired })
+	const named = nameLDevices({
+		input,
+		options,
+		lnodes: rederive ? [...existing, ...fresh] : fresh,
+		known,
+		fixedInstOf,
+	})
 	refusals.push(...named.refusals)
+	const moved: IedRebuildReport['moved'] = []
+	const logicalNodes: PlannedLogicalNode[] = []
+	const rebound: RequestedLNode[] = []
+	const reboundIds = new Set<string>()
+	for (const planned of paired.logicalNodes) {
+		const inst = rederive ? named.instOf.get(planned.lnode.id ?? '') : planned.lDeviceInst
+		if (inst === undefined) continue
+		if (inst === planned.lDeviceInst) logicalNodes.push(planned)
+		else if (planned.kind === 'LN0') {
+			// an LN0 never moves: the new logical device's LN0 takes the binding, built when the logical device is new
+			const lnode = existing.find((entry) => entry.ref.id === planned.lnode.id)
+			const ln0 = input.lDevices
+				.find((lDevice) => lDevice.inst === inst)
+				?.logicalNodes.find((held) => held.ref.tagName === 'LN0')
+			if (ln0)
+				logicalNodes.push({ ...planned, lDeviceInst: inst, lnType: ln0.lnType, existing: ln0.ref })
+			else if (lnode) rebound.push(lnode)
+			reboundIds.add(planned.lnode.id ?? '')
+		} else {
+			moved.push({ ln: planned.existing as Scl.Ref<'LN'>, fromLd: planned.lDeviceInst, toLd: inst })
+			logicalNodes.push({ ...planned, lDeviceInst: inst })
+		}
+	}
+	const scope = new Set([
+		...logicalNodes.map((planned) => planned.lDeviceInst),
+		...named.instOf.values(),
+	])
+	// orphans only in a rebuild: a build given new LNodes alone keeps every logical node and refuses their identities
+	const orphans = rebuilding
+		? orphansOf({ input, scope })
+		: { removed: [], keptInUse: [], orphanLDevices: [] }
+	const freed = new Set<string>([
+		...orphans.removed.map((ln) => ln.id ?? ''),
+		...paired.renamed.map((entry) => entry.ln.id ?? ''),
+		...moved.map((entry) => entry.ln.id ?? ''),
+	])
+	refusals.push(...finalCollisions({ input, paired, moved, freed, logicalNodes }))
 	const lDevices = new Map([
 		...known,
 		...named.lDevices.map((lDevice) => [lDevice.inst, lDevice] as const),
 	])
-	const logicalNodes: PlannedLogicalNode[] = [...built.logicalNodes]
 	const lnodeTypes: OpenValueUsed[] = []
 	const requested: { inst: string; lnClass: string }[] = []
-	for (const lnode of fresh) {
+	for (const lnode of [...rebound, ...fresh]) {
 		const inst = named.instOf.get(lnode.ref.id)
 		if (inst === undefined) continue
-		const planned = planLogicalNode({ input, options, lnode, inst, logicalNodes, lDevices })
+		const planned = planLogicalNode({ input, options, lnode, inst, logicalNodes, lDevices, freed })
 		requested.push({ inst, lnClass: lnClassOf({ lnode }) })
 		refusals.push(...planned.refusals)
 		lnodeTypes.push(...planned.openValuesUsed)
 		if (planned.logicalNode) logicalNodes.push(planned.logicalNode)
 	}
+	const leaving = new Set([
+		...orphans.removed.map((ln) => ln.id ?? ''),
+		...moved.map((entry) => entry.ln.id ?? ''),
+	])
+	const emptied = emptiedLDevicesOf({ input, leaving, logicalNodes, rebound: reboundIds })
+	for (const lDevice of emptied) lDevices.delete(lDevice.inst)
 
 	const additions = planAdditions({ input, options, lDevices, logicalNodes, requested })
 	const valuesPlanned = planValues({
@@ -117,6 +189,38 @@ export function planBuild(params: { input: BuildInput; options: BuildOptions }):
 		openValuesUsed: [...named.openValuesUsed, ...lnodeTypes, ...additions.openValuesUsed],
 		values: valuesPlanned.values,
 		valuesLeftOut: valuesPlanned.valuesLeftOut,
+		rebuild: rebuilding
+			? {
+					added: {
+						lDevices: [...lDevices.values()]
+							.filter((lDevice) => !lDevice.existing)
+							.map((lDevice) => lDevice.inst),
+						logicalNodes: logicalNodes
+							.filter((planned) => !planned.existing)
+							.map((planned) => planned.lnode),
+					},
+					moved,
+					renamed: paired.renamed,
+					retyped: paired.retyped,
+					removed: {
+						logicalNodes: orphans.removed,
+						lDevices: emptied.map((lDevice) => lDevice.ref),
+					},
+					keptInUse: orphans.keptInUse,
+					boundOutsideScope: boundOutsideScopeOf({
+						input,
+						requested: new Set(input.lnodes.map((lnode) => lnode.ref.id)),
+					}),
+					orphanLDevices: orphans.orphanLDevices,
+					implementedElsewhere: implementedElsewhereOf({
+						input,
+						orphans: [...orphans.removed, ...orphans.keptInUse.map((entry) => entry.ln)],
+						leftOut,
+					}),
+					drift: paired.drift,
+					values: valueCountsOf({ values: valuesPlanned.values, logicalNodes }),
+				}
+			: emptyRebuild(),
 		refusals,
 	}
 }
@@ -159,42 +263,6 @@ function inProcessSection(section: SectionElement): boolean {
 		section.ancestry.some((ancestor) => PROCESS_ROOTS.has(ancestor.tagName)) &&
 		!section.ancestry.some((ancestor) => ancestor.tagName === 'FunctionTemplate')
 	)
-}
-
-/** The LNodes the target IED already implements: their logical nodes, as they are, and the logical devices holding them. */
-function planExisting(params: { input: BuildInput; existing: readonly RequestedLNode[] }): {
-	lDevices: LDeviceDraft[]
-	logicalNodes: PlannedLogicalNode[]
-} {
-	const { input, existing } = params
-	const lDevices = new Map<string, LDeviceDraft>()
-	const logicalNodes: PlannedLogicalNode[] = []
-	for (const lnode of existing) {
-		const lnId = lnode.implementation?.ln.id
-		const target = input.lDevices.find((lDevice) =>
-			lDevice.logicalNodes.some((logicalNode) => logicalNode.ref.id === lnId),
-		)
-		const logicalNode = target?.logicalNodes.find((held) => held.ref.id === lnId)
-		if (!target || !logicalNode) continue
-		const source = lDeviceSourceOf({ lnode })
-		if (!lDevices.has(target.inst))
-			lDevices.set(target.inst, {
-				inst: target.inst,
-				from: source.kind === 'container' ? source.ref : 'lnode-ldInst',
-				existing: target.ref,
-				element: source.ref,
-				target,
-			})
-		logicalNodes.push({
-			lnode: lnode.ref,
-			lDeviceInst: target.inst,
-			kind: logicalNode.ref.tagName === 'LN0' ? 'LN0' : 'LN',
-			identity: logicalNode.identity,
-			lnType: logicalNode.lnType,
-			existing: logicalNode.ref,
-		})
-	}
-	return { lDevices: [...lDevices.values()], logicalNodes }
 }
 
 /** Where an LNode's logical device comes from (the `ldInst` it names wins over its function). */
@@ -276,13 +344,15 @@ function nameLDevices(params: {
 	options: BuildOptions
 	lnodes: readonly RequestedLNode[]
 	known: ReadonlyMap<string, LDeviceDraft>
+	/** The logical device a source already built in the IED stays in, by source key: taken as it is. */
+	fixedInstOf: ReadonlyMap<string, string>
 }): {
 	instOf: Map<string, string>
 	lDevices: LDeviceDraft[]
 	refusals: BuildRefusal[]
 	openValuesUsed: OpenValueUsed[]
 } {
-	const { input, options, lnodes, known } = params
+	const { input, options, lnodes, known, fixedInstOf } = params
 	const lDevices = new Map<string, LDeviceDraft>()
 	const sources = new Map<string, LDeviceSource>()
 	const sourceOfLNode = new Map<string, LDeviceSource>()
@@ -300,6 +370,11 @@ function nameLDevices(params: {
 	const openValuesUsed: OpenValueUsed[] = []
 	const instOfSource = new Map<string, string>()
 	for (const source of sources.values()) {
+		const fixed = fixedInstOf.get(source.key)
+		if (fixed !== undefined) {
+			instOfSource.set(source.key, fixed)
+			continue
+		}
 		const checked = checkSource({ input, options, source, names })
 		const sharedAcross =
 			source.kind === 'ldInst' &&
@@ -500,12 +575,14 @@ function planLogicalNode(params: {
 	inst: string
 	logicalNodes: readonly PlannedLogicalNode[]
 	lDevices: ReadonlyMap<string, LDeviceDraft>
+	/** Logical nodes of the target this run removes, renames or moves: their identity is free. */
+	freed: ReadonlySet<string>
 }): {
 	logicalNode?: PlannedLogicalNode
 	refusals: BuildRefusal[]
 	openValuesUsed: OpenValueUsed[]
 } {
-	const { input, options, lnode, inst, logicalNodes, lDevices } = params
+	const { input, options, lnode, inst, logicalNodes, lDevices, freed } = params
 	const named = identityOf({ options, lnode })
 	if ('refusal' in named) return { refusals: [named.refusal], openValuesUsed: [] }
 	const { identity, kind } = named
@@ -514,12 +591,14 @@ function planLogicalNode(params: {
 		logicalNodes.some(
 			(planned) => planned.lDeviceInst === inst && sameLogicalNode({ kind, identity, planned }),
 		) ||
-		(target?.logicalNodes.some((held) =>
-			sameLogicalNode({
-				kind,
-				identity,
-				planned: { kind: held.ref.tagName === 'LN0' ? 'LN0' : 'LN', identity: held.identity },
-			}),
+		(target?.logicalNodes.some(
+			(held) =>
+				!freed.has(held.ref.id) &&
+				sameLogicalNode({
+					kind,
+					identity,
+					planned: { kind: held.ref.tagName === 'LN0' ? 'LN0' : 'LN', identity: held.identity },
+				}),
 		) ??
 			false)
 	if (taken)
@@ -718,4 +797,111 @@ function planAdditions(params: {
 		}
 	}
 	return { added, refusals, openValuesUsed }
+}
+
+/** A rebuild report with nothing in it, its lists fresh. */
+function emptyRebuild(): IedRebuildReport {
+	return {
+		...EMPTY_REBUILD_REPORT,
+		added: { lDevices: [], logicalNodes: [] },
+		moved: [],
+		renamed: [],
+		retyped: [],
+		removed: { logicalNodes: [], lDevices: [] },
+		keptInUse: [],
+		boundOutsideScope: [],
+		orphanLDevices: [],
+		implementedElsewhere: [],
+		drift: [],
+		values: { added: 0, changed: 0 },
+	}
+}
+
+/** The logical devices the paired logical nodes stay in, as drafts. */
+function lDevicesOfPaired(params: {
+	input: BuildInput
+	existing: readonly RequestedLNode[]
+	paired: PairedLNodes
+}): Map<string, LDeviceDraft> {
+	const { input, existing, paired } = params
+	const lDevices = new Map<string, LDeviceDraft>()
+	for (const planned of paired.logicalNodes) {
+		if (lDevices.has(planned.lDeviceInst)) continue
+		const target = input.lDevices.find((lDevice) => lDevice.inst === planned.lDeviceInst)
+		const lnode = existing.find((entry) => entry.ref.id === planned.lnode.id)
+		if (!target || !lnode) continue
+		const source = lDeviceSourceOf({ lnode })
+		lDevices.set(target.inst, {
+			inst: target.inst,
+			from: source.kind === 'container' ? source.ref : 'lnode-ldInst',
+			existing: target.ref,
+			element: source.ref,
+			target,
+		})
+	}
+	return lDevices
+}
+
+/**
+ * A renamed or moved logical node landing on an identity its logical device keeps: a logical node there this run
+ * neither removes, renames nor moves, or another renamed or moved one ending on the same identity.
+ */
+function finalCollisions(params: {
+	input: BuildInput
+	paired: PairedLNodes
+	moved: IedRebuildReport['moved']
+	freed: ReadonlySet<string>
+	logicalNodes: readonly PlannedLogicalNode[]
+}): BuildRefusal[] {
+	const { input, paired, moved, freed, logicalNodes } = params
+	const changing = new Set([
+		...paired.renamed.map((entry) => entry.ln.id),
+		...moved.map((entry) => entry.ln.id),
+	])
+	return logicalNodes.flatMap(function collision(planned): BuildRefusal[] {
+		if (!planned.existing || !changing.has(planned.existing.id)) return []
+		const target = input.lDevices.find((lDevice) => lDevice.inst === planned.lDeviceInst)
+		const heldTaken = (target?.logicalNodes ?? []).some(
+			(held) =>
+				held.ref.id !== planned.existing?.id &&
+				!freed.has(held.ref.id) &&
+				sameLogicalNode({
+					kind: planned.kind,
+					identity: planned.identity,
+					planned: { kind: held.ref.tagName === 'LN0' ? 'LN0' : 'LN', identity: held.identity },
+				}),
+		)
+		const plannedTaken = logicalNodes.some(
+			(other) =>
+				other !== planned &&
+				other.lDeviceInst === planned.lDeviceInst &&
+				changing.has(other.existing?.id ?? '') &&
+				logicalNodes.indexOf(other) < logicalNodes.indexOf(planned) &&
+				sameLogicalNode({ kind: planned.kind, identity: planned.identity, planned: other }),
+		)
+		return heldTaken || plannedTaken
+			? [
+					{
+						reason: 'ln-collision',
+						ref: planned.lnode,
+						detail: `logical device ${planned.lDeviceInst} keeps another ${planned.identity.prefix}${planned.identity.lnClass}${planned.identity.inst}`,
+					},
+				]
+			: []
+	})
+}
+
+/** The values planned on logical nodes built before: new DAIs and changed ones. */
+function valueCountsOf(params: {
+	values: IedBuildPlan['values']
+	logicalNodes: readonly PlannedLogicalNode[]
+}): IedRebuildReport['values'] {
+	const built = new Set(
+		params.logicalNodes.flatMap((planned) => (planned.existing ? [planned.lnode.id ?? ''] : [])),
+	)
+	const onBuilt = params.values.filter((value) => built.has(value.lnode.id ?? ''))
+	return {
+		added: onBuilt.filter((value) => !value.existing).length,
+		changed: onBuilt.filter((value) => value.existing).length,
+	}
 }
