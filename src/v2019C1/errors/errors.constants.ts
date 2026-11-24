@@ -256,7 +256,8 @@ export const SCL_ERRORS = defineErrors({
 	 * access point). A logical node or a logical device moved within its IED is followed, unless the logical device goes to
 	 * an access point with no connection on the subnetwork of an address it sends. A reference naming its IED outright
 	 * (an LNode, a connected access point) moves as it is.
-	 * `meta: { moved: { tagName, id }, parent: { tagName, id } }` — the first such move, and the parent it was given.
+	 * `meta: { moved: { tagName, id }, parent: { tagName, id } }` — the first such move, and the parent it was given; the
+	 * commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one (one per move and cause).
 	 */
 	MOVE_NOT_FOLLOWED: {
 		code: 'SCL4003',
@@ -269,7 +270,7 @@ export const SCL_ERRORS = defineErrors({
 	 * at once; `out-of-scope`, a behaviour variable names an element its local path cannot reach (not at or below the
 	 * level holding its `BehaviorDescription`). `meta: { reference: { tagName, id }, uuidAttribute, reason }`; for
 	 * `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the registry's
-	 * order.
+	 * order. The commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one.
 	 */
 	REFERENCE_INCOHERENT: {
 		code: 'SCL4004',

@@ -1,4 +1,5 @@
 import type { Scl } from '@/v2019C1/config'
+import type { CommitRefusal } from '@/v2019C1/hooks/before-commit/commit-plan.types'
 import type { MoveRemoval } from '@/v2019C1/hooks/before-commit/moves.types'
 import type {
 	PrunedEffect,
@@ -52,4 +53,18 @@ export type CommitPrune = {
 	moves: MoveRemoval[]
 	/** Each LNode the commit releases from a logical node the transaction deleted. */
 	released: ReleasedLNodeBinding[]
+	/**
+	 * Every move the commit does not follow and every incoherent uuid reference it refuses, in the order it judges them:
+	 * listed with `{ collect: true }` (the commit then refuses with the first), empty otherwise.
+	 */
+	refusals: CommitRefusal[]
+}
+
+/** How the preview reads a transaction the commit refuses. */
+export type CommitPruneOptions = {
+	/**
+	 * List the moves the commit does not follow and the incoherent uuid references in `refusals` instead of throwing the
+	 * first; every other refusal still throws.
+	 */
+	collect?: boolean
 }
