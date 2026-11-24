@@ -1,3 +1,4 @@
+import { LN0_IDENTITY } from '../transaction/build-ied.constants'
 import { FUNCTION_LIKES, LN_CONTENT_IN_USE } from './build.constants'
 import { readUsers, specNamingsOf } from './read-rebuild'
 import { readHeldValues, readValueTypes, specifiedValuesOf } from './read-values'
@@ -79,25 +80,48 @@ export async function readBuildInput(
 			return lnType && lnType !== lnTypeOfLn.get(implementation.ln.id ?? '') ? [lnode.id] : []
 		}),
 	)
+	// a re-derive may bind an LLN0 LNode to another logical device's LN0: every LN0's values and the LLN0 types are read
+	const ln0Rebinds =
+		params.rederiveLDevices === true &&
+		asked.some(function boundLln0(lnode, position) {
+			const { lnClass } = readAttributes({
+				record: lnodeRecords[position] as AnyRawRecord,
+				defaults: 'none',
+			})
+			return (
+				lnClass === LN0_IDENTITY.lnClass && implementations.get(lnode.id)?.ied.id === params.ied.id
+			)
+		})
+	const everyLn0 = ln0Rebinds
+		? lDevices.flatMap((lDevice) =>
+				lDevice.logicalNodes.flatMap((logicalNode) =>
+					logicalNode.ref.tagName === 'LN0' ? [logicalNode.ref] : [],
+				),
+			)
+		: []
+	const valueHolders = [...implementations].flatMap(([lnodeId, implementation]) =>
+		implementation.ied.id === params.ied.id &&
+		(specifiedValues.has(lnodeId) || retyped.has(lnodeId))
+			? [implementation.ln]
+			: [],
+	)
 	const heldValues = await readHeldValues(query, {
-		logicalNodes: [...implementations].flatMap(([lnodeId, implementation]) =>
-			implementation.ied.id === params.ied.id &&
-			(specifiedValues.has(lnodeId) || retyped.has(lnodeId))
-				? [implementation.ln]
-				: [],
-		),
+		logicalNodes: [
+			...new Map([...valueHolders, ...everyLn0].map((ln) => [ln.id, ln] as const)).values(),
+		],
 	})
 	const valueTypes = await readValueTypes({
 		query,
 		contextQuery,
 		types,
-		lnClasses: new Set(
-			lnodeRecords.flatMap((record, position) =>
+		lnClasses: new Set([
+			...lnodeRecords.flatMap((record, position) =>
 				specifiedValues.has(asked[position]?.id ?? '') || retyped.has(asked[position]?.id ?? '')
 					? classesOf({ record: record as AnyRawRecord, types })
 					: [],
 			),
-		),
+			...(ln0Rebinds ? [LN0_IDENTITY.lnClass] : []),
+		]),
 	})
 	const boundLNodeOf = boundLNodesOf({
 		iedName: readAttributes({ record: iedRecord, defaults: 'none' }).name ?? '',

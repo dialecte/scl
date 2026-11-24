@@ -4,7 +4,10 @@ import type { Scl } from '@/v2019C1/config'
 /** A logical node's identity in its logical device. */
 export type LnIdentity = { prefix: string; lnClass: string; inst: string }
 
-/** What a rebuild of an IED built before changes, and what it keeps; empty on a first build of new logical devices. */
+/**
+ * What a rebuild of an IED built before changes, and what it keeps; empty on a first build of new logical devices, unless
+ * an LNode left out for a real IED is still specified on the IED (`implementedElsewhere`).
+ */
 export type IedRebuildReport = {
 	/** Logical devices and the LNodes built anew in an IED built before. */
 	added: { lDevices: string[]; logicalNodes: Scl.Ref<'LNode'>[] }
