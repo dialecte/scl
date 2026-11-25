@@ -1,3 +1,5 @@
+import type { CidSenders } from './ied.types'
+
 /** What an IED export writes under the root of an empty target: a target already holding one is refused. */
 export const EXPORTED_ROOT_TAGS: ReadonlySet<string> = new Set([
 	'IED',
@@ -23,3 +25,22 @@ export const REAL_IED_EXPORT_FILES = { CID: { extension: '.cid' } } as const
 
 /** The extension of the name an ISD export suggests. */
 export const ISD_FILE_EXTENSION = '.isd'
+
+/**
+ * The substation part of a CID: the frames of the IED's LNodes only, no application, allocation role or power system
+ * relation; a data specification keeps its mapping (the file holds the logical node it maps to).
+ */
+export const CID_PROCESS_OPTIONS = {
+	applications: false,
+	allocationRoles: false,
+	powerSystemRelations: false,
+	keepMappings: true,
+} as const
+
+/** The senders of a CID holding no other IED (`interactingIeds: 'none'`): none. */
+export const NO_SENDERS: CidSenders = {
+	roots: [],
+	senders: [],
+	connections: new Map(),
+	unresolvedMembers: [],
+}

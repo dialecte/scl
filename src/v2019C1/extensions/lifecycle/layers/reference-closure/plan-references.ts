@@ -52,8 +52,17 @@ export async function planReferences(params: PlanReferencesParams): Promise<Refe
 	const { roots, sourceQuery, destinationQuery, policy } = params
 	const ieds = await sourceQuery.getRecordsByTagName('IED')
 	const iedById = new Map(ieds.map((ied) => [ied.id, ied] as const))
+	const wholeRoots = roots.filter((root) => root.depth === 'whole')
+	const interfaceRoots = roots.flatMap((root) => (root.depth === 'interface' ? [root] : []))
+	for (const root of interfaceRoots) {
+		invariant(iedById.has(root.ref.id), {
+			key: 'ELEMENT_NOT_FOUND',
+			ref: root.ref,
+			detail: 'planReferences: root not found',
+		})
+	}
 	const rootRecords = await Promise.all(
-		roots.map(async function readRoot(root) {
+		wholeRoots.map(async function readRoot(root) {
 			const ied = iedById.get(root.ref.id)
 			invariant(ied, {
 				key: 'ELEMENT_NOT_FOUND',
@@ -63,7 +72,14 @@ export async function planReferences(params: PlanReferencesParams): Promise<Refe
 			return { ied, records: await readHolderRecords(sourceQuery, { iedRef: root.ref }) }
 		}),
 	)
-	const landing = await readLanding({ destinationQuery, rootRecords })
+	const landing = await readLanding({
+		destinationQuery,
+		rootRecords,
+		interfaceIeds: interfaceRoots.map((root) => ({
+			ied: iedById.get(root.ref.id) as Scl.RawRecord<'IED'>,
+			uuids: root.uuids,
+		})),
+	})
 	const decisions = [
 		...rootRecords.flatMap(function decideRoot({ records }) {
 			return [
@@ -117,10 +133,14 @@ async function readHolderRecords(
 async function readLanding(params: {
 	destinationQuery: Core.Query<Config>
 	rootRecords: readonly { ied: Scl.RawRecord<'IED'>; records: HolderRecords }[]
+	/** The interface roots: inside by their name and by the uuids they keep. */
+	interfaceIeds: readonly { ied: Scl.RawRecord<'IED'>; uuids: ReadonlySet<string> }[]
 }): Promise<Landing> {
-	const { destinationQuery, rootRecords } = params
+	const { destinationQuery, rootRecords, interfaceIeds } = params
 	const insideIeds = new Set(
-		rootRecords.map(({ ied }) => readAttribute({ record: ied, name: 'name' })),
+		[...rootRecords, ...interfaceIeds].map(({ ied }) =>
+			readAttribute({ record: ied, name: 'name' }),
+		),
 	)
 	const destination = await destinationQuery.getRecordsByTagName('IED')
 	const presentIeds = new Set(
@@ -128,11 +148,12 @@ async function readLanding(params: {
 			.map((record) => readAttribute({ record, name: 'name' }))
 			.filter((name) => name !== undefined && !insideIeds.has(name)),
 	)
-	const insideUuids = new Set(
-		rootRecords.flatMap(({ records }) =>
+	const insideUuids = new Set([
+		...rootRecords.flatMap(({ records }) =>
 			uuidsOf(UUID_TARGET_TAGS.flatMap((tag): readonly Core.AnyRawRecord[] => records[tag])),
 		),
-	)
+		...interfaceIeds.flatMap(({ uuids }) => [...uuids]),
+	])
 	const destinationRoot = await destinationQuery.getRoot()
 	const destinationTargets = await destinationQuery.findDescendants(destinationRoot, {
 		collect: [...UUID_TARGET_TAGS],
@@ -274,7 +295,10 @@ async function decideSupervisions(params: {
 	policy: ReferencePolicy
 }): Promise<Decision[]> {
 	const { sourceQuery, roots, policy } = params
-	const rootIds = new Set(roots.map((root) => root.ref.id))
+	const rootIds = new Set(roots.flatMap((root) => (root.depth === 'whole' ? [root.ref.id] : [])))
+	const interfaceControlBlocks = new Set(
+		roots.flatMap((root) => (root.depth === 'interface' ? [...root.controlBlocks] : [])),
+	)
 	const context = createDataflowContext(sourceQuery)
 	const section = await context.iedSection()
 	const supervising = section.logicalNodes.filter(function isRootSupervision(node) {
@@ -287,17 +311,12 @@ async function decideSupervisions(params: {
 		)
 	})
 	if (supervising.length === 0) return []
-	const index = await context.supervisionIndex()
-	const insideValueIds = new Set(
-		[...section.controlBlocks.values()]
-			.filter((controlBlock) => rootIds.has(controlBlock.ied.id))
-			.flatMap((controlBlock) =>
-				roots.flatMap((root) => {
-					const supervision = index.supervisionOf({ controlBlock, subscriber: root.ref })
-					return supervision ? [supervision.val.id] : []
-				}),
-			),
-	)
+	const insideValueIds = await insideSupervisionValues({
+		context,
+		roots,
+		rootIds,
+		interfaceControlBlocks,
+	})
 	const references = await readSupervisionReferences({
 		query: sourceQuery,
 		logicalNodes: supervising.map(({ record }) => record),
@@ -330,6 +349,32 @@ async function decideSupervisions(params: {
 			},
 		]
 	})
+}
+
+/** The values supervising a control block of the closure (a whole root's, or one an interface root keeps), by id. */
+async function insideSupervisionValues(params: {
+	context: ReturnType<typeof createDataflowContext>
+	roots: readonly ClosureRoot[]
+	rootIds: ReadonlySet<string>
+	interfaceControlBlocks: ReadonlySet<string>
+}): Promise<ReadonlySet<string>> {
+	const { context, roots, rootIds, interfaceControlBlocks } = params
+	const section = await context.iedSection()
+	const index = await context.supervisionIndex()
+	return new Set(
+		[...section.controlBlocks.values()]
+			.filter(
+				(controlBlock) =>
+					rootIds.has(controlBlock.ied.id) || interfaceControlBlocks.has(controlBlock.record.id),
+			)
+			.flatMap((controlBlock) =>
+				roots.flatMap((root) => {
+					if (root.depth !== 'whole') return []
+					const supervision = index.supervisionOf({ controlBlock, subscriber: root.ref })
+					return supervision ? [supervision.val.id] : []
+				}),
+			),
+	)
 }
 
 /** The reference values of supervising logical nodes: their data object, its reference attribute, its values, one read per level. */

@@ -26,7 +26,8 @@ import type { AnyRawRecord } from '@dialecte/core'
  * What changes on the written process part. A specification of an input or an output, a behaviour variable or a process
  * echo naming what the file does not hold keeps its expected data and loses that link (its uuid, its path and what
  * names the data there); an input or output specification gets the expected data it lacked from what it named, and is
- * said. A data specification loses its mapping to the implementing logical node. A written LNode gets its own naming as
+ * said. A data specification loses its mapping to the implementing logical node, unless `keepMappings` (a file holding that
+ * logical node). A written LNode gets its own naming as
  * its specified naming. With `internalService`, a flow between two written LNodes of the IED is an internal service.
  */
 export function planProcessEdits(params: {
@@ -36,8 +37,10 @@ export function planProcessEdits(params: {
 	iedUuids: ReadonlySet<string>
 	/** A flow between two written LNodes of the IED written as an internal service. */
 	internalService: boolean
+	/** A data specification keeps its mapping to the implementing logical node: the file holds it. */
+	keepMappings: boolean
 }): Pick<ProcessStepResult, 'warnings'> & { edits: RecordEdit[]; namings: ProcessNaming[] } {
-	const { index, kept, lnodes, internalService } = params
+	const { index, kept, lnodes, internalService, keepMappings } = params
 	const written = writtenUuids({ index, kept, iedUuids: params.iedUuids })
 	const edits: RecordEdit[] = []
 	const warnings: ProcessStepResult['warnings'] = []
@@ -46,7 +49,7 @@ export function planProcessEdits(params: {
 		if (!node) continue
 		const cut = cutLinks({ node, index, kept, written })
 		const internal = internalService ? internalFlowEdit({ node, index, lnodes }) : undefined
-		const mapping = mappingRemoval(node.record)
+		const mapping = keepMappings ? {} : mappingRemoval(node.record)
 		const attributes = { ...cut?.attributes, ...internal, ...mapping }
 		if (Object.keys(attributes).length === 0) continue
 		edits.push({ ref: node.ref, attributes })

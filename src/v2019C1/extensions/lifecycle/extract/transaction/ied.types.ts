@@ -6,6 +6,8 @@ import type { IedProcessPlan } from '@/v2019C1/extensions/lifecycle/layers/ied/i
 import type { IedCommunicationDescription } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-communication.types'
 import type { IedContentSelection } from '@/v2019C1/extensions/lifecycle/layers/ied/select-ied-content.types'
 import type { SupervisionDependencyPlan } from '@/v2019C1/extensions/lifecycle/layers/ied/supervision-dependencies.types'
+import type { IedClosure } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/closure.types'
+import type { ClosureRoot } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type { LinkedSectionReading } from '@/v2019C1/extensions/lifecycle/linked-sections/description.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
 import type * as Core from '@dialecte/core'
@@ -60,6 +62,11 @@ export type CidExtractParams = IedExtractBase & {
 	interactingIeds: InteractingIeds
 	/** `'keep'` by default: see {@link ClientRefs}. */
 	clientRefs?: ClientRefs
+	/**
+	 * The substation part related to the IED: the frames holding the LNodes it implements, names and identifiers as in the
+	 * project. Off by default: a CID needs none.
+	 */
+	includeSubstation?: boolean
 }
 
 /** Parameters of `extract.ied` writing the ISD of one specification IED. */
@@ -112,6 +119,31 @@ export type RealIedExport = {
 	linked: LinkedSectionReading
 	/** The IED's own lists of minimum project files in the source, written back exactly. */
 	minimumScdFiles: readonly Scl.Ref<'MinRequestedSCDFiles'>[]
+	/** The IEDs sending to the IED, each cut to what it sends (`interactingIeds: 'publishers'`). */
+	senders: readonly CidSender[]
+	/** What the Communication written leaves out: other IEDs' connections but the senders', cut to what they send. */
+	communicationLeaveOut: ReadonlySet<string>
+	/** The substation part related to the IED (`includeSubstation`), when asked. */
+	process: IedProcessPlan | undefined
+}
+
+/** A sending IED of a CID: the IED, what its clone leaves out, its engineering right. */
+export type CidSender = {
+	ied: Scl.Ref<'IED'>
+	leaveOut: ReadonlySet<string>
+	/** The engineering right the closure gives it: `fix`, not engineered in the file. */
+	engRight: IedClosure['engRight']
+}
+
+/** A connection of a sending IED a CID writes: its subnetwork, what it leaves out (the GSE / SMV of what is not sent). */
+export type CidSenderConnection = { subNetwork: string | undefined; leaveOut: ReadonlySet<string> }
+
+/** The senders of a CID: as roots of the reference cut, as IEDs to write, their connections, the members naming nothing. */
+export type CidSenders = {
+	roots: readonly ClosureRoot[]
+	senders: readonly CidSender[]
+	connections: ReadonlyMap<string, CidSenderConnection>
+	unresolvedMembers: readonly string[]
 }
 
 /** What an IED export reads and decides before its first write. */

@@ -80,6 +80,11 @@ export type ExtractWarning =
 			iedName: string
 	  }
 	| {
+			/** A member of a data set a sending IED sends naming a logical node that IED does not hold: written as it is. */
+			code: 'data-set-member-unresolved'
+			source: Scl.Ref<'FCDA'>
+	  }
+	| {
 			/** A logical node supervising a control block the file does not hold (or that nothing names): kept as it is. */
 			code: 'supervision-source-absent'
 			source: Scl.Ref<'LN'>

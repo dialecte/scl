@@ -1,7 +1,9 @@
 import {
+	CID_PROCESS_OPTIONS,
 	CLIENT_REFS,
 	EXPORTED_ROOT_TAGS,
 	INTERACTING_IEDS,
+	NO_SENDERS,
 	REAL_IED_EXPORT_FILES,
 } from './ied.constants'
 import { readIedSourceFileType } from './read-ied-source-file-type'
@@ -15,14 +17,31 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { readIedExportRefusals } from '@/v2019C1/extensions/lifecycle/extract/query/read-ied-export-refusals'
 import { readSelectedIedName } from '@/v2019C1/extensions/lifecycle/extract/query/read-selected-ied-name'
 import { applyRecordEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-record-edits'
+import { cloneIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/clone-ied-process'
+import { planIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/plan-ied-process'
 import { readIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-communication'
+import { readIedProcessSource } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-process-source'
 import { selectRealIedContent } from '@/v2019C1/extensions/lifecycle/layers/ied/select-real-ied-content'
+import {
+	planClosure,
+	planSenderSeeds,
+	readClosureModel,
+} from '@/v2019C1/extensions/lifecycle/layers/reference-closure/closure'
 import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction/deep'
+import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction/write-provenance'
 
-import type { CidExtractParams, IedExtractResult, RealIedExport } from './ied.types'
+import type { ExtractWarning } from './extract.types'
+import type {
+	CidExtractParams,
+	CidSender,
+	CidSenders,
+	IedExtractResult,
+	RealIedExport,
+} from './ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { IedProcessPlan } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -59,10 +78,10 @@ async function refuseRealIedExport(
 	if (params.clientRefs !== undefined) {
 		refuseOptionNotOffered({ option: 'clientRefs', value: params.clientRefs, offered: CLIENT_REFS })
 	}
-	if (params.interactingIeds === 'publishers') {
+	if (params.includeSubstation !== undefined && typeof params.includeSubstation !== 'boolean') {
 		throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
-			meta: { option: 'interactingIeds', value: params.interactingIeds },
-			detail: 'extract.ied: a CID with the IEDs sending to the selected IED is not available yet',
+			meta: { option: 'includeSubstation', value: String(params.includeSubstation) },
+			detail: 'extract.ied: includeSubstation is true or false',
 		})
 	}
 	const iedName = await readSelectedIedName(sourceQuery, { iedRef })
@@ -102,12 +121,32 @@ async function readRealIedExport(
 	const { iedName } = params
 	const { sourceQuery, provenanceQuery = sourceQuery, iedRef } = params.params
 	const sourceFileType = await readIedSourceFileType(provenanceQuery)
+	const senders =
+		params.params.interactingIeds === 'publishers'
+			? await readSenders(sourceQuery, { iedRef })
+			: NO_SENDERS
 	const selection = await selectRealIedContent(sourceQuery, {
 		iedRef,
 		destinationQuery: tx,
 		clientRefs: params.params.clientRefs ?? 'keep',
+		senders: senders.roots,
 	})
 	const description = await readIedCommunication(sourceQuery, { iedRef, iedName })
+	const communicationLeaveOut = withSenderConnections({
+		leaveOut: description.leaveOut,
+		connections: senders.connections,
+	})
+	const processSource = params.params.includeSubstation
+		? await readIedProcessSource(sourceQuery, { iedRef })
+		: undefined
+	const process = processSource
+		? planIedProcess({
+				source: processSource,
+				iedRef,
+				iedLeaveOut: selection.leaveOut,
+				options: CID_PROCESS_OPTIONS,
+			})
+		: undefined
 	const linked = await readLinkedSections(tx, {
 		sourceQuery,
 		description,
@@ -116,7 +155,85 @@ async function readRealIedExport(
 		landings: [],
 	})
 	const minimumScdFiles = await readMinimumScdFiles(sourceQuery, { iedRef })
-	return { sourceFileType, selection, description, linked, minimumScdFiles }
+	return {
+		sourceFileType,
+		selection: {
+			...selection,
+			warnings: [
+				...selection.warnings,
+				...senders.unresolvedMembers.map((id): ExtractWarning => ({
+					code: 'data-set-member-unresolved',
+					source: { tagName: 'FCDA', id },
+				})),
+				...(process?.warnings ?? []),
+			],
+		},
+		description,
+		linked,
+		minimumScdFiles,
+		senders: senders.senders,
+		communicationLeaveOut,
+		process,
+	}
+}
+
+/**
+ * The IEDs sending to the IED: the control blocks and logical nodes its inputs name in other IEDs, closed over what they
+ * reference (`planClosure`): each sending IED cut to that, its connections cut to their address and the GSE / SMV of what it
+ * sends; the members of a sent data set naming nothing the sender holds.
+ */
+async function readSenders(
+	query: Core.Query<Config>,
+	params: { iedRef: Scl.Ref<'IED'> },
+): Promise<CidSenders> {
+	const { iedRef } = params
+	const model = await readClosureModel(query, { iedRefs: [iedRef] })
+	const { ExtRef: found = [] } = await query.findDescendants(iedRef, { collect: ['ExtRef'] })
+	const inputs = found.filter(isNativeRecord)
+	const seeds = planSenderSeeds({ model, iedRef, inputs })
+	const plan = planClosure({ model, seeds: [{ ref: iedRef, depth: 'whole' }, ...seeds] })
+	const interfaceIeds = [...plan.ieds].filter(([, closure]) => closure.depth === 'interface')
+	const subNetworkOf = new Map(
+		model.ConnectedAP.map((connection) => [connection.id, connection.parent?.id]),
+	)
+	return {
+		roots: interfaceIeds.map(([id, closure]) => ({
+			ref: { tagName: 'IED', id },
+			depth: 'interface',
+			uuids: closure.keep?.uuids ?? new Set<string>(),
+			controlBlocks: closure.keep?.controlBlocks ?? new Set<string>(),
+		})),
+		senders: interfaceIeds.map(([id, closure]) => ({
+			ied: { tagName: 'IED', id },
+			leaveOut: closure.leaveOut,
+			engRight: closure.engRight,
+		})),
+		connections: new Map(
+			[...plan.connections].map(([id, connection]) => [
+				id,
+				{ subNetwork: subNetworkOf.get(id), leaveOut: connection.leaveOut },
+			]),
+		),
+		unresolvedMembers: [...plan.unresolvedMembers],
+	}
+}
+
+/** What the Communication leaves out once the senders' connections are written: each with its subnetwork, cut inside. */
+function withSenderConnections(params: {
+	leaveOut: ReadonlySet<string>
+	connections: CidSenders['connections']
+}): ReadonlySet<string> {
+	const { leaveOut, connections } = params
+	const written = new Set(
+		[...connections].flatMap(([id, connection]) => [
+			id,
+			...(connection.subNetwork ? [connection.subNetwork] : []),
+		]),
+	)
+	return new Set([
+		...[...leaveOut].filter((id) => !written.has(id)),
+		...[...connections.values()].flatMap((connection) => [...connection.leaveOut]),
+	])
 }
 
 /** The IED's own list of the minimum project files it needs, as the source holds it: written back exactly. */
@@ -165,17 +282,66 @@ async function writeRealIedExport(
 			ref,
 			targetParent,
 			withTypes: false,
-			leaveOut: read.description.leaveOut,
+			leaveOut: read.communicationLeaveOut,
 		})
 		cloneMappings.push(...communication.cloneMappings)
 	}
-	await finalizeClonedIdentity(tx, { cloneMappings, mode: 'keep' })
+	const senderMappings = await writeSenders(tx, {
+		sourceQuery,
+		targetParent,
+		senders: read.senders,
+	})
+	await finalizeClonedIdentity(tx, {
+		cloneMappings: [...cloneMappings, ...senderMappings],
+		mode: 'keep',
+	})
+	// the substation part comes once the IED holds its own uuids: what it maps to is then there to keep
+	if (read.process) await writeProcessPart(tx, { sourceQuery, process: read.process })
 	const clonedIed = { tagName: 'IED', id: cloned.record.id } as const
 	await rewriteMinimumScdFiles(tx, { sourceQuery, ied: clonedIed, sources: read.minimumScdFiles })
 	await writeProvenance(tx, {
 		sourceQuery: provenanceQuery,
 		target: { anchor: 'document', fileType: read.sourceFileType },
 	})
+}
+
+/** The substation part related to the IED: its frames cloned with the project's identifiers, its cut references applied. */
+async function writeProcessPart(
+	tx: Core.Transaction<Config>,
+	params: { sourceQuery: Core.Query<Config>; process: IedProcessPlan },
+): Promise<void> {
+	const { sourceQuery, process } = params
+	const processMappings = await cloneIedProcess(tx, { sourceQuery, plan: process })
+	await finalizeClonedIdentity(tx, { cloneMappings: processMappings, mode: 'keep' })
+	await applyRecordEdits(tx, { edits: process.edits, cloneMappings: processMappings })
+}
+
+/** Each sending IED, cut to what it sends, with the types its logical nodes use, marked not engineered in the file. */
+async function writeSenders(
+	tx: Core.Transaction<Config>,
+	params: {
+		sourceQuery: Core.Query<Config>
+		targetParent: Parameters<typeof deep>[1]['targetParent']
+		senders: readonly CidSender[]
+	},
+): Promise<Scl.CloneMapping[]> {
+	const { sourceQuery, targetParent, senders } = params
+	const mappings: Scl.CloneMapping[] = []
+	for (const sender of senders) {
+		const cloned = await deep(tx, {
+			sourceQuery,
+			ref: sender.ied,
+			targetParent,
+			leaveOut: sender.leaveOut,
+			withTypes: { keepNameFrom: 'source' },
+		})
+		await tx.update(
+			{ tagName: 'IED', id: cloned.record.id },
+			{ attributes: { engRight: sender.engRight } },
+		)
+		mappings.push(...cloned.cloneMappings)
+	}
+	return mappings
 }
 
 /**

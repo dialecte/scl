@@ -220,7 +220,8 @@ tx.lifecycle.extract.ied(params: {
   provenanceQuery?: Scl.Query        // the document recorded as its source; default sourceQuery
   iedRef: Scl.Ref<'IED'>
   fileType: 'CID'
-  interactingIeds: 'none' | 'publishers' // required, no default; 'publishers' is not available yet
+  interactingIeds: 'none' | 'publishers' // required, no default
+  includeSubstation?: boolean           // default false
   clientRefs?: 'keep' | 'cleanAbsent'    // default 'keep'
   tool: string
   who: string
@@ -229,11 +230,11 @@ tx.lifecycle.extract.ied(params: {
 }): Promise<{ warnings: ExtractWarning[]; fileName: string }>
 ```
 
-`interactingIeds` says which IEDs the file holds besides the selected one: none, or the IEDs its inputs are bound to with the part they send it, so that the tool can set up its subscriptions (`'publishers'`, not available yet: refused with `OPTION_NOT_AVAILABLE`). There is no default: the caller states what the file holds.
+`interactingIeds` says which IEDs the file holds besides the selected one: none, or the IEDs its inputs are bound to with the part they send it, so that the tool can set up its subscriptions (`'publishers'`). There is no default: the caller states what the file holds.
 
 Steps:
 
-1. Refuse before anything is written, in this order: an omitted or unknown `interactingIeds`, an unknown `clientRefs`, then `interactingIeds: 'publishers'` (`OPTION_NOT_AVAILABLE`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); an IED none of whose connections holds an `Address` (`IED_NOT_CONNECTED`, `SCL2016`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source (the `provenanceQuery` document when given) registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); `as: 'revision'` (`OPTION_NOT_AVAILABLE`). A `fileType` other than `'ISD'` or `'CID'` is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'fileType', value }`).
+1. Refuse before anything is written, in this order: an omitted or unknown `interactingIeds`, an unknown `clientRefs`, then an `includeSubstation` that is not a boolean (`OPTION_NOT_AVAILABLE`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); an IED none of whose connections holds an `Address` (`IED_NOT_CONNECTED`, `SCL2016`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source (the `provenanceQuery` document when given) registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); `as: 'revision'` (`OPTION_NOT_AVAILABLE`). A `fileType` other than `'ISD'` or `'CID'` is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'fileType', value }`).
 2. Write the CID history header (`fileType: 'CID'`, a uuid of its own) and record the project in the `Header` (its file name, version, revision and type, as for an ISD).
 3. Write the IED as the project holds it: its name, uuids, manufacturer, values, control blocks, data sets, supervision logical nodes, vendor content, and its `IEDSourceFiles` and `MinRequestedSCDFiles` exactly as the source holds them; the data types its logical nodes use, no other.
 4. Write the `Communication` holding its connections (addresses, GSE, SMV, physical connections) and their subnetworks, no connection of another IED.
@@ -246,6 +247,16 @@ Steps:
    - `Association` and `KDC` naming such an IED: kept and told (`ied-reference-dangling`), they are the device's configuration;
    - an `LGOS` or `LSVS` whose reference names a control block the file does not hold: kept and told (`supervision-source-absent`), its values are the device's data model.
 
+With `interactingIeds: 'publishers'`, the file also holds each IED the selected IED receives from, cut to what it sends:
+
+- the senders are read from its inputs: the control block an input names (by its names and its service, else by its control block uuid) and the logical node it names (by its names, else by its uuid; an input polling data names no control block); and every control block of another IED naming the selected IED as a receiver or report client, whether an input is bound to it or not;
+- each sender keeps what that block or logical node references: the block, its data set and the members it lists, the logical devices and logical nodes they name with their LN0, the server with its authentication, the access point, the access points serving that server; the receivers and report clients of a sent block naming the selected IED (its tool reads them to find what is sent to it); everything else is left out (values, inputs and outputs, other receivers and report clients, associations, key distribution entries, services, security, texts, private content, every logical device, logical node, data set and control block nothing names);
+- each sender is marked `engRight="fix"` (not engineered in the file), with the data types its kept logical nodes use;
+- its connections on a kept access point are written with their address, physical connection and the GSE / SMV of what it sends; a sent data set member naming nothing the sender holds is written and told (`data-set-member-unresolved`);
+- the senders count as held by the file: inputs bound to them are written as they are, receivers and report clients naming them stay under `clientRefs: 'cleanAbsent'`, a supervision of a sent block is not told.
+
+With `includeSubstation: true` the file holds the substation part related to the IED: the frames (substation, voltage level, bay, function) holding the LNodes it implements, names and identifiers as in the project, data specifications keeping their mapping to the IED's logical nodes, no application, allocation role or power system relation; an LNode of another IED is left out, and an input or output specification naming it loses that link and is told (`process-reference-cut`).
+
 Returns `fileName` (`<IED>.cid`) and the warnings:
 
 ```ts
@@ -255,6 +266,7 @@ Returns `fileName` (`<IED>.cid`) and the warnings:
 { code: 'ied-reference-dangling', source: Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>, iedName: string }
 { code: 'ied-reference-left-out', source: Ref<'IEDName' | 'ClientLN'>, iedName: string }
 { code: 'supervision-source-absent', source: Ref<'LN'>, reference: string }
+{ code: 'data-set-member-unresolved', source: Ref<'FCDA'> }
 ```
 
 #### `exportOptions`

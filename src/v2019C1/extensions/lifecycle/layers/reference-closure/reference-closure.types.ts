@@ -9,8 +9,21 @@ import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/tran
 import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
-/** An element that travels with the file or the copy, with its whole subtree (`'whole'`). */
-export type ClosureRoot = { ref: Scl.Ref<'IED'>; depth: 'whole' }
+/**
+ * An IED that travels with the file or the copy: with its whole subtree (`'whole'`: its references are classified and cut),
+ * or cut to an interface by the closure (`'interface'`: it counts as inside, its own references are left out by the closure,
+ * never read here); an interface root names the uuids and the control blocks it keeps.
+ */
+export type ClosureRoot =
+	| { ref: Scl.Ref<'IED'>; depth: 'whole' }
+	| {
+			ref: Scl.Ref<'IED'>
+			depth: 'interface'
+			/** The uuids of the logical nodes and control blocks it keeps. */
+			uuids: ReadonlySet<string>
+			/** The control blocks it keeps (record ids): a supervision of one is inside. */
+			controlBlocks: ReadonlySet<string>
+	  }
 
 /** Where a reference's target is: in the closure, outside it but in the destination, or nowhere the result lands. */
 export type ReferenceClass = (typeof REFERENCE_CLASSES)[number]
