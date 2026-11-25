@@ -29,6 +29,26 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
+/** A variable in the SCL Private of bay B1; bay B2's SCL Private of type ACME holds a vendor Private (another namespace). */
+const vendorPayloadXml = /* xml */ `
+	<SCL ${ALL_XMLNS_NAMESPACES} ${id}="root">
+		<Substation ${id}="sub" name="S1">
+			<VoltageLevel ${id}="vl" name="V1">
+				<Bay ${id}="bay-1" name="B1">
+					<Private ${id}="private-1" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Variable ${id}="variable" name="VX" value="1"/>
+					</Private>
+				</Bay>
+				<Bay ${id}="bay-2" name="B2">
+					<Private ${id}="private-2" type="ACME">
+						<v:Private xmlns:v="urn:vendor" ${id}="vendor-payload"/>
+					</Private>
+				</Bay>
+			</VoltageLevel>
+		</Substation>
+	</SCL>
+`
+
 describe('a move - a moved 6-100 root is wrapped in an SCL Private, never a vendor one', () => {
 	it('a variable moved to a bay holding a vendor Private of the 6-100 type → in a new SCL Private of that bay, the vendor one left empty', async () => {
 		const { source } = await createSclTestProject({ sourceXml })
@@ -54,5 +74,26 @@ describe('a move - a moved 6-100 root is wrapped in an SCL Private, never a vend
 		expect(holder?.namespace.uri).toBe('http://www.iec.ch/61850/2003/SCL')
 		expect(holder?.parent?.id).toBe('bay-2')
 		expect(vendorPrivate?.children).toEqual([])
+	})
+
+	it('a variable moved inside a vendor Private (another namespace) → wrapped in a new SCL Private there, as under any element', async () => {
+		const { source } = await createSclTestProject({ sourceXml: vendorPayloadXml })
+		await source.document.transaction(async function move(tx) {
+			await tx.any.move(
+				{ tagName: 'Variable', id: 'variable' },
+				{ parent: { tagName: 'Private', id: 'vendor-payload' } },
+			)
+		})
+		const query = source.document.query as Core.Query<Config>
+		const variable = await query.getRecord({
+			tagName: 'Variable',
+			id: 'variable',
+		} as Scl.Ref<'Variable'>)
+		const holder = variable?.parent
+			? await query.getRecord(variable.parent as Scl.Ref<Scl.ElementsOf>)
+			: undefined
+
+		expect(holder?.namespace.uri).toBe('http://www.iec.ch/61850/2003/SCL')
+		expect(holder?.parent?.id).toBe('vendor-payload')
 	})
 })

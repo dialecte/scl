@@ -8,5 +8,6 @@
   - an element written in an SCL `Private` (a 6-100 element added to a bay or inside a vendor `Private`, or moved to one, the `LNodeSpecNaming` an import or a commit gives an `LNode`) never goes into a vendor one of the same `type`, and the naming of an `LNode` is read from its SCL `Private` only;
   - a logical node inside one is not native;
   - the scaffolding of linked SSD units leaves one out with what it holds, as any element of its own;
-  - an element put in one is moved into it, and an emptied one is not pruned as a namespace wrapper.
-    SCL documents answer as before, with no more reads.
+  - an element put in one is reported as moved into it, and an emptied one is not pruned as a namespace wrapper.
+    SCL documents answer as before, with no more store calls.
+- `isNamespaceWrapper` takes the record's `tagName` and `namespace` with its attributes, to tell the SCL `Private` from a vendor's.
