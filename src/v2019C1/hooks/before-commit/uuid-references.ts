@@ -164,7 +164,7 @@ function movedBehaviourPairsOf(params: {
 }
 
 /** The pairs of a reference the transaction wrote (see {@link planUuidReferencesAtCommit}), each holding its uuid. */
-function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
+export function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	const { change } = params
 	const { before, after } = change
 	return (PATH_PAIRS_BY_TAG.get(after.tagName) ?? []).flatMap(function boundPair(pair) {
@@ -194,7 +194,7 @@ function changedOn(params: { change: RecordChange; names: readonly string[] }): 
  * A behaviour variable the transaction created, or gave an attribute of one of its groups, holding both groups: named
  * by the uuid attribute of the last group in the registry's order it set.
  */
-function groupsTogetherOf(params: { change: RecordChange }): UuidReferenceRefusal[] {
+export function groupsTogetherOf(params: { change: RecordChange }): UuidReferenceRefusal[] {
 	const { change } = params
 	const { before, after } = change
 	const pairs = PATH_PAIRS_BY_TAG.get(after.tagName) ?? []
@@ -212,7 +212,7 @@ function groupsTogetherOf(params: { change: RecordChange }): UuidReferenceRefusa
 }
 
 /** A written pair holding its uuid without the data object the registry requires beside it. */
-function dataMissingOf(params: { bound: BoundPair }): UuidReferenceRefusal[] {
+export function dataMissingOf(params: { bound: BoundPair }): UuidReferenceRefusal[] {
 	const { record, pair } = params.bound
 	const { doAttribute, doRequired } = dataCompanionsOf(pair)
 	if (!doRequired || !doAttribute) return []
@@ -309,7 +309,7 @@ async function localPathsWritten(params: {
 }
 
 /** A uuid reference refused, as the commit throws it and lists it. */
-function toCommitRefusal(refusal: UuidReferenceRefusal): CommitRefusal {
+export function toCommitRefusal(refusal: UuidReferenceRefusal): CommitRefusal {
 	const { record, uuidAttribute, reason } = refusal
 	return {
 		key: 'REFERENCE_INCOHERENT',

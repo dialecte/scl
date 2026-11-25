@@ -22,6 +22,11 @@ export type CloneFunctionCategoriesParams = {
 	 * the functions of one operation so that a category classifying several of them is placed once.
 	 */
 	placedCategories?: Map<string, Scl.Ref<'FunctionCategory'>>
+	/**
+	 * The source is the document placed into (a copy): every element of it is held by its uuid, the held elements of
+	 * the source are no copy of anything, and a reference the source holds is never one the placement wrote.
+	 */
+	sourceIsProject?: boolean
 }
 
 export type CloneFunctionCategoriesResult = {

@@ -4,6 +4,6 @@ export type {
 	MovedElement,
 	MoveRefusal,
 	MoveReport,
-	NameTaken,
 	ReportMoveParams,
 } from './move.types'
+export type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'

@@ -2,6 +2,12 @@ import { nameCreatedSharedElements } from './name-created-shared-elements'
 import { resolveTargetStructure } from './resolve-target-structure'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import {
+	planCopyUnbinds,
+	readCopyTrees,
+	writeCopyUnbinds,
+} from '@/v2019C1/extensions/lifecycle/copy'
+import { NO_LEVEL_LANDED } from '@/v2019C1/extensions/lifecycle/copy/copy.constants'
 import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -23,9 +29,11 @@ import {
 	resolveStructureRef,
 } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
+import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { AsdParams, AsdResult, PlaceApplicationParams, PlacedApplication } from './asd.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 
@@ -69,15 +77,24 @@ export async function placeApplication(
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
 	const { decisionMappings, leftOut } = params
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
+	// a copy is pasted under the anchor itself, inside the document it reads (a level of the topology: refused else)
+	const copy =
+		policy.placementIdentity === 'copy' && isTopologyLevel(targetParent.tagName)
+			? { placeUnder: targetParent as Scl.Ref<TopologyStructuralTag> }
+			: undefined
 
 	// capture the composed Function source refs BEFORE cloning (they are "missing" only
-	// until placed) so their clones can be collision-checked at their structural level
-	const composedFunctionRefs = await findMissingReferencedRecords(tx, {
-		sourceQuery,
-		scopeRef: applicationRef,
-		refTagName: 'FunctionRef',
-		targetTagName: 'Function',
-	})
+	// until placed) so their clones can be collision-checked at their structural level; a copy composes copies of
+	// every one
+	const composedFunctionRefs =
+		policy.composedFunctions === 'all'
+			? await findComposedFunctionRefs(sourceQuery, applicationRef)
+			: await findMissingReferencedRecords(tx, {
+					sourceQuery,
+					scopeRef: applicationRef,
+					refTagName: 'FunctionRef',
+					targetTagName: 'Function',
+				})
 	const placedPrimaryRefs = [
 		applicationRef,
 		...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
@@ -97,7 +114,10 @@ export async function placeApplication(
 		: undefined
 	const structure = landing?.structure ?? (await resolveTargetStructure(tx, targetParent))
 	// the levels of the template above the application land on the levels of the structure: a reference to one names it
-	const landed = await landOnStructure(sourceQuery, { primaryRef: applicationRef, structure })
+	const landed =
+		policy.placement === 'template-levels'
+			? await landOnStructure(sourceQuery, { primaryRef: applicationRef, structure })
+			: NO_LEVEL_LANDED
 	// what the references of what travels with it may name: the application and the functions it composes, as placed,
 	// and the levels it lands on
 	const applicationScope = await resolveApplicationScope(sourceQuery, { applicationRef, leftOut })
@@ -117,6 +137,7 @@ export async function placeApplication(
 		scope,
 		index,
 		landings: landed.redirects,
+		copy,
 	})
 	const { cloneMappings: contentMappings, redirectMappings } = content
 
@@ -141,6 +162,8 @@ export async function placeApplication(
 		referenced: content.referenced,
 		index,
 		held: content.held,
+		sourceIsProject: copy !== undefined,
+		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
 	const allMappings = [
@@ -159,13 +182,24 @@ export async function placeApplication(
 			...redirectMappings,
 		],
 	})
+	// a copy releases its LNodes from the IED that does not travel with it, as its report lists
+	if (copy) {
+		const trees = await readCopyTrees(sourceQuery, {
+			refs: [applicationRef, ...composedFunctionRefs],
+		})
+		await writeCopyUnbinds(tx, {
+			unbinds: planCopyUnbinds({ trees }),
+			cloneMappings: allMappings,
+		})
+	}
 
 	// resolve a name collision for each placed composed Function at its own structural
 	// level (a repeated instantiate would otherwise duplicate a Function name in the Bay)
 	for (const functionRef of policy.bumpsCollisions ? composedFunctionRefs : []) {
 		const functionMapping = contentMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
-		const functionParent = await resolveStructureRef(sourceQuery, functionRef, structure)
+		const functionParent =
+			copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, functionRef, structure))
 		await placeUniquely(tx, {
 			ref: functionMapping.target,
 			parentRef: functionParent,
@@ -206,7 +240,8 @@ export async function placeApplication(
 	// application's own structural level, not the anchor): apply any user edits then
 	// auto-resolve a name collision among siblings (schema constraint)
 	if (policy.bumpsCollisions) {
-		const applicationParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
+		const applicationParent =
+			copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, applicationRef, structure))
 		await placeUniquely(tx, {
 			ref: rootMapping.target,
 			parentRef: applicationParent,

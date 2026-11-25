@@ -36,9 +36,11 @@ else prepared.discard()
 - `move`: the `element`, `from`, `to`, `subtreeSize` (the records it carries, itself included, a `Private` wrapper left
   out), `followingReferences` (the references whose uuid, path or names the commit rewrites to follow it, those it clears
   left out; an address only carried along with its control block is not one),
-  `reordered: true` when it only changes place among its parent's children, and `nameTaken` when a sibling at the new
-  parent holds its name: the `attribute`, `value`, `constraint`, `collidesWith` and the `proposed` name, numbered as
-  `tx.lifecycle.makeUnique` numbers (`F1` -> `F1_1`). A name taken sets `needsDecisions`; it is never a refusal;
+  `reordered: true` when it only changes place among its parent's children, and `keyTaken` when a sibling at the new
+  parent holds its key (its name): the `constraint`, the key's `values` the element holds, `takenBy` (the sibling) and
+  the `proposed` values of its editable fields, numbered as `tx.lifecycle.makeUnique` numbers (`{ name: 'F1' }` ->
+  `{ name: 'F1_1' }`) — the shape a copy's report gives (`KeyTaken`). A key taken sets `needsDecisions`; it is never a
+  refusal;
 - `refusals`: every reason the move cannot be written, each with the `key`, `code`, `meta` and `detail` of its error:
   core's refusal of the anchors (`MAX_OCCURRENCES_REACHED`, `MOVE_INTO_OWN_SUBTREE`, `MOVE_BEFORE_NOT_SIBLING`,
   `PROTECTED_ROOT`, `ELEMENT_NOT_FOUND` for the element or the parent; nothing staged, no instance), a move the commit

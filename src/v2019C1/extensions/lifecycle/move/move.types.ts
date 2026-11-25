@@ -1,5 +1,6 @@
 import type { MOVE_ANCHOR_REFUSAL_KEYS } from './move.constants'
 import type { Scl } from '@/v2019C1/config'
+import type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type {
 	CommitRefusal,
@@ -20,17 +21,6 @@ export type ReportMoveParams = {
  */
 export type ApplyMoveParams = ReportMoveParams & { rename?: Record<string, string> }
 
-/** A name the moved element shares with an element of its new parent, and the name the engine proposes instead. */
-export type NameTaken = {
-	/** The editable key field taken (`name`). */
-	attribute: string
-	value: string
-	proposed: string
-	/** The uniqueness constraint the name breaks there. */
-	constraint: string
-	collidesWith: CommitRefusalElement
-}
-
 /** The element a move puts elsewhere, where from and where to, and what follows it. */
 export type MovedElement = {
 	element: CommitRefusalElement
@@ -45,8 +35,8 @@ export type MovedElement = {
 	followingReferences: number
 	/** Present when the element only changes place among the children of its parent. */
 	reordered?: true
-	/** Present when a sibling at the new parent holds its name. */
-	nameTaken?: NameTaken
+	/** Present when a sibling at the new parent holds its key (its name), with the values the engine proposes instead. */
+	keyTaken?: KeyTaken
 }
 
 /** A key core refuses a move's anchors with. */
@@ -70,7 +60,7 @@ export type MoveRefusal =
  * A move, reported for a merge review: a `DiffReport` holding one `moved` node and its group, with the element moved,
  * every refusal up front, and `nothingToMove` when the element is already where it is asked to go.
  */
-export type MoveReport = DiffReport & {
+export type MoveReport = Omit<DiffReport, 'refusals'> & {
 	move?: MovedElement
 	refusals: MoveRefusal[]
 	nothingToMove?: true

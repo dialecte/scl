@@ -1,8 +1,7 @@
-import { isEditable } from './move-name'
-
 import { throwDialecteError } from '@dialecte/core'
 
 import { assertNoIdentityCollision } from '@/v2019C1/extensions/lifecycle/constraints/find-identity-collision'
+import { isEditable } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken'
 import { resolvePlacementCollision } from '@/v2019C1/extensions/lifecycle/constraints/resolve-placement-collision'
 
 import type { ApplyMoveParams } from './move.types'

@@ -8,10 +8,10 @@ import { runSclTestCases } from '@/v2019C1/test'
 import type { MoveReport, ReportMoveParams } from './move.types'
 import type { SclTest } from '@/v2019C1/test'
 
-/** A report read for a person: the move, the name taken, the moved node and its group, as `describeReport` writes them. */
+/** A report read for a person: the move, the key taken, the moved node and its group, as `describeReport` writes them. */
 type DescribedReport = {
 	move: string | undefined
-	nameTaken: string | undefined
+	keyTaken: string | undefined
 	node: string | undefined
 	rootRef: string | undefined
 	group: string | undefined
@@ -40,7 +40,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 			move: { ref: ref('Function', 'f1'), parent: ref('Bay', 'b2') },
 			expected: {
 				move: 'Function f1 from Bay b1 to Bay b2: 10 records, 3 references follow',
-				nameTaken: undefined,
+				keyTaken: undefined,
 				node: 'moved Function instance f1 source f1 applied f1 from b1 to b2',
 				rootRef: 'f1',
 				group: 'moved accept, name editable',
@@ -58,7 +58,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 			move: { ref: ref('Bay', 'b1'), parent: ref('VoltageLevel', 'vl2') },
 			expected: {
 				move: 'Bay b1 from VoltageLevel vl1 to VoltageLevel vl2: 16 records, 5 references follow',
-				nameTaken: undefined,
+				keyTaken: undefined,
 				node: 'moved Bay instance b1 source b1 applied b1 from vl1 to vl2',
 				rootRef: 'b1',
 				group: 'moved accept, name editable',
@@ -75,7 +75,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 			move: { ref: ref('Function', 'f1'), parent: ref('Bay', 'b3') },
 			expected: {
 				move: 'Function f1 from Bay b1 to Bay b3: 10 records, 3 references follow',
-				nameTaken: 'name F1 taken by Function f9 (uniqueChildNameInBay) → F1_1',
+				keyTaken: 'uniqueChildNameInBay name=F1 taken by Function f9 → name=F1_1',
 				node: 'moved Function instance f1 source f1 applied f1 from b1 to b3',
 				rootRef: 'f1',
 				group: 'moved accept, name editable',
@@ -93,7 +93,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 				move: { ref: ref('FunctionCategory', 'c1'), parent: ref('Private', 'b2-private') },
 				expected: {
 					move: 'FunctionCategory c1 from Private b1-private to Private b2-private: 2 records, 0 references follow',
-					nameTaken: 'name C1 taken by FunctionCategory c2 (uniqueChildNameInBay) → C1_1',
+					keyTaken: 'uniqueChildNameInBay name=C1 taken by FunctionCategory c2 → name=C1_1',
 					node: 'moved FunctionCategory instance c1 source c1 applied c1 from b1-private to b2-private',
 					rootRef: 'c1',
 					group: 'moved accept, name editable',
@@ -111,7 +111,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 			move: { ref: ref('SubFunction', 'sf1'), parent: ref('Function', 'f2') },
 			expected: {
 				move: 'SubFunction sf1 from Function f1 to Function f2: 3 records, 1 references follow',
-				nameTaken: undefined,
+				keyTaken: undefined,
 				node: 'moved SubFunction instance sf1 source sf1 applied sf1 from f1 to f2',
 				rootRef: 'sf1',
 				group: 'moved accept, name editable',
@@ -131,7 +131,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 				move: { ref: ref('LDevice', 'ctrl'), parent: ref('Server', 'a-server2') },
 				expected: {
 					move: 'LDevice ctrl from Server a-server1 to Server a-server2: 3 records, 0 references follow',
-					nameTaken: undefined,
+					keyTaken: undefined,
 					node: 'moved LDevice instance ctrl source ctrl applied ctrl from a-server1 to a-server2',
 					rootRef: 'ctrl',
 					group: 'moved accept',
@@ -148,7 +148,7 @@ describe('tx.lifecycle.reportMove - a move reported for a merge review', () => {
 			move: { ref: ref('Function', 'f7'), parent: ref('Bay', 'b3'), before: ref('Function', 'f9') },
 			expected: {
 				move: 'Function f7 from Bay b3 to Bay b3: 1 records, 0 references follow, reordered',
-				nameTaken: undefined,
+				keyTaken: undefined,
 				node: 'moved Function instance f7 source f7 applied f7 from b3 to b3',
 				rootRef: 'f7',
 				group: 'moved accept, name editable',
@@ -229,7 +229,7 @@ async function reported(params: { source: Source; move: ReportMoveParams }): Pro
 function nothingToMove(): DescribedReport {
 	return {
 		move: undefined,
-		nameTaken: undefined,
+		keyTaken: undefined,
 		node: undefined,
 		rootRef: undefined,
 		group: undefined,
@@ -250,13 +250,13 @@ function describeReport(report: MoveReport): DescribedReport {
 	const editable = group?.editableAttributes?.some((attribute) => attribute.attr === 'name')
 		? ', name editable'
 		: ''
-	const taken = move?.nameTaken
+	const taken = move?.keyTaken
 	return {
 		move: move
 			? `${move.element.tagName} ${move.element.id} from ${move.from.tagName} ${move.from.id} to ${move.to.tagName} ${move.to.id}: ${move.subtreeSize} records, ${move.followingReferences} references follow${move.reordered ? ', reordered' : ''}`
 			: undefined,
-		nameTaken: taken
-			? `${taken.attribute} ${taken.value} taken by ${taken.collidesWith.tagName} ${taken.collidesWith.id} (${taken.constraint}) → ${taken.proposed}`
+		keyTaken: taken
+			? `${taken.constraint} ${describeValues(taken.values)} taken by ${taken.takenBy.tagName} ${taken.takenBy.id} → ${describeValues(taken.proposed)}`
 			: undefined,
 		node: node
 			? `${node.change} ${node.tagName} instance ${node.instanceRef?.id} source ${node.sourceRef?.id} applied ${node.appliedRef?.id} from ${node.movedFrom?.id} to ${node.movedTo?.id}`
@@ -271,4 +271,11 @@ function describeReport(report: MoveReport): DescribedReport {
 		refusals: report.refusals.map((refusal) => `${refusal.key} ${refusal.code}`),
 		nothingToMove: report.nothingToMove === true,
 	}
+}
+
+/** The values of a key, field by field. */
+function describeValues(values: Readonly<Record<string, string>>): string {
+	return Object.entries(values)
+		.map(([field, value]) => `${field}=${value}`)
+		.join(' ')
 }
