@@ -15,6 +15,7 @@ import { toAnyRawRecord } from '@/v2019C1/extensions/reference/query/find/collec
 import { readAttribute } from '@/v2019C1/helpers'
 import { exclusiveGroupsHeld, groupAttributeNames } from '@/v2019C1/hooks/shared/exclusive-groups'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
+import { parentRefOf } from '@/v2019C1/hooks/shared/parent-ref'
 import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
 import {
 	hasAttributeChange,
@@ -254,7 +255,7 @@ async function localPathsWritten(params: {
 	const paths = await buildElementPaths(query, {
 		refs: unnamed.flatMap((entry) => [
 			toRef(entry.target) as Scl.Ref<Scl.ElementsOf>,
-			parentRefOf({ record: entry.record }),
+			parentRefOf({ record: entry.record, caller: 'uuidReferences' }),
 		]),
 	})
 	const composed = unnamed.map(function composedPath(entry, index) {
@@ -305,17 +306,6 @@ async function localPathsWritten(params: {
 		]
 	})
 	return { operations, refusals }
-}
-
-/** The element holding a record (its BehaviorDescription, for a behaviour variable). */
-function parentRefOf(params: { record: AnyRawRecord }): Scl.Ref<Scl.ElementsOf> {
-	const { parent } = params.record
-	if (!parent) {
-		return throwDialecteError('ASSERTION_FAILED', {
-			detail: `uuidReferences: the ${params.record.tagName} "${params.record.id}" has no parent`,
-		})
-	}
-	return toRef(parent) as Scl.Ref<Scl.ElementsOf>
 }
 
 /** A uuid reference refused, as the commit throws it and lists it. */

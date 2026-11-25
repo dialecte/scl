@@ -277,7 +277,7 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1/test",
 			"otherRoutes": [],
-			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 7 more ...; info: { ...; }; }>>",
+			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; }) => Promise<TestProjectResult<Config, { cleanUp: { query: typeof import(\"../extensions/clean-up/query\"); transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 7 more ....",
 			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first: once imported, the given documents must pass the output checks but the XSD validator (schema, uniqueness, references, identity; see `assertGivenDocuments`), or the call rejects with a plain `Error` named after the running test. `allowInvalidFixture` tolerates the violations it lists (with the reason; a listed violation they lack fails the call too), `allowIncoherentReferences` leaves the references out.",
 			"intents": [
 				"open an SCL project in a test with fixtures imported",
@@ -325,6 +325,19 @@
 				"test an act that reads several SCL files"
 			],
 			"declaredAt": "src/v2019C1/test/open-scl-document.ts:14"
+		},
+		{
+			"path": "doc.query.cleanUp.findOutOfScopeVariables",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "() => Promise<OutOfScopeVariable[]>",
+			"summary": "Every stored behaviour variable (`InputVar`, `OutputVar`) whose uuid names an element out of its behaviour's reach (not at or below the element holding its BehaviorDescription), one entry per pair, the `InputVar`s first, then the `OutputVar`s, each tag in document order: the state the commit refuses (`REFERENCE_INCOHERENT` `out-of-scope`) for what a transaction writes, kept by projects written before. Its `counterpart` is the one element of the target's tag in reach sharing its template lineage: an instance of it (`templateUuid` its uuid), the template it is an instance of, or another instance of that template; none when no element, or several, are. A variable naming nothing (the orphan rules' case) or in reach is not listed. `tx.cleanUp.repairOutOfScopeVariables` writes what this answers.",
+			"intents": [
+				"find behaviour variables naming an LNode outside their behaviour",
+				"list out-of-scope InputVar OutputVar",
+				"preview the repair of stored out-of-reach references"
+			],
+			"declaredAt": "src/v2019C1/extensions/clean-up/query/out-of-scope-variables.ts:33"
 		},
 		{
 			"path": "doc.query.dataflow.all",
@@ -970,6 +983,19 @@
 				"tidy up the DataTypeTemplates of an imported file"
 			],
 			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/prune-unused-types.ts:16"
+		},
+		{
+			"path": "tx.cleanUp.repairOutOfScopeVariables",
+			"root": "tx",
+			"otherRoutes": [],
+			"signature": "() => Promise<RepairedVariables>",
+			"summary": "Repair every stored behaviour variable naming an element out of its behaviour's reach (`query.cleanUp.findOutOfScopeVariables`): one with a counterpart in reach is given the counterpart's uuid, its local path then written by the hooks from it (`rescoped`); one without has its reference cleared, its uuid, path and data names, the variable kept, as the orphan rules clear a behaviour variable (`cleared`). A variable holding both its reference groups (data and input or output) is left as it is (`left`): its groups are the caller's to settle first (the commit refuses a rescope of it, `groups-together`). Answers each in the query's order. For projects written before the commit refused such variables: once repaired, they copy, instantiate and update again.",
+			"intents": [
+				"repair out-of-scope behaviour variables",
+				"re-scope InputVar OutputVar to the LNode in reach",
+				"clear references a behaviour cannot name"
+			],
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/repair-out-of-scope-variables.ts:29"
 		},
 		{
 			"path": "tx.cleanUp.resetLNode",
