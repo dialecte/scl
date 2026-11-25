@@ -100,7 +100,16 @@ export type {
 	TemplateUuidWarningInfo,
 } from './validate'
 
-export type { IedClassification, IedClassificationBasis, IedKind } from './ied/public'
+export type {
+	BoundIed,
+	BoundIedAssignment,
+	BoundIeds,
+	BoundIedsParams,
+	BoundLNodes,
+	IedClassification,
+	IedClassificationBasis,
+	IedKind,
+} from './ied/public'
 export type {
 	CidExtractParams,
 	ClientRefs,
