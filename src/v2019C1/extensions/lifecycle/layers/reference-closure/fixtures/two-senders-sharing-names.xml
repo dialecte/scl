@@ -1,0 +1,85 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root">
+	<!-- A and B share the names LD1 / GooseA. A: GooseA and SvA send SetA (one member names LD9, which A does not hold), RptLn sits in LN PTRC1 with SetR, AP3 serves AP1's server (ServerAt) on Bus2, AP2 holds no server; B: GooseA and GooseB on its own SetA -->
+	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Communication>
+		<SubNetwork name="Bus1" type="8-MMS">
+			<ConnectedAP iedName="A" apName="AP1" dev:db-id="a-ap1-connection">
+				<Address dev:db-id="a-ap1-address"><P type="IP">10.0.0.1</P></Address>
+				<GSE ldInst="LD1" cbName="GooseA" dev:db-id="a-gse-goose-a"/>
+				<SMV ldInst="LD1" cbName="SvA" dev:db-id="a-smv-sv-a"/>
+			</ConnectedAP>
+			<ConnectedAP iedName="B" apName="AP1" dev:db-id="b-ap1-connection">
+				<GSE ldInst="LD1" cbName="GooseA" dev:db-id="b-gse-goose-a"/>
+				<GSE ldInst="LD1" cbName="GooseB" dev:db-id="b-gse-goose-b"/>
+			</ConnectedAP>
+		</SubNetwork>
+		<SubNetwork name="Bus2" type="8-MMS">
+			<ConnectedAP iedName="A" apName="AP3" dev:db-id="a-ap3-connection">
+				<GSE ldInst="LD1" cbName="GooseA" dev:db-id="a-ap3-gse-goose-a"/>
+			</ConnectedAP>
+			<ConnectedAP iedName="A" apName="AP2" dev:db-id="a-ap2-connection"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="A" dev:db-id="a">
+		<AccessPoint name="AP1" dev:db-id="a-ap1">
+			<Server dev:db-id="a-server">
+				<Authentication dev:db-id="a-authentication"/>
+				<LDevice inst="LD1" dev:db-id="a-ld1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="a-ln0">
+						<DataSet name="SetA" dev:db-id="a-set-a">
+							<FCDA ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST" dev:db-id="a-fcda-ggio1"/>
+							<FCDA ldInst="LD9" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST" dev:db-id="a-fcda-absent"/>
+						</DataSet>
+						<GSEControl name="GooseA" datSet="SetA" appID="AppA" confRev="1" dev:db-id="a-goose-a"/>
+						<SampledValueControl name="SvA" datSet="SetA" smvID="SvA" smpRate="80" nofASDU="1" confRev="1" dev:db-id="a-sv-a">
+							<IEDName apRef="AP1" dev:db-id="a-sv-a-receiver">B</IEDName>
+							<SmvOpts refreshTime="true" dev:db-id="a-sv-a-options"/>
+						</SampledValueControl>
+					</LN0>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" dev:db-id="a-ggio1"/>
+					<LN lnClass="PTRC" inst="1" lnType="PTRC_Type" dev:db-id="a-ptrc1">
+						<DataSet name="SetR" dev:db-id="a-set-r">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTRC" lnInst="1" doName="Op" fc="ST" dev:db-id="a-fcda-ptrc1"/>
+						</DataSet>
+						<ReportControl name="RptLn" datSet="SetR" confRev="1" dev:db-id="a-rpt-ln"/>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" dev:db-id="a-ap2"/>
+		<AccessPoint name="AP3" dev:db-id="a-ap3">
+			<ServerAt apName="AP1" dev:db-id="a-ap3-server-at"/>
+		</AccessPoint>
+	</IED>
+	<IED name="B" dev:db-id="b">
+		<AccessPoint name="AP1" dev:db-id="b-ap1">
+			<Server dev:db-id="b-server">
+				<Authentication dev:db-id="b-authentication"/>
+				<LDevice inst="LD1" dev:db-id="b-ld1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="b-ln0">
+						<DataSet name="SetA" dev:db-id="b-set-a">
+							<FCDA ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST" dev:db-id="b-fcda-ggio1"/>
+						</DataSet>
+						<GSEControl name="GooseA" datSet="SetA" appID="AppBA" confRev="1" dev:db-id="b-goose-a"/>
+						<GSEControl name="GooseB" datSet="SetA" appID="AppBB" confRev="1" dev:db-id="b-goose-b"/>
+					</LN0>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" dev:db-id="b-ggio1"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="SPS_Type"/>
+		</LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO">
+			<DO name="Ind" type="SPS_Type"/>
+		</LNodeType>
+		<LNodeType id="PTRC_Type" lnClass="PTRC">
+			<DO name="Op" type="SPS_Type"/>
+		</LNodeType>
+		<DOType id="SPS_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>
