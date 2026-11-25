@@ -1,6 +1,7 @@
 import { assertCoherentSclReferences } from './assert-coherent-scl-references'
 import { assertValidSclXml } from './assert-valid-scl-xml'
 import { assertGivenEditions } from './given-edition'
+import { assertGivenExtensionVersions } from './given-extension-version'
 
 import type { OpenSclDocumentParams } from './open-scl-document.types'
 import type { Scl } from '@/v2019C1/config'
@@ -14,6 +15,11 @@ import type { Scl } from '@/v2019C1/config'
  */
 export async function openSclDocument(params: OpenSclDocumentParams): Promise<Scl.Document> {
 	const { project, xml, label, allowIncoherentReferences } = params
+	assertGivenExtensionVersions({
+		given: [{ role: 'source', xml }],
+		label,
+		noExtensionVersion: params.noExtensionVersion,
+	})
 	assertValidSclXml({ xml, label, requireComplete: false })
 	if (!allowIncoherentReferences) await assertCoherentSclReferences({ xml, label })
 

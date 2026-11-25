@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- a function holding an LNode typed by id, two category references by uuid (one naming nothing), a DO naming no DOType and a DAType naming itself -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" dev:db-id="scl-1" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" dev:db-id="scl-1" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<Substation name="S1" dev:db-id="s1">
 		<Function name="F1" uuid="00000000-0000-4000-8000-0000000000f1" dev:db-id="f1">
 			<LNode iedName="None" lnClass="GGIO" lnInst="1" lnType="LN1" dev:db-id="lnode-1"/>

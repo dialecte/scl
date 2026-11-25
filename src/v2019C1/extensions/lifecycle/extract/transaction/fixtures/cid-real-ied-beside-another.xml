@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<!-- Selected: a real IED (ICD source) with values, a vendor Private, both source file lists of two entries each and two control blocks on OutSet; Other on StationBus beside it and alone on OtherBus; Unused_Type and the types of Other used by no LN of Selected -->
 	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
 	<Communication>

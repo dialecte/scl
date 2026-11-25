@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<!-- project North with BCU1 placed from the template ISD's first revision, LineProtection also holding an LNode of the project's own (b...017), specified on BCU1, bound to the CILO of BCU2 -->
 	<Header id="North" fileType="SSD" uuid="f0000000-0000-4000-8000-000000000020" version="3" revision="B"/>
 	<Substation name="North" uuid="b0000000-0000-4000-8000-000000000001">

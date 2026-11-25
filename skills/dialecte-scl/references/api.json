@@ -201,7 +201,7 @@
 				"check an exported SCL document with XPath in a test",
 				"query SCL elements by namespace prefix"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:186"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:196"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertNoNewSclOutputViolations",
@@ -229,7 +229,7 @@
 				"check an SCL element was removed",
 				"assert absence with XPath in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:197"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:207"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.assertValidSclXml",
@@ -277,14 +277,14 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1/test",
 			"otherRoutes": [],
-			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; editionOneRoot?: string; }) => Promise<TestProjectResult<Config, { cleanUp: { query: typeof import(\"../extensions/clean-up/query\"); transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 7 more ....",
+			"signature": "(params: { sourceXml: string; targetXml?: string; dev?: { perf?: boolean; }; allowIncoherentReferences?: string; allowInvalidOutput?: SclOutputOptOut; allowInvalidFixture?: SclOutputOptOut; editionOneRoot?: string; noExtensionVersion?: string; }) => Promise<TestProjectResult<Config, { cleanUp: { query: typeof import(\"../extensions/clean-up/query\"); transaction: typeof import(\"../extensions/clean-up/transaction\"); }; dataflow: { query: typeof import(\"../extensions/dataflow/query\"); transaction: typeof import(\"../extensions/dataflow/transaction\"); }; ... 7 more ....",
 			"summary": "Open a test project with `sourceXml` (and `targetXml`) imported, the fixtures checked first: once imported, the given documents must pass the output checks but the XSD validator (schema, uniqueness, references, identity; see `assertGivenDocuments`), or the call rejects with a plain `Error` named after the running test. `allowInvalidFixture` tolerates the violations it lists (with the reason; a listed violation they lack fails the call too), `allowIncoherentReferences` leaves the references out.",
 			"intents": [
 				"open an SCL project in a test with fixtures imported",
 				"get source and target SCL documents to test against",
 				"assert the SCL output is valid against the XSD in a test"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:96"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:99"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.createSclTestRecord",
@@ -297,7 +297,7 @@
 				"build an SCL record for a unit test",
 				"test a pure function or helper on an SCL record without a project"
 			],
-			"declaredAt": "src/v2019C1/test/hydrated-test.ts:175"
+			"declaredAt": "src/v2019C1/test/hydrated-test.ts:185"
 		},
 		{
 			"path": "@dialecte/scl/v2019C1/test.isSclXsdConfigured",
@@ -324,7 +324,7 @@
 				"import a previous revision in a test",
 				"test an act that reads several SCL files"
 			],
-			"declaredAt": "src/v2019C1/test/open-scl-document.ts:15"
+			"declaredAt": "src/v2019C1/test/open-scl-document.ts:16"
 		},
 		{
 			"path": "doc.query.cleanUp.findOutOfScopeVariables",

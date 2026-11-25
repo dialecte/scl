@@ -5,6 +5,7 @@ import {
 import { assertAllowInvalidFixtureReason, assertOptOutReason } from './assert-scl-output'
 import { assertValidSclXml } from './assert-valid-scl-xml'
 import { assertGivenEditions } from './given-edition'
+import { assertGivenExtensionVersions, givenXmlOf } from './given-extension-version'
 import {
 	assertGivenDocuments,
 	assertOutputGateTestCases,
@@ -27,6 +28,8 @@ import type { TestHelpers, XmlAssertions } from '@dialecte/core/test'
 
 export {
 	ALL_XMLNS_NAMESPACES,
+	CURRENT_6_100_VERSION,
+	CURRENT_SCL_EDITION,
 	XMLNS_SCL_6_100_NAMESPACE,
 	XMLNS_SCL_NAMESPACE,
 } from './scl-xmlns.constants'
@@ -105,6 +108,8 @@ export async function createSclTestProject(params: {
 	allowInvalidFixture?: SclOutputOptOut
 	/** The reason a given document is a first-edition file, its root stating no SCL version. */
 	editionOneRoot?: string
+	/** The reason a given document carries the eIEC61850-6-100 namespace without its version on its root. */
+	noExtensionVersion?: string
 }) {
 	const {
 		sourceXml,
@@ -118,6 +123,11 @@ export async function createSclTestProject(params: {
 	const label = expect.getState().currentTestName ?? 'createSclTestProject'
 	assertOptOutReason({ name: 'allowInvalidOutput', optOut: allowInvalidOutput, label })
 	assertAllowInvalidFixtureReason({ allowInvalidFixture, label })
+	assertGivenExtensionVersions({
+		given: givenXmlOf({ sourceXml, targetXml }),
+		label,
+		noExtensionVersion: params.noExtensionVersion,
+	})
 	assertValidSclXml({ xml: sourceXml, label: 'sourceXml', requireComplete: false })
 	if (targetXml) assertValidSclXml({ xml: targetXml, label: 'targetXml', requireComplete: false })
 	if (!allowIncoherentReferences) {

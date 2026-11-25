@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-extract:test:vendor" dev:db-id="source-root" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:ied-extract:test:vendor" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<!-- IED Selected whose associations and key distribution name itself and IED Foreign, then IED Foreign -->
 	<Header id="ProjectSource" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="2" dev:db-id="source-header"/>
 	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" templateUuid="20000000-0000-4000-8000-000000000002" desc="Selected specification" dev:db-id="selected-ied">

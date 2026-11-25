@@ -68,6 +68,8 @@ export type OutputGateTestCase = CoreTest.BaseXmlTestCase & {
 	allowIncoherentReferences?: string
 	/** The reason a given document is a first-edition file on purpose, its root stating no SCL version. */
 	editionOneRoot?: string
+	/** The reason a given document carries the eIEC61850-6-100 namespace without its version on its root on purpose. */
+	noExtensionVersion?: string
 }
 
 export type WithOutputGateParams<GenericTestCase extends OutputGateTestCase, GenericResult> = {

@@ -11,4 +11,6 @@ export type OpenSclDocumentParams = {
 	allowIncoherentReferences?: string
 	/** The reason the document is a first-edition file on purpose, its root stating no SCL version. */
 	editionOneRoot?: string
+	/** The reason the document carries the eIEC61850-6-100 namespace without its version on its root on purpose. */
+	noExtensionVersion?: string
 }

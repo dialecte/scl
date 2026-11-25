@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Three LNodes, each with its own LNodeType -> DOType -> EnumType closure: nine types, three of each tag. -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-s" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-s" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
     <Substation name="S1" dev:db-id="sub-s">
         <LNode iedName="None" lnClass="CSWI" lnInst="1" lnType="L1" dev:db-id="lnode-1"/>
         <LNode iedName="None" lnClass="CSWI" lnInst="2" lnType="L2" dev:db-id="lnode-2"/>

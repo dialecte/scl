@@ -34,6 +34,11 @@ export namespace SclTest {
 		 * Every other given document states `version="2007" revision="C" release="5"` (as `ALL_XMLNS_NAMESPACES` does).
 		 */
 		editionOneRoot?: string
+		/**
+		 * Set when a given document carries the eIEC61850-6-100 namespace without the extension's version on its root on
+		 * purpose: the reason it does. Every other such root states `CURRENT_6_100_VERSION` (as `ALL_XMLNS_NAMESPACES` does).
+		 */
+		noExtensionVersion?: string
 	}
 	export type TestCases<T extends BaseTestCase = BaseXmlTestCase> = Record<string, T>
 	export type TestDocument = CoreTest.TestDocument<Config>

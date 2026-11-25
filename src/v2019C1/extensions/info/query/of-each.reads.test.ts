@@ -163,7 +163,7 @@ describe('ofEach - the records moved', () => {
 
 /** Three bays with labels, two ApplicationSclRefs titled by their SclFileReference. */
 const LABELS_AND_CHILD_TITLES_XML = /* xml */ `
-	<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" dev:db-id="scl-1">
+	<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1" dev:db-id="scl-1">
 		<Substation name="S1" dev:db-id="sub-1">
 			<VoltageLevel name="V1" dev:db-id="vl-1">
 				<Bay name="B1" dev:db-id="bay-1">
@@ -278,7 +278,7 @@ describe('of and ofEach - labels and titles read from a child', () => {
 
 /** A Bay holding two `<Labels>`, an ApplicationSclRef titled by its SclFileReference. */
 const TWO_LABELS_XML = /* xml */ `
-	<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" dev:db-id="scl-1">
+	<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1" dev:db-id="scl-1">
 		<Substation name="S1" dev:db-id="sub-1">
 			<VoltageLevel name="V1" dev:db-id="vl-1">
 				<Bay name="B1" dev:db-id="bay-1">

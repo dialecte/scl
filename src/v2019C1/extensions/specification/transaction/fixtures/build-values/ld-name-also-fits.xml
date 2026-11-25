@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<Substation name="S1"><VoltageLevel name="E1"><Bay name="Q01"><Function name="PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" dev:db-id="fn"><LNode iedName="None" lnClass="PTOC" lnInst="1" lnType="PTOC_T" dev:db-id="ptoc1"></LNode></Function></Bay></VoltageLevel></Substation>
 	<IED name="S" dev:db-id="ied-s"><AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0"><LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/><LN lnClass="LPHD" inst="1" prefix="" lnType="LPHD_T"/></LDevice></Server></AccessPoint></IED>
 	<DataTypeTemplates>

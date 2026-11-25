@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<!-- project South: substation South / E1 / Q01, Q01 holding the copy of the template bay variable VBAY (value 9); real IED R1 (from a supplier ICD) beside it, on the station bus -->
 	<Header id="South" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000030" version="1" revision="A"/>
 	<Substation name="South" uuid="c0000000-0000-4000-8000-000000000001">

@@ -1,3 +1,4 @@
+import type { ROOT_OPT_IN_NEEDS } from './given-edition.constants'
 import type { GatedDocument } from './output-gate.types'
 
 export type AssertGivenEditionsParams = {
@@ -13,4 +14,10 @@ export type AssertGivenEditionsParams = {
 
 export type RootVersionParams = { document: GatedDocument['document'] | undefined }
 
-export type EditionOneRootReasonParams = { editionOneRoot: string | undefined; label: string }
+export type RootOptInReasonParams = {
+	/** The opt-in, as the case names it. */
+	name: keyof typeof ROOT_OPT_IN_NEEDS
+	/** Its value: absent when the case does not set it. */
+	reason: string | undefined
+	label: string
+}

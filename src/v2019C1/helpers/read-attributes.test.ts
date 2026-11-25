@@ -1,11 +1,14 @@
 import { readAttribute, readAttributes } from './read-attributes'
 
+import { XMLNS_DEV_NAMESPACE } from '@dialecte/core/test'
 import { describe, expect } from 'vitest'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import {
-	ALL_XMLNS_NAMESPACES,
+	CURRENT_SCL_EDITION,
 	CUSTOM_RECORD_ID_ATTRIBUTE,
+	XMLNS_SCL_6_100_NAMESPACE,
+	XMLNS_SCL_NAMESPACE,
 	createSclTestRecord,
 	runSclTestCases,
 } from '@/v2019C1/test'
@@ -156,8 +159,11 @@ describe('readAttribute(s) read as the query reads', () => {
 	}
 
 	const id = CUSTOM_RECORD_ID_ATTRIBUTE
+	/** The root states the extension's revision only: its version is read absent, as the schema fixes it. */
+	const NO_EXTENSION_VERSION =
+		'the root states the extension revision only, its version read as the schema fixes it'
 	const sourceXml = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} ${NAMESPACED_REVISION}="C" ${id}="root">
+		<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${CURRENT_SCL_EDITION} ${NAMESPACED_REVISION}="C" ${id}="root">
 			<Substation name="S1" ${id}="substation">
 				<VoltageLevel name="V1" ${id}="voltage-level">
 					<Bay name="B1" ${id}="bay">
@@ -172,11 +178,13 @@ describe('readAttribute(s) read as the query reads', () => {
 		'LNode: stored, stored empty, absent with a schema default, absent without → as the query reads':
 			{
 				sourceXml,
+				noExtensionVersion: NO_EXTENSION_VERSION,
 				ref: { tagName: 'LNode', id: 'lnode' },
 				names: [{ name: 'lnClass' }, { name: 'prefix' }, { name: 'iedName' }, { name: 'ldInst' }],
 			},
 		'SCL: namespaced stored, namespaced fixed absent → as the query reads': {
 			sourceXml,
+			noExtensionVersion: NO_EXTENSION_VERSION,
 			ref: { tagName: 'SCL', id: 'root' },
 			names: [
 				{ name: NAMESPACED_REVISION },
