@@ -4,6 +4,12 @@ import { resolveTargetStructure } from './resolve-target-structure'
 import { throwDialecteError } from '@dialecte/core'
 
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
+import {
+	planCopyUnbinds,
+	readCopyTrees,
+	writeCopyUnbinds,
+} from '@/v2019C1/extensions/lifecycle/copy'
+import { NO_LEVEL_LANDED } from '@/v2019C1/extensions/lifecycle/copy/copy.constants'
 import { readSatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { scopeFunctionCarried } from '@/v2019C1/extensions/lifecycle/cross-cutting/carried-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
@@ -59,6 +65,8 @@ import type * as Core from '@dialecte/core'
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
 	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
+	// a copy reads the document it is pasted into: the shared elements it is classified by are the project's own
+	const sourceIsProject = policy.placementIdentity === 'copy'
 
 	// where the function lands: where the consumer started, or — started above the level the
 	// function was made for — on the level its template says, the missing levels created
@@ -87,20 +95,24 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	const index = await readSatelliteIndex(sourceQuery)
 	// what the function holds naming what it does not place (a node no file of it holds, another function) is not
 	// written, nor a variable it holds left applying to nothing: the report tells of each reference
-	// the levels of the template above it land on the levels of the structure: a reference to one names it
-	const landed = await landOnStructure(sourceQuery, { primaryRef: functionRef, structure })
-	const carried = await scopeFunctionCarried(sourceQuery, {
-		functionRef,
-		landedLevels: landed.levels,
-		index,
-	})
+	// the levels of the template above it land on the levels of the structure: a reference to one names it; a copy
+	// names the levels it names, where they are
+	const landed =
+		policy.placement === 'template-levels'
+			? await landOnStructure(sourceQuery, { primaryRef: functionRef, structure })
+			: NO_LEVEL_LANDED
+	// a copy keeps what it carries as written: inside one document the element a reference names is there
+	const carried =
+		policy.outsideReferences === 'leave-out'
+			? await scopeFunctionCarried(sourceQuery, { functionRef, landedLevels: landed.levels, index })
+			: undefined
 	const { cloneMappings: functionMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
 		targetParent,
 		retagRoot,
 		withTypes: { keepNameFrom: keepNameTypesFrom },
-		leaveOut: carried.leaveOut,
+		leaveOut: carried?.leaveOut,
 	})
 
 	// An FSD also carries the FunctionCategory classification that references the
@@ -108,7 +120,14 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 	// structure is resolved from `targetParent` (Bay / VoltageLevel / Substation).
 	const { cloneMappings: categoryCloneMappings, redirectMappings } = await cloneFunctionCategories(
 		tx,
-		{ sourceQuery, functionRef, structure, categoryMappings, matchKey: policy.matchKey },
+		{
+			sourceQuery,
+			functionRef,
+			structure,
+			categoryMappings,
+			matchKey: policy.matchKey,
+			sourceIsProject,
+		},
 	)
 
 	// external cross-cutting satellites (Variable / BehaviorDescription) that apply
@@ -122,6 +141,8 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		bumpsCollisions: policy.bumpsCollisions,
 		scope,
 		index,
+		sourceIsProject,
+		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
 	const allMappings = [
@@ -138,6 +159,14 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		mode: policy.placementIdentity,
 		redirectMappings: [...landing.redirectMappings, ...redirectMappings, ...landed.redirects],
 	})
+	// a copy releases its LNodes from the IED that does not travel with it, as its report lists
+	if (sourceIsProject) {
+		const trees = await readCopyTrees(sourceQuery, { refs: [functionRef] })
+		await writeCopyUnbinds(tx, {
+			unbinds: planCopyUnbinds({ trees }),
+			cloneMappings: allMappings,
+		})
+	}
 
 	// a shared element created here (no project element to map onto) is named at its structural level
 	async function placementStructure(): Promise<TargetStructure> {

@@ -66,8 +66,11 @@ export async function cloneAppliedSatellites(
 		const satelliteId = readRecordId(satellite.satelliteRef)
 		return !referencedIds.has(satelliteId) && !params.carried?.notPlaced.has(satelliteId)
 	})
-	// one the project holds by its uuid already is not placed again
-	const held = await findHeldSatelliteIds(tx, { satellites: applied })
+	// one the project holds by its uuid already is not placed again — but a copy's source is the project: every one is
+	// held, none brought from another file
+	const held = params.sourceIsProject
+		? new Set<string>()
+		: await findHeldSatelliteIds(tx, { satellites: applied })
 	// one applying where the project's copy of it applies already does not apply there twice
 	const duplicates = params.held
 		? collectDuplicateApplications({ satellites: applied, index, held: params.held })
@@ -124,7 +127,7 @@ export async function cloneAppliedSatellites(
 						...(leftOut ?? []),
 						...(params.carried?.leaveOut ?? []),
 						...(duplicates ?? []),
-						...collectOutOfScopeReferences({ tree, scope }),
+						...(params.keepsOutsideReferences ? [] : collectOutOfScopeReferences({ tree, scope })),
 					])
 				)
 			},
@@ -159,7 +162,7 @@ function indexFrameLandings(frame: FramePlacement): FrameLandings {
  * The level of the target structure a satellite's nearest structural ancestor maps onto, as `resolveStructureRef`; one
  * held outside the substations (a line, a process) goes to the outermost level of the structure.
  */
-function readStructureLevel(params: {
+export function readStructureLevel(params: {
 	ancestors: readonly AnyTrackedRecord[]
 	structure: TargetStructure
 }): Scl.Ref<Scl.ElementsOf> {

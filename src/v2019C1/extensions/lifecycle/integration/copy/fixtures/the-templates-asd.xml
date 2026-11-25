@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The ASD the application A1 of instances-of-templates.xml was placed from: A1 (asd-a) composing G1 (asd-g). -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="asd" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="TEMPLATE" dev:db-id="asd-s">
+        <VoltageLevel name="TEMPLATE" dev:db-id="asd-vl">
+            <Bay name="TEMPLATE" dev:db-id="asd-b">
+                <Private type="eIEC61850-6-100" dev:db-id="asd-b-private">
+                    <eIEC61850-6-100:Application name="A1" type="DCS" uuid="asd-a" originUuid="first-a" dev:db-id="asd-a">
+                        <eIEC61850-6-100:FunctionRole name="ROOT" dev:db-id="asd-root">
+                            <eIEC61850-6-100:FunctionRoleContent dev:db-id="asd-root-content">
+                                <eIEC61850-6-100:FunctionRef function="TEMPLATE/TEMPLATE/TEMPLATE/G1" functionUuid="asd-g" dev:db-id="asd-a-g1"/>
+                            </eIEC61850-6-100:FunctionRoleContent>
+                        </eIEC61850-6-100:FunctionRole>
+                    </eIEC61850-6-100:Application>
+                </Private>
+                <Function name="G1" uuid="asd-g" dev:db-id="asd-g">
+                    <LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="asd-gln" dev:db-id="asd-gln"/>
+                </Function>
+            </Bay>
+        </VoltageLevel>
+    </Substation>
+</SCL>

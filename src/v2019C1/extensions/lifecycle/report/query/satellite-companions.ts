@@ -116,6 +116,8 @@ export async function foldSatelliteCompanions(
 		params
 	const matchKey = params.matchKey ?? 'templateUuid'
 	const firstTime = instanceScopeId === undefined
+	// a copy reads the document it is placed into: a reference the source holds is never one the placement wrote
+	const sourceIsProject = params.diffPolicy.sourceIsProject === true
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
 
@@ -164,6 +166,7 @@ export async function foldSatelliteCompanions(
 						leftOut: params.notSelected,
 						redirectMappings: params.redirectMappings,
 						placeholderLineages: params.placeholderLineages,
+						sourceIsProject,
 					})
 				: await diffSatellite(query, { ...params, satelliteRef, instance, projectOwned, matchKey })
 		// what the satellite leaves out naming outside the placement is told of with the primary

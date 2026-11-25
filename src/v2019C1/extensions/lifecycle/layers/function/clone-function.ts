@@ -115,6 +115,7 @@ export async function cloneFunctionCategories(
 				target: existing,
 				scope,
 				matchKey: params.matchKey ?? 'templateUuid',
+				sourceIsProject: params.sourceIsProject,
 			})
 			cloneMappings.push(...contributed.cloneMappings)
 			redirectMappings.push(...contributed.redirectMappings)
