@@ -66,19 +66,19 @@ describe('an edit of a subscriber narrowing or widening what it names', () => {
 			],
 			unexpectedQueries: ['//default:IEDName[@ldInst or @ldUuid]'],
 		},
-		// an access point subscriber: the access point name the schema requires removed, its apUuid kept
+		// an access point subscriber created with its apUuid: the access point name the schema requires removed, its apUuid kept
 		"an access point subscriber's access point name removed → written again from its apUuid": {
 			sourceXml: breakersAndASubscriber,
-			subscriber: { apRef: 'AP1' },
+			subscriber: { apRef: 'AP1', apUuid: 'ap8' },
 			edited: { apRef: undefined } as unknown as Record<string, string>,
 			expectedQueries: [
 				'//default:GSEControl/default:IEDName[.="IED8"][@apRef="AP1"][@apUuid="ap8"]',
 			],
 		},
-		// IED7's GOOSE gets a subscriber naming IED8's access point AP1; a device name is then added
+		// IED7's GOOSE gets a subscriber naming IED8's access point AP1 with its apUuid; a device name is then added
 		'an access point subscriber given a device → its apUuid kept, the device uuid written': {
 			sourceXml: breakersAndASubscriber,
-			subscriber: { apRef: 'AP1' },
+			subscriber: { apRef: 'AP1', apUuid: 'ap8' },
 			edited: { ldInst: 'LD1' },
 			expectedQueries: ['//default:IEDName[.="IED8"][@apUuid="ap8"][@ldInst="LD1"][@ldUuid="ld8"]'],
 		},

@@ -59,8 +59,8 @@ describe('the commit resolves the names of a created reference as its kind write
 	type TestCase = SclTest.BaseXmlTestCase & { added: Added }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// IED8's inputs; IED8 holds CSWI1
-		'an input naming a logical node of its own IED by "@" → its lnUuid written': {
+		// IED8's inputs; IED8 holds CSWI1, which the transaction does not create
+		'an input naming a logical node of its own IED by "@" → no uuid written': {
 			sourceXml: connectionsAndAVendorCopy,
 			added: {
 				parent: IED8_INPUTS,
@@ -74,10 +74,11 @@ describe('the commit resolves the names of a created reference as its kind write
 					intAddr: 'own',
 				},
 			},
-			expectedQueries: ['//default:ExtRef[@intAddr="own"][@iedName="@"][@lnUuid="cswi8"]'],
+			expectedQueries: ['//default:ExtRef[@intAddr="own"][@iedName="@"]'],
+			unexpectedQueries: ['//default:ExtRef[@intAddr="own"][@lnUuid]'],
 		},
-		// IED7's GOOSE; IED8's access point AP1
-		'a subscriber naming its IED by its text and its access point → its apUuid written': {
+		// IED7's GOOSE; IED8's access point AP1, which the transaction does not create
+		'a subscriber naming its IED by its text and its access point → no uuid written': {
 			sourceXml: connectionsAndAVendorCopy,
 			added: {
 				parent: { tagName: 'GSEControl', id: 'gc7' } as Scl.Ref<Scl.ElementsOf>,
@@ -85,9 +86,8 @@ describe('the commit resolves the names of a created reference as its kind write
 				attributes: { apRef: 'AP1' },
 				value: 'IED8',
 			},
-			expectedQueries: [
-				'//default:GSEControl[@name="C1"]/default:IEDName[.="IED8"][@apUuid="ap8"]',
-			],
+			expectedQueries: ['//default:GSEControl[@name="C1"]/default:IEDName[.="IED8"][@apRef="AP1"]'],
+			unexpectedQueries: ['//default:IEDName[.="IED8"][@apUuid]'],
 		},
 		// IED7's data set; only IED7's vendor Private holds a logical node XCBR4
 		'an entry naming a logical node only vendor payload holds → no uuid written': {
@@ -162,13 +162,14 @@ describe('the commit resolves a reference by its names as the transaction leaves
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// IED7's data set gets an entry naming XCBR9, then the same transaction points it at XCBR1
-		'an entry created by names, then edited in the same transaction → the uuid of what its last names name':
+		// IED7's data set gets an entry naming XCBR9, then the same transaction points it at the existing XCBR1
+		'an entry created by names, then edited in the same transaction → no uuid: it is still a create':
 			{
 				sourceXml: connectionsAndAVendorCopy,
 				entry: { ...ENTRY, lnInst: '9' },
 				edited: { lnInst: '1' },
-				expectedQueries: ['//default:FCDA[@lnInst="1"][@lnUuid="xcbr7"]'],
+				expectedQueries: ['//default:FCDA[@lnInst="1"]'],
+				unexpectedQueries: ['//default:FCDA[@lnInst="1"][@lnUuid]'],
 			},
 	}
 
