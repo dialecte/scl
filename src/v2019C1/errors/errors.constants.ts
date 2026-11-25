@@ -215,7 +215,8 @@ export const SCL_ERRORS = defineErrors({
 	/**
 	 * Staging the ISD of a specification built from logical nodes breaks a rule: nothing is written.
 	 * `meta: { reason, stage: 'stageIsd', ref? }`: `target-not-empty`, `lnode-outside-process`, `shell-not-specification`,
-	 * `no-lnodes` or `ied-name`; `ref` names the element it is about.
+	 * `no-lnodes`, `ied-name` or `type-missing` (an LNode naming an LNodeType the project lacks, or a logical node of the
+	 * shell IED naming one the shell document lacks); `ref` names the element it is about.
 	 */
 	SPECIFICATION_STAGE_REFUSED: {
 		code: 'SCL2014',
