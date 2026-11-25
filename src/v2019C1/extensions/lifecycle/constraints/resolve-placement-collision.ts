@@ -93,7 +93,8 @@ export async function findConstraintParent(
 	while (parent && isTransparentElement(parent.tagName)) {
 		// dialecte-allow query-in-loop: each wrapper's parent is known only once it is read; as many reads as main's walk
 		const wrapper = await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>)
-		if (!wrapper || !isOwnTransparentElement({ record: wrapper })) break
+		if (!wrapper) return undefined
+		if (!isOwnTransparentElement({ record: wrapper })) break
 		parent = wrapper.parent
 	}
 	return parent ? (toRef(parent) as Scl.Ref<Scl.ElementsOf>) : undefined

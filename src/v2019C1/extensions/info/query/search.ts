@@ -1,7 +1,7 @@
 import { describeRecords } from './describe-records'
 import { createInfoContext } from './info-context'
 
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { SearchHit, SearchParams } from './search.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -69,7 +69,7 @@ export async function search(
 		if (ancestors.some((ancestor) => omitted.has(ancestor.tagName))) continue
 		const { record, title } = placed[index]
 		const path = ancestors.flatMap((ancestor) =>
-			isTransparentElement(ancestor.tagName)
+			isOwnTransparentElement({ record: ancestor })
 				? []
 				: [{ tagName: ancestor.tagName, id: ancestor.id }],
 		)

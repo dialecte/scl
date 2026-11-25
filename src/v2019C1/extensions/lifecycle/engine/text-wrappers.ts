@@ -1,7 +1,10 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { readAttribute } from '@/v2019C1/helpers'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import {
+	isOwnTransparentElement,
+	isTransparentElement,
+} from '@/v2019C1/helpers/transparent-elements'
 
 import type { AcceptedIds } from './decide.types'
 import type { DiffNode } from './diff.types'
@@ -121,7 +124,11 @@ async function readLeafWrappers(
 	if (refs.length === 0) return []
 	// the element's wrappers read at once
 	const children = await reader.any.getRecords(refs)
+	// an SCL Private only: a vendor's Private of another namespace is an element the compared trees show
 	return children.filter(
-		(child): child is AnyTrackedRecord => child !== undefined && child.children.length === 0,
+		(child): child is AnyTrackedRecord =>
+			child !== undefined &&
+			isOwnTransparentElement({ record: child }) &&
+			child.children.length === 0,
 	)
 }

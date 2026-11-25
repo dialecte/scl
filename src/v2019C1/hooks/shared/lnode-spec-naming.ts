@@ -13,6 +13,7 @@ import {
 	specifiedNamingOf,
 } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import {
 	addChildToPrivate,
 	handleNewPrivateRecordCase,
@@ -116,6 +117,8 @@ async function findOwnedPrivate(
 	const { lnode, type } = params
 	const privates = await query.getChildren(lnode, 'Private')
 	for (const privateRecord of privates) {
+		// only an SCL Private holds the naming: a vendor's Private of another namespace is its own element
+		if (!isOwnTransparentElement({ record: privateRecord })) continue
 		const privateType = await query.getAttribute(privateRecord, { name: 'type' })
 		if (privateType === type) return privateRecord
 	}
