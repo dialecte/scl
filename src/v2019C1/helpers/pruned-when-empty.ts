@@ -6,7 +6,7 @@ import {
 	REQUIRED_CHILD_GROUPS_BY_TAG,
 } from './pruned-when-empty.constants'
 import { readAttribute } from './read-attributes'
-import { isTransparentElement } from './transparent-elements'
+import { isOwnTransparentElement } from './transparent-elements'
 
 import type { EmptiedRule, EmptiedRuleParams } from './pruned-when-empty.types'
 import type { ReadAttributeParams } from './read-attributes.types'
@@ -89,9 +89,12 @@ function lostRequiredGroups(params: {
  *
  * @intent tell a namespace Private from a tool's private data, is this Private a wrapper of 6-100 elements, walk through a Private wrapper
  */
-export function isNamespaceWrapper(params: { record: ReadAttributeParams['record'] }): boolean {
+export function isNamespaceWrapper(params: {
+	record: ReadAttributeParams['record'] & { tagName: string; namespace: { uri: string } }
+}): boolean {
 	const { record } = params
-	if (!isTransparentElement(record.tagName)) return false
+	// a vendor's Private of another namespace is its own element, whatever its type
+	if (!isOwnTransparentElement({ record })) return false
 	const type = readAttribute({ record, name: 'type', defaults: 'none' })
 	return type !== undefined && NAMESPACE_WRAPPER_TYPES.has(type)
 }

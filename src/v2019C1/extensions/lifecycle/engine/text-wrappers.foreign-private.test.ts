@@ -13,7 +13,7 @@ import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 
-/** A function holding a text-only SCL Private and a text-only vendor Private (another namespace). */
+/** A function holding a text-only SCL Private and a text-only vendor Private (another namespace), side by side. */
 const sourceXml = /* xml */ `
 	<SCL ${ALL_XMLNS_NAMESPACES} ${id}="root-s">
 		<Substation ${id}="sub-s" name="S1">
@@ -21,9 +21,7 @@ const sourceXml = /* xml */ `
 				<Bay ${id}="bay-s" name="B1">
 					<Function ${id}="function-s" name="Prot">
 						<Private ${id}="private-s" type="ACME">scl text</Private>
-						<Private ${id}="holder-s" type="VENDOR">
-							<v:Private xmlns:v="urn:vendor" ${id}="vendor-private-s" type="ACME">vendor text</v:Private>
-						</Private>
+						<v:Private xmlns:v="urn:vendor" ${id}="vendor-private-s" type="VENDOR">vendor text</v:Private>
 					</Function>
 				</Bay>
 			</VoltageLevel>
@@ -45,15 +43,15 @@ const targetXml = /* xml */ `
 `
 
 describe('diffTextWrappers - the text-only wrappers are the SCL Privates', () => {
-	it('an SCL Private holding a text-only vendor Private (another namespace) → no text wrapper listed: the vendor Private is an element of its own', async () => {
+	it('a function holding a text-only SCL Private and a text-only vendor Private (another namespace) → the SCL one listed added, the vendor one an element the trees show', async () => {
 		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 		const sourceQuery = source.document.query as Core.Query<Config>
 		const targetQuery = target.document.query as Core.Query<Config>
 		const sourceNode = await sourceQuery.any.getTree({
-			tagName: 'Private',
-			id: 'holder-s',
-		} as Scl.Ref<'Private'>)
+			tagName: 'Function',
+			id: 'function-s',
+		} as Scl.Ref<'Function'>)
 		const instanceNode = await targetQuery.any.getTree({
 			tagName: 'Function',
 			id: 'function-t',
@@ -61,6 +59,10 @@ describe('diffTextWrappers - the text-only wrappers are the SCL Privates', () =>
 		if (!sourceNode || !instanceNode) throw new Error('trees required')
 		const nodes = await diffTextWrappers(sourceQuery, { targetQuery, sourceNode, instanceNode })
 
-		expect(nodes).toEqual([])
+		expect(
+			nodes.map(function sourceIdOf(node) {
+				return node.sourceRef?.id
+			}),
+		).toEqual(['private-s'])
 	})
 })

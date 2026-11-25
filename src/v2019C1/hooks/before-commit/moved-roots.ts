@@ -1,5 +1,5 @@
 import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import { childrenIndexOf } from '@/v2019C1/hooks/shared/follow-ancestry'
 
 import type { MovePlaces, MovedRecord, MovedRef } from './moved-roots.types'
@@ -36,9 +36,12 @@ export function movedRecordsOf(params: {
 	for (const [id, record] of last) {
 		const from = first.get(id)
 		if (!from || !record.parent || record.parent.id === from.id) continue
+		// put in an SCL Private created where it stood: wrapped, not moved; a vendor's Private is an element it moved into
+		const wrapper = last.get(record.parent.id)
 		const wrappedInPlace =
-			isTransparentElement(record.parent.tagName) &&
-			last.get(record.parent.id)?.parent?.id === from.id
+			wrapper !== undefined &&
+			isOwnTransparentElement({ record: wrapper }) &&
+			wrapper.parent?.id === from.id
 		if (!wrappedInPlace) moved.set(id, { ref: refOf(record), from, to: refOf(record.parent) })
 	}
 	return moved

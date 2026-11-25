@@ -4,7 +4,9 @@ import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 
 /**
  * Whether a tag is one of the dialecte's transparent wrappers (`transparentElements`: a `Private`): an element a tree
- * read shows the content of as its parent's, the content keeping the wrapper as its record parent.
+ * read shows the content of as its parent's, the content keeping the wrapper as its record parent. By tag only: a
+ * pre-filter on refs, which carry no namespace; a decision on a record is {@link isOwnTransparentElement}'s, a vendor's
+ * `Private` of another namespace being an ordinary element.
  */
 export function isTransparentElement(tagName: string): boolean {
 	return (SCL_DIALECTE_CONFIG.transparentElements as readonly string[]).includes(tagName)
