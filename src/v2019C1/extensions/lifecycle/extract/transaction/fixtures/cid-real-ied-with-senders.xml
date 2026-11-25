@@ -1,0 +1,112 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root" version="2007" revision="C" release="5">
+	<!-- Selected (real) subscribes GooseA and GooseB of Pub, polls GGIO1 of Pub2, holds an input bound to Absent (no IED), an LGOS on GooseA; its GooseOut names Pub and Absent as receivers. Pub also sends GooseB (its SetB names LD9), holds a report with a client, inputs, values. Pub sends GooseA to Selected and to Other (receivers), Rpt to Selected and Hmi (clients); GooseC goes to nobody; a report block shares the name GooseA. Rpt2 of Pub2 names Selected as a client, no input bound to it. Pub3 sits on Bus2 beside Other3; Selected's input on GooseC of Pub3 names GGIO2, outside SetC. Selected's Rpt names Pub as a client -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS">
+			<ConnectedAP iedName="Selected" apName="AP1"><Address><P type="IP">10.0.0.1</P></Address></ConnectedAP>
+			<ConnectedAP iedName="Pub" apName="AP1" dev:db-id="pub-connection">
+				<Address><P type="IP">10.0.0.2</P></Address>
+				<GSE ldInst="LD1" cbName="GooseA" dev:db-id="pub-gse-a"><Address><P type="APPID">0011</P></Address></GSE>
+				<GSE ldInst="LD1" cbName="GooseB" dev:db-id="pub-gse-b"><Address><P type="APPID">0012</P></Address></GSE>
+				<GSE ldInst="LD1" cbName="GooseC" dev:db-id="pub-gse-c"/>
+			</ConnectedAP>
+			<ConnectedAP iedName="Pub2" apName="AP1" dev:db-id="pub2-connection"><Address><P type="IP">10.0.0.3</P></Address></ConnectedAP>
+		</SubNetwork>
+		<SubNetwork name="Bus2" type="8-MMS">
+			<ConnectedAP iedName="Pub3" apName="AP1"><Address><P type="IP">10.1.0.3</P></Address><GSE ldInst="LD1" cbName="GooseC"/></ConnectedAP>
+			<ConnectedAP iedName="Other3" apName="AP1" dev:db-id="other3-connection"><Address><P type="IP">10.1.0.4</P></Address></ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
+						<DataSet name="OutSet"><FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/></DataSet>
+						<ReportControl name="SelRpt" datSet="OutSet" confRev="1"><RptEnabled max="1"><ClientLN iedName="Pub" apRef="AP1" ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" dev:db-id="client-pub"/></RptEnabled></ReportControl>
+						<GSEControl name="GooseOut" datSet="OutSet" appID="OutApp" confRev="1">
+							<IEDName apRef="AP1" dev:db-id="receiver-pub">Pub</IEDName>
+							<IEDName apRef="AP1" dev:db-id="receiver-absent">Absent</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002">
+						<Inputs>
+							<ExtRef intAddr="FromPub" pDO="Ind" iedName="Pub" ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="GooseA" dev:db-id="input-pub"/>
+							<ExtRef intAddr="FromPubB" pDO="Ind" iedName="Pub" ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="GooseB" dev:db-id="input-pub-b"/>
+							<ExtRef intAddr="FromPub2" pDO="Ind" iedName="Pub2" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" serviceType="Poll" dev:db-id="input-pub2"/>
+							<ExtRef intAddr="FromPubRpt" pDO="Ind" iedName="Pub" ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" serviceType="Report" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="Rpt"/>
+							<ExtRef intAddr="FromPub3" pDO="Ind" iedName="Pub3" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="2" doName="Ind" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="GooseC"/>
+							<ExtRef intAddr="Relative" dev:db-id="input-relative" pDO="Op" iedName="@" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op"/>
+							<ExtRef intAddr="Self" dev:db-id="input-self" pDO="Op" iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op"/>
+							<ExtRef intAddr="FromAbsent" pDO="Ind" iedName="Absent" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="input-absent"/>
+						</Inputs>
+					</LN>
+					<LN lnClass="LGOS" inst="1" lnType="LGOS_Type" dev:db-id="lgos-pub">
+						<DOI name="GoCBRef"><DAI name="setSrcRef"><Val>PubLD1/LLN0.GooseA</Val></DAI></DOI>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<IEDSourceFiles><SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/></IEDSourceFiles>
+	</IED>
+	<IED name="Pub" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="pub">
+		<Services dev:db-id="pub-services"/>
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" dev:db-id="pub-ld1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
+						<DataSet name="SetA"><FCDA ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/></DataSet>
+						<DataSet name="SetB" dev:db-id="pub-set-b"><FCDA ldInst="LD9" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST" dev:db-id="pub-fcda-absent"/></DataSet>
+						<ReportControl name="Rpt" datSet="SetA" confRev="1" dev:db-id="pub-report"><RptEnabled max="2"><ClientLN iedName="Hmi" apRef="AP1" ldInst="H" prefix="" lnClass="IHMI" lnInst="1" dev:db-id="pub-client-hmi"/><ClientLN iedName="Selected" apRef="AP1" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" dev:db-id="pub-client-selected"/></RptEnabled></ReportControl>
+						<DOI name="Status" dev:db-id="pub-values"><DAI name="stVal"><Val>true</Val></DAI></DOI>
+						<Inputs dev:db-id="pub-inputs"><ExtRef intAddr="In" pDO="Ind"/></Inputs>
+						<GSEControl name="GooseA" datSet="SetA" appID="AppA" confRev="1"><IEDName apRef="AP1" dev:db-id="pub-receiver-selected">Selected</IEDName><IEDName apRef="AP1" dev:db-id="pub-receiver-other">Other</IEDName></GSEControl>
+						<GSEControl name="GooseB" datSet="SetB" appID="AppB" confRev="1" dev:db-id="pub-goose-b"/>
+						<ReportControl name="GooseA" datSet="SetB" confRev="1" dev:db-id="pub-report-named-goose-a"/>
+						<GSEControl name="GooseC" datSet="SetA" appID="AppC" confRev="1" dev:db-id="pub-goose-c"/>
+					</LN0>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_Type" dev:db-id="pub-xcbr1"/>
+				</LDevice>
+				<LDevice inst="LD2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000012"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Pub2" uuid="20000000-0000-4000-8000-000000000003" dev:db-id="pub2">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"><DataSet name="Set2"><FCDA ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/></DataSet><ReportControl name="Rpt2" datSet="Set2" confRev="1"><RptEnabled max="1"><ClientLN iedName="Selected" apRef="AP1" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1"/></RptEnabled></ReportControl></LN0>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type"/>
+					<LN lnClass="GGIO" inst="2" lnType="GGIO_Type" dev:db-id="pub2-ggio2"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Pub3" uuid="20000000-0000-4000-8000-000000000004">
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD1">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type">
+				<DataSet name="SetC"><FCDA ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/></DataSet>
+				<GSEControl name="GooseC" datSet="SetC" appID="AppP3" confRev="1"/>
+			</LN0>
+			<LN lnClass="GGIO" inst="1" lnType="GGIO_Type"/>
+			<LN lnClass="GGIO" inst="2" lnType="GGIO_Type"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="Other3"><AccessPoint name="AP1"/></IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Status" type="SPS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="SPS_Type"/></LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO"><DO name="Ind" type="SPS_Type"/></LNodeType>
+		<LNodeType id="LGOS_Type" lnClass="LGOS"><DO name="GoCBRef" type="ORG_Type"/></LNodeType>
+		<LNodeType id="XCBR_Type" lnClass="XCBR"><DO name="Pos" type="DPC_Type"/></LNodeType>
+		<DOType id="SPS_Type" cdc="SPS"><DA name="stVal" bType="BOOLEAN" fc="ST"/></DOType>
+		<DOType id="ORG_Type" cdc="ORG"><DA name="setSrcRef" bType="ObjRef" fc="SP"/></DOType>
+		<DOType id="DPC_Type" cdc="DPC"><DA name="stVal" bType="Dbpos" fc="ST"/></DOType>
+	</DataTypeTemplates>
+</SCL>

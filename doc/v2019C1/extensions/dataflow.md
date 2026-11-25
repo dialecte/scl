@@ -1,5 +1,5 @@
 ---
-description: 'Dataflow extension for @dialecte/scl v2019C1 -- what each signal of the specification describes, what implements it (ExtRef, ExtCtrl, control block, registration), between which IEDs, and how to link or unlink it.'
+description: 'Dataflow extension for @dialecte/scl v2019C1 -- what each signal of the specification describes, what implements it (ExtRef, ExtCtrl, control block, registration), between which IEDs, and how to link, unlink or unsubscribe it.'
 ---
 
 # Dataflow
@@ -65,6 +65,20 @@ What subscribes to a control block (`GSEControl`, `SampledValueControl` or `Repo
 | `dataflows`     | the dataflows of those `ExtRef`s, specified or not                                                      |
 
 A reference that is not a control block of an IED of the document is refused with `ELEMENT_NOT_FOUND`.
+
+### `companionsOf`
+
+```ts
+const companions = await doc.query.dataflow.companionsOf({
+	extRef: { tagName: 'ExtRef', id },
+})
+// Ref<'ExtRef'>[]
+```
+
+The other `ExtRef`s implementing the same data object signal as the one given (its `stVal` and `q` companions): in the
+same logical node, naming the same publisher logical node, data object and control block (each resolved, by uuid or by
+names), and linked to no other signal, in document order. None while the `ExtRef` names no control block or no publisher
+logical node. An `ExtRef` that is not an input of an IED is refused with `ELEMENT_NOT_FOUND`.
 
 ### `supervisionsOf`
 
@@ -210,18 +224,70 @@ await doc.transaction(async (tx) => {
 
 Unlinks a signal from the element implementing it: its uuid (`extRefUuid` / `extCtrlUuid`) and its address (`extRefAddr` / `extCtrlAddr`) are removed. The signal keeps what it specifies, and the `ExtRef` / `ExtCtrl` is not touched.
 
+### `unsubscribe`
+
+```ts
+const ended = await doc.transaction((tx) =>
+	tx.dataflow.unsubscribe({ extRefs: [{ tagName: 'ExtRef', id }] }),
+)
+// UnsubscribeResult
+```
+
+Ends the subscriptions of `ExtRef`s, with their companions (see `companionsOf`) unless `withCompanions: false`, in one
+transaction:
+
+- **The input.** An `ExtRef` holding an internal address (`intAddr`) is kept, its binding cleared: the data and control
+  block it names and its `serviceType`; its `intAddr`, `desc`, expected data (`pXxx`) and `uuid` stay. One without an
+  internal address is removed. It is the delete cascade's rule, shared.
+- **The signal.** A `SourceRef` linked to a kept `ExtRef` is unlinked (as `unlink` does); one linked to a removed `ExtRef`
+  loses its link with it.
+- **The registrations.** Per control block and subscriber IED, once none of the subscriber's `ExtRef`s names the control
+  block any more, its registrations go: on a GOOSE or sampled value control block every `IEDName` naming that IED (a
+  subscriber is its IED); on a report control block each `ClientLN` naming where an ending `ExtRef` sits, its logical
+  node, logical device or access point (a client is a logical node: one with no `ExtRef`, such as an HMI, stays). While
+  some still name it, an `IEDName` naming only a logical device or logical node none of them is in goes when another
+  registration already names each remaining `ExtRef`, else one such is cleared to the IED (and any further one goes), so
+  the subscriber is never registered twice at the IED. A `ClientLN` naming a logical node none of them sits in goes
+  as well; it is never cleared to its IED. A `ClientLN` is kept,
+  listed in `kept`, when it is a client of a buffered report control block (`buffered-preconfigured`: it may be a
+  preconfigured client), or of an indexed one with a client after it that stays (`indexed-position`: its position is the
+  instance number of the clients after it); the last clients go.
+- **The supervision.** Once the subscriber's `ExtRef`s no longer name a GOOSE or sampled value control block, the
+  `setSrcRef` value naming it in the subscriber's LGOS / LSVS is cleared (its `Val` removed); the logical node stays.
+- **Engineering rights.** An IED whose `engRight` is `fix` is never written: when it holds a given `ExtRef`, the call is refused with `DATAFLOW_UNSUBSCRIBE_REFUSED` (`meta: { reason: 'eng-right-fix', ied }`) and
+  nothing is written; when it is the publisher, its registrations are kept, listed with `eng-right-fix`.
+
+| Field           | Content                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| `unbound`       | the `ExtRef`s kept, their binding cleared                                                         |
+| `removed`       | the `ExtRef`s removed (no internal address)                                                       |
+| `unlinked`      | the `SourceRef`s no longer linked                                                                 |
+| `registrations` | each `IEDName` / `ClientLN` removed (`deleted`) or cleared to its IED (`cleared`, `attributes`)   |
+| `supervisions`  | the `setSrcRef` `DAI`s whose value was cleared                                                    |
+| `kept`          | each registration kept, with `why`: `indexed-position`, `buffered-preconfigured`, `eng-right-fix` |
+
+A reference that is not an input of an IED is refused with `ELEMENT_NOT_FOUND`. The data the control block sends (its
+data set and entries) and its configuration revision are not touched.
+
+A `ClientLN` kept for its position is not removed by a later unsubscribe that leaves it last. Only the first
+supervision (in document order) naming the control block in the subscriber is cleared.
+
 ## Exported types
 
 Exported from `@dialecte/scl/v2019C1`; the runtime extension object is not.
 
-| Type                                                          | Content                                                                            |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `Dataflow`, `SpecifiedDataflow`, `ImplementationOnlyDataflow` | the record                                                                         |
-| `ExtRefState`, `ExtCtrlState`                                 | the `binding` values, and the `state` of an `ExtRef` / `ExtCtrl` in `info.of`      |
-| `Registration`                                                | `{ element: Ref<'IEDName' \| 'ClientLN'>; names: 'ap' \| 'ld' \| 'ln' }`           |
-| `DanglingLink`                                                | `{ element, attribute, value }`                                                    |
-| `IedDataflows`                                                | `{ published, subscribed }`                                                        |
-| `ControlBlockSubscribers`                                     | `{ registrations, elements, dataflows }`                                           |
-| `Supervision`, `SupervisionRequest`                           | `{ ln, doi, dai, val }`, and a request of `supervisionsOf`                         |
-| `LinkParams`, `UnlinkParams`                                  | the parameters of `link` and `unlink`                                              |
-| `LinkedElement`, `LinkTargetMismatchMeta`                     | an element as an error names it, and the `meta` of `DATAFLOW_LINK_TARGET_MISMATCH` |
+| Type                                                                  | Content                                                                            |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Dataflow`, `SpecifiedDataflow`, `ImplementationOnlyDataflow`         | the record                                                                         |
+| `ExtRefState`, `ExtCtrlState`                                         | the `binding` values, and the `state` of an `ExtRef` / `ExtCtrl` in `info.of`      |
+| `Registration`                                                        | `{ element: Ref<'IEDName' \| 'ClientLN'>; names: 'ap' \| 'ld' \| 'ln' }`           |
+| `DanglingLink`                                                        | `{ element, attribute, value }`                                                    |
+| `IedDataflows`                                                        | `{ published, subscribed }`                                                        |
+| `ControlBlockSubscribers`                                             | `{ registrations, elements, dataflows }`                                           |
+| `Supervision`, `SupervisionRequest`                                   | `{ ln, doi, dai, val }`, and a request of `supervisionsOf`                         |
+| `LinkParams`, `UnlinkParams`                                          | the parameters of `link` and `unlink`                                              |
+| `LinkedElement`, `LinkTargetMismatchMeta`                             | an element as an error names it, and the `meta` of `DATAFLOW_LINK_TARGET_MISMATCH` |
+| `CompanionsOfParams`                                                  | the parameters of `companionsOf`                                                   |
+| `UnsubscribeParams`, `UnsubscribeResult`                              | the parameters and result of `unsubscribe`                                         |
+| `RegistrationOperation`, `KeptRegistration`, `KeptRegistrationReason` | a registration removed or cleared, and one kept with why                           |
+| `UnsubscribeRefusalMeta`                                              | the `meta` of `DATAFLOW_UNSUBSCRIBE_REFUSED`                                       |

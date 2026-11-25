@@ -3,9 +3,16 @@ import { XMLNS_DEV_NAMESPACE } from '@dialecte/core/test'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 
+/** The SCL edition every current file's root states, as attributes of a fixture's root. */
+export const CURRENT_SCL_EDITION = 'version="2007" revision="C" release="5"'
+
 /** The SCL default namespace, as an attribute of a fixture's root. */
 export const XMLNS_SCL_NAMESPACE = `xmlns="${SCL_DIALECTE_CONFIG.namespaces.default.uri}"`
 /** The eIEC61850-6-100 namespace, as an attribute of a fixture's root. */
 export const XMLNS_SCL_6_100_NAMESPACE = `xmlns:${SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix}="${SCL_DIALECTE_CONFIG.namespaces.v2019C1.uri}"`
-/** Every namespace a fixture's root declares: SCL, eIEC61850-6-100, the test record ids and xsi. */
-export const ALL_XMLNS_NAMESPACES = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${XMLNS_XSI_NAMESPACE}`
+/**
+ * What every fixture's root states: the namespaces it declares (SCL, eIEC61850-6-100, the test record ids and xsi) and
+ * the SCL edition of the current files, `version="2007" revision="C" release="5"`. A root stating no version is a
+ * first-edition file: build it from the namespace constants and opt the case in with `editionOneRoot`.
+ */
+export const ALL_XMLNS_NAMESPACES = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE} ${XMLNS_DEV_NAMESPACE} ${XMLNS_XSI_NAMESPACE} ${CURRENT_SCL_EDITION}`

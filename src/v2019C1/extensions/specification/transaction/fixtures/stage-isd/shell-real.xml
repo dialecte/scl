@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="shell-root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="shell-root" version="2007" revision="C" release="5">
 	<Header id="Shell" uuid="10000000-0000-4000-8000-000000000002"/>
 	<IED name="SPECIFICATION" uuid="20000000-0000-4000-8000-000000000009" dev:db-id="shell-ied">
 		<IEDSourceFiles><SclFileReference fileType="ICD" fileName="shell.icd"/></IEDSourceFiles>

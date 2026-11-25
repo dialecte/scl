@@ -17,9 +17,7 @@ import { mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const SCL_NS = 'http://www.iec.ch/61850/2003/SCL'
-const DEFAULT_SIZES_MB = [5, 10, 50, 100, 200, 500]
-const FLUSH_AT = 8 * 1024 * 1024 // 8 MB buffer before a stream write
+import { DEFAULT_SIZES_MB, FLUSH_AT, SCL_NS } from './generate-scl-stress-fixtures.constants'
 
 /** One unit: a CSWI LNode instance + its LNodeType -> DOType -> EnumType chain (distinct ids). */
 function unitInstance(i: number): string {
@@ -58,7 +56,7 @@ export async function generateSclStress(params: {
 	const stream = createWriteStream(params.outPath, { encoding: 'utf8' })
 
 	const header =
-		`<?xml version="1.0" encoding="UTF-8"?>\n<SCL xmlns="${SCL_NS}" __id="scl-stress">` +
+		`<?xml version="1.0" encoding="UTF-8"?>\n<SCL xmlns="${SCL_NS}" version="2007" revision="C" release="5" __id="scl-stress">` +
 		`<Substation name="S1" __id="sub-1"><VoltageLevel name="V1" __id="vl-1"><Bay name="B1" __id="bay-1">`
 	const midSubToDtt = `</Bay></VoltageLevel></Substation><DataTypeTemplates __id="dtt-1">`
 	const footer = `</DataTypeTemplates></SCL>\n`

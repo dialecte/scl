@@ -109,14 +109,15 @@ describe('delete cascade over references by uuid: what each deletion leaves of i
 			unexpectedQueries: ['//default:ExtRef', '//default:ExtCtrl'],
 		},
 		// IED8's input names the breaker and the GOOSE, both in IED7's LD1
-		'the device holding the breaker and the GOOSE deleted → the input naming both keeps its internal address, its whole source cleared':
+		'the device holding the breaker and the GOOSE deleted → the input naming both keeps its internal address, its whole source and service cleared':
 			{
 				sourceXml: breakerSubscribedAndControlled,
 				deleted: { tagName: 'LDevice', id: 'ld7' },
-				expectedQueries: ['//default:ExtRef[@intAddr="posStVal"][@serviceType="GOOSE"]'],
+				expectedQueries: ['//default:ExtRef[@intAddr="posStVal"]'],
 				unexpectedQueries: [
 					'//default:ExtRef[@iedName or @ldInst or @lnClass or @lnInst or @doName or @daName or @lnUuid]',
 					'//default:ExtRef[@srcLDInst or @srcLNClass or @srcCBName or @srcCBUuid]',
+					'//default:ExtRef[@serviceType]',
 				],
 			},
 	}

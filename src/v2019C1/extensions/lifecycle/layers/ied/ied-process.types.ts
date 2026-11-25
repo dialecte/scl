@@ -4,18 +4,21 @@ import type { ProcessSection } from '@/v2019C1/extensions/dataflow/query/process
 import type { SectionNode } from '@/v2019C1/extensions/dataflow/query/section-node.types'
 import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { IedExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
+import type { IsdExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
 import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
 
-/** The export options that leave a part of the process part out. */
+/**
+ * The export options that leave a part of the process part out, and whether a data specification keeps its mapping to the
+ * implementing logical node (`keepMappings`: a file holding that logical node; an ISD's specification loses it).
+ */
 export type ProcessOptions = Pick<
-	IedExtractParams,
+	IsdExtractParams,
 	'applications' | 'allocationRoles' | 'powerSystemRelations' | 'internalService'
->
+> & { keepMappings?: boolean }
 
 /** The element each export option leaves out, by option. */
 export type ProcessOptionTags = Readonly<
-	Record<Exclude<keyof ProcessOptions, 'internalService'>, string>
+	Record<Exclude<keyof ProcessOptions, 'internalService' | 'keepMappings'>, string>
 >
 
 /** What the process part of an IED export is planned from, read from the source once. */

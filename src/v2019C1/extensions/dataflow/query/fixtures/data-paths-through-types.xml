@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root" version="2007" revision="C" release="5">
 	<Substation name="S1" dev:db-id="substation">
 		<Function name="F1" dev:db-id="function">
 			<LNode iedName="P1" ldInst="LD0" lnClass="PTRC" lnInst="1" lnUuid="uuid-ptrc" lnType="PTRC_T" dev:db-id="lnode-sender">

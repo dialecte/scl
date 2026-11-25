@@ -1,7 +1,8 @@
 import { apply } from './apply'
 import { makeUnique } from './constraints'
 import * as extractTransaction from './extract'
-import { classifyIeds } from './ied'
+import { exportOptions } from './extract/query'
+import { boundIeds, classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
 import { applyMove, reportMove } from './move'
 import { report } from './report'
@@ -32,6 +33,10 @@ import { checkTemplateUuids } from './validate'
  *                   (`tx.lifecycle.makeUnique`); what a consumer calls after naming an element.
  * - `classifyIeds` — read-only: every IED is a real device's IED or a specification IED
  *                   (`query.lifecycle.classifyIeds()`).
+ * - `exportOptions` — read-only: the file types an IED can be exported as, or why not
+ *                   (`query.lifecycle.exportOptions({ iedRef })`).
+ * - `boundIeds`   — read-only: the IEDs tied to the LNodes an SSD extract of a scope writes, each
+ *                   fully assigned or shared (`query.lifecycle.boundIeds({ scopeRef })`).
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written. `verb: 'ied'`
@@ -52,6 +57,8 @@ export const lifecycle = {
 		report,
 		checkTemplateUuids,
 		classifyIeds,
+		exportOptions,
+		boundIeds,
 		sourceRoot,
 		scenarioOf,
 	},

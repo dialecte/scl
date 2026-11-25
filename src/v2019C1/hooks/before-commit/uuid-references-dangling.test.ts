@@ -37,6 +37,19 @@ describe('the commit refuses a reference given a uuid that names no element', ()
 			},
 			expected: { uuidAttribute: 'lnodeUuid', reason: 'uuid-unresolved' },
 		},
+		// stored-data given "ghost", then F1's Private holding FB moved into F2: a retarget the move carries
+		'a stored variable a move carries, retargeted to nothing → refused uuid-unresolved': {
+			sourceXml: behaviours,
+			write: async function retargetThenMove(tx) {
+				await tx.any.update(STORED_DATA, { attributes: { lnodeUuid: 'ghost' } })
+				await tx.move(
+					{ tagName: 'Private', id: 'f1-private' },
+					{ parent: { tagName: 'Function', id: 'f2' } },
+				)
+				return { tagName: 'OutputVar', id: 'stored-data' }
+			},
+			expected: { uuidAttribute: 'lnodeUuid', reason: 'uuid-unresolved' },
+		},
 		// stored-control names CTL2 by its uuid; it is given "ghost"
 		'a stored control output given a uuid naming nothing → refused uuid-unresolved': {
 			sourceXml: behaviours,

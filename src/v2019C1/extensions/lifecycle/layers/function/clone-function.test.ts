@@ -31,7 +31,7 @@ async function buildTemplateStructure(tx: Core.Transaction<Config>) {
 }
 
 const emptyTargetXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="root">
 		<Substation ${id}="target-sub" name="TEMPLATE" uuid="target-sub-uuid">
 			<VoltageLevel ${id}="target-vl" name="TEMPLATE" uuid="target-vl-uuid">
 				<Bay ${id}="target-bay" name="TEMPLATE" uuid="target-bay-uuid"/>
@@ -86,7 +86,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'Function with SubFunction and LNode → full tree cloned': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="HMI Function" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="HMI" uuid="subfunc-uuid">
@@ -129,7 +129,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			// the clone is faithful: the lineage is the operation's to write
 			'Function with templateUuid → the lineage copied on root and children': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid" templateUuid="tmpl-uuid">
 								<SubFunction ${id}="subfunc1" name="Sub" uuid="subfunc-uuid" templateUuid="sub-tmpl-uuid"/>
@@ -149,7 +149,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			},
 			'SubFunction promoted to Function in target': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func-parent" name="Parent" uuid="parent-uuid">
 								<SubFunction ${id}="subfunc1" name="Child" uuid="child-uuid">
@@ -203,7 +203,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'FunctionCatRef pointing to Function → FunctionCategory cloned, functionUuid remapped': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Private ${id}="sub-priv" type="eIEC61850-6-100">
 								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid">
@@ -229,7 +229,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			},
 			'FunctionCatRef pointing to SubFunction → FunctionCategory cloned after promotion': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Private ${id}="sub-priv" type="eIEC61850-6-100">
 								<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="MMS CLIENTS" uuid="fcat-uuid">
@@ -259,7 +259,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			},
 			'No FunctionCategory referencing Function → only Function cloned': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="Standalone" uuid="func-uuid"/>
 						</Substation>
@@ -274,7 +274,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			'FunctionCategory with templateUuid and originUuid → the lineage copied on the category and its children':
 				{
 					sourceXml: /* xml */ `
-						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<SCL ${ns} ${id}="root">
 							<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 								<Private ${id}="sub-priv" type="eIEC61850-6-100">
 									<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid" templateUuid="tmpl-uuid" originUuid="origin-uuid">
@@ -311,7 +311,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'LNode with lnType → full type chain extracted to target': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="ProtFunc" uuid="func-uuid">
 								<SubFunction ${id}="subfunc1" name="PTOC" uuid="subfunc-uuid">
@@ -356,7 +356,7 @@ describe('cloneFunction + cloneFunctionCategories', () => {
 			},
 			'Function without LNode → no DataTypeTemplates created': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Function ${id}="func1" name="EmptyFunc" uuid="func-uuid"/>
 						</Substation>

@@ -60,6 +60,11 @@ export type BuildIedParams = {
 	 */
 	ldNameAlsoFits?: readonly string[]
 	/**
+	 * LNodeTypes the target IED's shell offers as its own (its template's LN0 and LPHD types, `copyIedShell`): counted as
+	 * types the target IED uses, for the `lnType` rule (`inTargetIed`). Default: none.
+	 */
+	shellTypes?: readonly string[]
+	/**
 	 * Re-derive the logical device of every LNode built before from its function (default: a built logical node stays in
 	 * the logical device it is in): logical nodes whose logical device changes are moved.
 	 */

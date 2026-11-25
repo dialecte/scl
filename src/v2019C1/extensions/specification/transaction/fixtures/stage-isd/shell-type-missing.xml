@@ -1,0 +1,16 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="shell-root" version="2007" revision="C" release="5">
+	<Header id="Shell" uuid="10000000-0000-4000-8000-000000000002"/>
+	<IED name="SPECIFICATION" uuid="20000000-0000-4000-8000-000000000009" dev:db-id="shell-ied">
+		<AccessPoint name="AP1"><Server><Authentication/>
+			<LDevice inst="LD0">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_S"/>
+				<LN lnClass="LPHD" inst="1" prefix="" lnType="LPHD_X" dev:db-id="shell-lphd1"/>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_S" lnClass="LLN0"><DO name="Beh" type="ENS_T"/><DO name="Mod" type="ENS_T"/></LNodeType>
+		<LNodeType id="LPHD_S" lnClass="LPHD"><DO name="PhyHealth" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+	</DataTypeTemplates>
+</SCL>

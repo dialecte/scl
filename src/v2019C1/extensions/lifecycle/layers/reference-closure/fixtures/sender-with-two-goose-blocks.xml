@@ -1,0 +1,118 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root" version="2007" revision="C" release="5">
+	<!-- Sender: GooseA on LD1 sends DataSet SetA naming LD2/GGIO1 and LD1/PTOC1; GooseB, a report and values beside it; LD3, LN XCBR1, LN GGIO2 and AP2 named by nothing; its connection holds both GOOSE addresses -->
+	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS">
+			<ConnectedAP iedName="Sender" apName="AP1" dev:db-id="connection">
+				<Address dev:db-id="connection-address">
+					<P type="IP">10.0.0.1</P>
+				</Address>
+				<GSE ldInst="LD1" cbName="GooseA" dev:db-id="gse-a">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-01</P>
+					</Address>
+				</GSE>
+				<GSE ldInst="LD1" cbName="GooseB" dev:db-id="gse-b">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-02</P>
+					</Address>
+				</GSE>
+				<PhysConn type="Connection" dev:db-id="connection-phys">
+					<P type="Port">1</P>
+				</PhysConn>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Sender" dev:db-id="sender">
+		<Services dev:db-id="services"/>
+		<AccessPoint name="AP1" dev:db-id="ap1">
+			<Server dev:db-id="server1">
+				<Authentication dev:db-id="authentication1"/>
+				<LDevice inst="LD1" dev:db-id="ld1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="ld1-ln0">
+						<DataSet name="SetA" dev:db-id="set-a">
+							<FCDA ldInst="LD2" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST" dev:db-id="fcda-ggio1"/>
+							<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST" dev:db-id="fcda-ptoc1"/>
+						</DataSet>
+						<DataSet name="SetB" dev:db-id="set-b">
+							<FCDA ldInst="LD1" prefix="" lnClass="LLN0" doName="Status" fc="ST"/>
+						</DataSet>
+						<ReportControl name="Rpt" datSet="SetB" confRev="1" dev:db-id="rpt">
+							<RptEnabled max="1" dev:db-id="rpt-enabled">
+								<ClientLN iedName="Client" apRef="AP1" ldInst="CLD" prefix="" lnClass="IHMI" lnInst="1" dev:db-id="client"/>
+							</RptEnabled>
+						</ReportControl>
+						<DOI name="Status" dev:db-id="ld1-ln0-values">
+							<DAI name="stVal">
+								<Val>true</Val>
+							</DAI>
+						</DOI>
+						<Inputs dev:db-id="ld1-ln0-inputs">
+							<ExtRef intAddr="In1" pDO="Ind"/>
+						</Inputs>
+						<GSEControl name="GooseA" datSet="SetA" appID="AppA" confRev="1" dev:db-id="goose-a">
+							<IEDName apRef="AP1" dev:db-id="goose-a-receiver">Receiver</IEDName>
+						</GSEControl>
+						<GSEControl name="GooseB" datSet="SetB" appID="AppB" confRev="1" dev:db-id="goose-b"/>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" dev:db-id="ptoc1">
+						<DOI name="Op" dev:db-id="ptoc1-values">
+							<DAI name="general">
+								<Val>false</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="XCBR" inst="1" lnType="XCBR_Type" dev:db-id="xcbr1"/>
+				</LDevice>
+				<LDevice inst="LD2" dev:db-id="ld2">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="ld2-ln0"/>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" dev:db-id="ggio1"/>
+					<LN lnClass="GGIO" inst="2" lnType="GGIO_Type" dev:db-id="ggio2"/>
+				</LDevice>
+				<LDevice inst="LD3" dev:db-id="ld3">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" dev:db-id="ld3-ln0"/>
+				</LDevice>
+				<Association kind="predefined" iedName="Client" apRef="AP1" ldInst="CLD" prefix="" lnClass="IHMI" lnInst="1" associationID="A1" dev:db-id="association"/>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" dev:db-id="ap2"/>
+		<KDC iedName="Client" apName="AP1" dev:db-id="kdc"/>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="SPS_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Op" type="ACT_Type"/>
+		</LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO">
+			<DO name="Ind" type="SPS_Type"/>
+		</LNodeType>
+		<LNodeType id="XCBR_Type" lnClass="XCBR">
+			<DO name="Pos" type="DPC_Type"/>
+		</LNodeType>
+		<DOType id="SPS_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="ACT_Type" cdc="ACT">
+			<DA name="general" bType="BOOLEAN" fc="ST"/>
+			<DA name="dirGeneral" bType="Enum" type="Dir_Enum" fc="ST"/>
+		</DOType>
+		<DOType id="DPC_Type" cdc="DPC">
+			<SDO name="origin" type="Origin_DO"/>
+			<DA name="stVal" bType="Dbpos" fc="ST"/>
+		</DOType>
+		<DOType id="Origin_DO" cdc="SPS">
+			<DA name="orCat" bType="Struct" type="Origin_DA" fc="ST"/>
+		</DOType>
+		<DAType id="Origin_DA">
+			<BDA name="orCat" bType="Enum" type="OrCat_Enum"/>
+		</DAType>
+		<EnumType id="Dir_Enum">
+			<EnumVal ord="0">unknown</EnumVal>
+		</EnumType>
+		<EnumType id="OrCat_Enum">
+			<EnumVal ord="0">not-supported</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

@@ -22,7 +22,7 @@ export const IMPORT_TYPES_SPANS = [
 	'scl::importTypes::preExistingIndex',
 ]
 
-export const EMPTY_SCL = `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" __id="scl-target"></SCL>`
+export const EMPTY_SCL = `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" version="2007" revision="C" release="5" __id="scl-target"></SCL>`
 export const SCL_HOOKS = { createImportSession: createSclImportSession, ...HOOKS }
 
 export const BENCHMARKS: Benchmark[] = [

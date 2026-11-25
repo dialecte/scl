@@ -1,10 +1,11 @@
-import { readImplementations } from './read-implementations'
 import { FUNCTION_TEMPLATE_TAG, TO_IMPLEMENT_REASON } from './to-implement.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
 import { readProcessSection } from '@/v2019C1/extensions/dataflow/query/process-section'
+import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
 import { readSpecNamings } from '@/v2019C1/extensions/reference/query/build/read-spec-namings'
+import { readImplementations } from '@/v2019C1/extensions/reference/query/resolve/read-implementations'
 import { readAttributes } from '@/v2019C1/helpers'
 
 import type { ToImplement, ToImplementParams, ToImplementReason } from './to-implement.types'
@@ -39,7 +40,8 @@ export async function toImplement(
 	const lnodes = [...section.lnodes.values()]
 		.filter((node) => !node.ancestry.some((ancestor) => ancestor.tagName === FUNCTION_TEMPLATE_TAG))
 		.map((node) => node.record as Scl.TrackedRecord<'LNode'>)
-	const { byLNode, ieds } = await readImplementations(query, { lnodes })
+	const classifications = await classifyIeds(query)
+	const { byLNode, ieds } = await readImplementations(query, { lnodes, classifications })
 	const asked = ieds.find((entry) => entry.ied.id === ied.id)
 	if (!asked) {
 		throwDialecteError('ELEMENT_NOT_FOUND', {

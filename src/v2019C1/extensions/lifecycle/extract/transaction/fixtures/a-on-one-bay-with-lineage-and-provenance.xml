@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl" version="2007" revision="C" release="5">
 	<!-- A placed from a template (its templateUuid, its IEDSourceFiles); B1 instance of a bay template, F1 of a function template; X publishes to Y over gcb1 of A, A its own receiver; QA1 of B1 on CN1 -->
 	<Header id="P" fileType="SSD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
 	<Substation name="S1" uuid="11000000-0000-4000-8000-000000000001">

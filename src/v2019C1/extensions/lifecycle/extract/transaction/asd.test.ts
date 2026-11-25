@@ -13,7 +13,7 @@ import type * as Core from '@dialecte/core'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root"/>`
 
 describe('asd', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
@@ -335,7 +335,7 @@ describe('asd', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'LNodeOutputRef under SignalRole → remapped controlRefUuid, preserved in output': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 							<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 								<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
@@ -425,7 +425,7 @@ describe('asd', () => {
 			'Application without SignalRole children → extraction succeeds, no LNodeInputRef/LNodeOutputRef':
 				{
 					sourceXml: /* xml */ `
-						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<SCL ${ns} ${id}="root">
 							<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 								<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 									<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
@@ -474,7 +474,7 @@ describe('asd', () => {
 				},
 			'FunctionCategory with FunctionCatRef → remapped functionUuid, preserved in output': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 							<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 								<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
@@ -521,7 +521,7 @@ describe('asd', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'LNode with lnType → DataTypeTemplates fully extracted': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 							<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 								<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>
@@ -588,7 +588,7 @@ describe('asd', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'application "Feeder Protection" → Header id asd_feeder_protection': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation name="S1" ${id}="sub-s">
 							<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 								<eIEC61850-6-100:Application name="Feeder Protection" type="PAC" uuid="app-uuid" ${id}="app-s">
@@ -620,7 +620,7 @@ describe('asd', () => {
 
 	describe('the equipment of the functions the application composes', () => {
 		const sourceXml = /* xml */ `
-			<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+			<SCL ${ns} ${id}="root">
 				<Substation name="S1" ${id}="sub-s">
 					<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 						<eIEC61850-6-100:Application name="Feeder" uuid="app-uuid" ${id}="app-s">
@@ -671,7 +671,7 @@ describe('asd', () => {
 
 		/** A function holding a logical node, and a breaker holding a logical node of its own type. */
 		const breakerLogicalNodeXml = /* xml */ `
-			<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+			<SCL ${ns} ${id}="root">
 				<Substation name="S1" ${id}="sub-s">
 					<Private type="eIEC61850-6-100" ${id}="sub-priv-s">
 						<eIEC61850-6-100:Application name="Feeder" uuid="app-uuid" ${id}="app-s">
@@ -759,7 +759,7 @@ describe('asd', () => {
 		const testCases: SclTest.TestCases<TestCase> = {
 			'AllocationRoleRef → AllocationRole cloned with new uuid': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 							<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 								<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>

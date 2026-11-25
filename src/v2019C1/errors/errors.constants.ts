@@ -215,11 +215,22 @@ export const SCL_ERRORS = defineErrors({
 	/**
 	 * Staging the ISD of a specification built from logical nodes breaks a rule: nothing is written.
 	 * `meta: { reason, stage: 'stageIsd', ref? }`: `target-not-empty`, `lnode-outside-process`, `shell-not-specification`,
-	 * `no-lnodes` or `ied-name`; `ref` names the element it is about.
+	 * `no-lnodes`, `ied-name` or `type-missing` (an LNode naming an LNodeType the project lacks, or a logical node of the
+	 * shell IED naming one the shell document lacks); `ref` names the element it is about.
 	 */
 	SPECIFICATION_STAGE_REFUSED: {
 		code: 'SCL2014',
 		message: 'The ISD of these logical nodes cannot be staged',
+	},
+	/** The selected source IED describes a specification, not a real device: a CID is written for a real IED. `meta: { ied }` */
+	IED_NOT_IMPLEMENTED: {
+		code: 'SCL2015',
+		message: 'The selected IED is not a real IED',
+	},
+	/** The selected IED has no network address (no connection of it holds an address): a CID needs one. `meta: { ied }` */
+	IED_NOT_CONNECTED: {
+		code: 'SCL2016',
+		message: 'The selected IED has no network address',
 	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
@@ -228,6 +239,14 @@ export const SCL_ERRORS = defineErrors({
 	DATAFLOW_LINK_TARGET_MISMATCH: {
 		code: 'SCL3001',
 		message: 'The signal cannot be implemented by an element of this kind',
+	},
+	/**
+	 * An unsubscribe that would change an IED whose engineering right is `fix` (exported to, or from, another project):
+	 * nothing is written. `meta: { reason: 'eng-right-fix', ied: { tagName, id } }`
+	 */
+	DATAFLOW_UNSUBSCRIBE_REFUSED: {
+		code: 'SCL3002',
+		message: 'The subscription cannot be ended: its IED may not be changed in this project',
 	},
 	/**
 	 * A commit deletes a record and leaves one of its children in the store without a parent: a bug of a hook that

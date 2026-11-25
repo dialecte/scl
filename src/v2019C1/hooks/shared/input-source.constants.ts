@@ -15,6 +15,12 @@ export const INTERNAL_ADDRESS_ATTRIBUTE = 'intAddr'
 const DATA_NAME_ATTRIBUTES = ['doName', 'daName'] as const
 
 /**
+ * The attribute naming the service a bound input receives its data by: set with the binding (not in a template), so
+ * cleared with it.
+ */
+export const SERVICE_ATTRIBUTE = 'serviceType'
+
+/**
  * The references naming another IED's data that hold content of their own, an internal address above all: an input
  * (`ExtRef`) and an output (`ExtCtrl`). Each is a tuple referrer with an identity (`uuid`) and a data name: kept when
  * what it names goes, its source cleared.
@@ -30,8 +36,9 @@ export const SOURCED_REFERRER_TAGS: ReadonlySet<string> = new Set(
 )
 
 /**
- * Per sourced referrer, every attribute naming its source, the data and the control block sending it alike: cleared, it
- * is unbound, offered for a later binding, its internal address, description, service and expected data (`pXxx`) kept.
+ * Per sourced referrer, every attribute naming its source, the data and the control block sending it alike, and the
+ * service it is received by: cleared, it is unbound, offered for a later binding, its internal address, description and
+ * expected data (`pXxx`) kept.
  */
 export const SOURCE_ATTRIBUTES_BY_TAG: ReadonlyMap<string, readonly string[]> = new Map(
 	[...SOURCED_REFERRER_TAGS].map((tagName): [string, readonly string[]] => [
@@ -40,6 +47,7 @@ export const SOURCE_ATTRIBUTES_BY_TAG: ReadonlyMap<string, readonly string[]> = 
 			...new Set([
 				...referencesOf(tagName).flatMap(namingAttributes),
 				...DATA_NAME_ATTRIBUTES.filter((name) => name in attributesOf(tagName)),
+				...(SERVICE_ATTRIBUTE in attributesOf(tagName) ? [SERVICE_ATTRIBUTE] : []),
 			]),
 		],
 	]),

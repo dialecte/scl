@@ -50,10 +50,45 @@ export type ExtractWarning =
 			source: Scl.Ref<'LN' | 'SupSubscription'>
 	  }
 	| {
-			/** An input written in later-binding form without what a later binding needs (`desc`, `intAddr`, `pDO`, and a `serviceType` from itself or its `pServT`): written as it is. */
+			/**
+			 * An input written in later-binding form without what a later binding needs: written as it is. For an ISD: `desc`,
+			 * `intAddr`, `pDO` and a `serviceType` from itself or its `pServT`; for a real IED's file: `desc`, `intAddr` and `pDO`.
+			 */
 			code: 'input-incomplete'
 			source: Scl.Ref<'ExtRef'>
 			missing: string[]
+	  }
+	| {
+			/** An input bound to an IED the file does not hold, with no internal address (made by a system tool): not written. */
+			code: 'input-removed'
+			source: Scl.Ref<'ExtRef'>
+			/** The IED it names, when it names one by name rather than by uuid only. */
+			iedName?: string
+	  }
+	| {
+			/** An input or output bound to an IED the file does not hold: written without its source, the `attributes` removed. */
+			code: 'input-unbound'
+			source: Scl.Ref<'ExtRef' | 'ExtCtrl'>
+			/** The IED it names, when it names one by name rather than by uuid only. */
+			iedName?: string
+			attributes: string[]
+	  }
+	| {
+			/** A receiver, report client, association or key distribution entry naming an IED the file does not hold: kept. */
+			code: 'ied-reference-dangling'
+			source: Scl.Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>
+			iedName: string
+	  }
+	| {
+			/** A member of a data set a sending IED sends naming a logical node that IED does not hold: written as it is. */
+			code: 'data-set-member-unresolved'
+			source: Scl.Ref<'FCDA'>
+	  }
+	| {
+			/** A logical node supervising a control block the file does not hold (or that nothing names): kept as it is. */
+			code: 'supervision-source-absent'
+			source: Scl.Ref<'LN'>
+			reference: string
 	  }
 	| {
 			code: 'ied-reference-left-out'
