@@ -29,6 +29,11 @@ export namespace SclTest {
 		 * one (`allowIncoherentReferences` covers references), is refused.
 		 */
 		allowInvalidFixture?: SclOutputOptOut
+		/**
+		 * Set when a given document is a first-edition file on purpose, its root stating no SCL version: the reason it is.
+		 * Every other given document states `version="2007" revision="C" release="5"` (as `ALL_XMLNS_NAMESPACES` does).
+		 */
+		editionOneRoot?: string
 	}
 	export type TestCases<T extends BaseTestCase = BaseXmlTestCase> = Record<string, T>
 	export type TestDocument = CoreTest.TestDocument<Config>

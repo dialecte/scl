@@ -20,7 +20,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const SOURCE_ISD = /* xml */ `
-	<SCL ${ns} ${id}="source-root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="source-root">
 		<Header ${id}="source-header" id="source-header" uuid="11111111-1111-4111-8111-111111111111" fileType="ISD" version="2" revision="B"/>
 		<IED ${id}="source-ied" name="SourceIED" uuid="33333333-3333-4333-8333-333333333333">
 			<AccessPoint ${id}="source-access-point" name="AP1"/>
@@ -29,7 +29,7 @@ const SOURCE_ISD = /* xml */ `
 `
 
 const SOURCE_SSD = /* xml */ `
-	<SCL ${ns} ${id}="source-root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="source-root">
 		<Header ${id}="source-header" id="source-header" uuid="11111111-1111-4111-8111-111111111111" fileType="SSD" version="2" revision="B"/>
 		<IED ${id}="source-ied" name="SourceIED" uuid="33333333-3333-4333-8333-333333333333">
 			<AccessPoint ${id}="source-access-point" name="AP1"/>
@@ -38,7 +38,7 @@ const SOURCE_SSD = /* xml */ `
 `
 
 const SOURCE_SCD = /* xml */ `
-	<SCL ${ns} ${id}="source-root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="source-root">
 		<Header ${id}="source-header" id="source-header" uuid="11111111-1111-4111-8111-111111111111" fileType="SCD" version="2" revision="B"/>
 		<IED ${id}="source-ied" name="SourceIED" uuid="33333333-3333-4333-8333-333333333333">
 			<AccessPoint ${id}="source-access-point" name="AP1"/>
@@ -57,7 +57,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED without source files -> supplied source version recorded': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -78,7 +78,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED already listing that exact version -> unchanged without a duplicate': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -101,7 +101,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED listing an older revision -> new revision appended after it': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -125,7 +125,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED listing another file -> existing entry retained before new entry': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -149,7 +149,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED listing another file UUID at the same type/version/revision -> new file appended': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -173,7 +173,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED listing the same file/type/revision at another version -> new version appended': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -197,7 +197,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'IED listing the same file/version/revision at another file type -> supplied type appended': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -221,7 +221,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'SSD source -> explicit source type preserved': {
 			sourceXml: SOURCE_SSD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -242,7 +242,7 @@ describe('writeProvenance with an IED anchor', () => {
 		'SCD source -> explicit source type preserved': {
 			sourceXml: SOURCE_SCD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
@@ -290,7 +290,7 @@ describe('writeProvenance with an IED anchor reads its source only', () => {
 		'IED reference written from an ISD source → the source as it was': {
 			sourceXml: SOURCE_ISD,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="target-root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="target-root">
 					<Header ${id}="target-header" id="target-header" uuid="44444444-4444-4444-8444-444444444444" version="7" revision="C"/>
 					<IED ${id}="other-ied" name="OtherIED" uuid="55555555-5555-4555-8555-555555555555">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>

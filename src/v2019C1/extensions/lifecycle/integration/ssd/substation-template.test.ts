@@ -64,7 +64,7 @@ const twoLevelsXml = /* xml */ `
 	</SCL>
 `
 
-const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root" version="2007" revision="C" release="5"/>`
+const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root"/>`
 
 /**
  * A substation extracted to an SSD is a template: the substation is the `TEMPLATE` scaffolding, each of its named voltage
@@ -132,7 +132,8 @@ describe('extract.ssd of a substation, instantiated', () => {
 			},
 		})
 		if (testCase.expectedCandidates) {
-			const refusal = toDialecteError(await placed.catch((error: unknown) => error))
+			const thrown = await placed.catch((error: unknown) => error)
+			const refusal = toDialecteError(thrown)
 			expect(refusal?.key).toBe('SSD_SCOPE_AMBIGUOUS')
 			const candidates = (refusal?.meta?.candidates ?? []) as { tagName: string; name: string }[]
 			expect(candidates.map((candidate) => `${candidate.tagName} ${candidate.name}`)).toEqual(

@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root" version="2007" revision="C" release="5">
 	<!-- Selected: a real IED whose LN0 holds one system input bound to Other, and whose PTOC holds device inputs bound to Other (one per data attribute), relative to itself, bound to itself, unbound (UuidOnlyIn given only a logical node uuid by the case that needs it), bound to Ghost (no IED of the file), one without desc, and two outputs to Other (with and without an internal address) -->
 	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" dev:db-id="source-header"/>
 	<Communication>

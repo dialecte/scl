@@ -162,7 +162,9 @@ targets is a copy of this registry: import the derived view instead.
 reference) plus two fixture validators that run before every case: XML validity against the SCL
 definition, and reference coherence (empty, dangling, wrong-target, path mismatch).
 
-- Inline fixtures start with `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">`.
+- Inline fixtures start with `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="scl-1">`; the constant states the
+  SCL edition too (`version="2007" revision="C" release="5"`): never write it again on the root. A fixture file's
+  root states it. A root stating no version is a first-edition file, refused unless the case sets `editionOneRoot`.
 - An intentionally incoherent fixture opts out per case with `allowIncoherentReferences: '<reason>'`
   (also an option of `createSclTestProject`).
 - XPath prefixes are the config keys: `default:`, `v2019C1:` (not `eIEC61850-6-100:`) and `xsi:`.

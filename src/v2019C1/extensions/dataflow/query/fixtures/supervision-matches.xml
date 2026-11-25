@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root" version="2007" revision="C" release="5">
 	<IED name="P1" dev:db-id="ied-p1">
 		<AccessPoint name="AP1" dev:db-id="ap-p1">
 			<Server dev:db-id="server-p1">

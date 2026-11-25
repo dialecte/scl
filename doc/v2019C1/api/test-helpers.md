@@ -303,16 +303,22 @@ During `act`, `crypto.randomUUID` is replaced with a counter mock — IDs for ne
 
 ## Namespace constants
 
-| Constant                     | Value                                                            |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `XMLNS_SCL_NAMESPACE`        | `xmlns="http://www.iec.ch/61850/2003/SCL"`                       |
-| `XMLNS_SCL_6_100_NAMESPACE`  | `xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100"` |
-| `ALL_XMLNS_NAMESPACES`       | Both SCL namespaces + dev namespace combined                     |
-| `CUSTOM_RECORD_ID_ATTRIBUTE` | `dev:db-id="..."` — attribute string for use in XML fixtures     |
+| Constant                     | Value                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `XMLNS_SCL_NAMESPACE`        | `xmlns="http://www.iec.ch/61850/2003/SCL"`                                                                       |
+| `XMLNS_SCL_6_100_NAMESPACE`  | `xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100"`                                                 |
+| `ALL_XMLNS_NAMESPACES`       | Both SCL namespaces + dev namespace + xsi, and the current SCL edition `version="2007" revision="C" release="5"` |
+| `CUSTOM_RECORD_ID_ATTRIBUTE` | `dev:db-id="..."` — attribute string for use in XML fixtures                                                     |
 
 ```ts
 const xml = `<SCL ${ALL_XMLNS_NAMESPACES}><Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="s1"/></SCL>`
 ```
+
+Every given document's root states its SCL edition: a root stating no version is a first-edition (2003) file, refused by
+`runSclTestCases`, `createSclTestProject` and `openSclDocument` unless the case (or the call) sets `editionOneRoot` with
+the reason it is one on purpose. Build such a root from `XMLNS_SCL_NAMESPACE` and `XMLNS_SCL_6_100_NAMESPACE`, never by
+removing the edition from `ALL_XMLNS_NAMESPACES`. An opt-in without a reason, or on documents that all state their
+version, is refused.
 
 XPath queries against SCL documents must use the `default:` prefix for all element names (SCL uses a default namespace). Attributes don't need a prefix unless qualified (e.g. `dev:db-id`).
 
