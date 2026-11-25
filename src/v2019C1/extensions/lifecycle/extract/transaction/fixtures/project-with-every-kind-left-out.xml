@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="scl" version="2007" revision="C" release="5">
 	<!--
 		F1 on A: X publishes to Y over gcb1 (A its own receiver, B another), an LNode of A mapped to its LGOS.
 		F2: Control on A fed by B's CILO, whose input has no description; Interlock on B; a behaviour across A and B.

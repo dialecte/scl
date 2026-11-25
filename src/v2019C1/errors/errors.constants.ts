@@ -215,11 +215,22 @@ export const SCL_ERRORS = defineErrors({
 	/**
 	 * Staging the ISD of a specification built from logical nodes breaks a rule: nothing is written.
 	 * `meta: { reason, stage: 'stageIsd', ref? }`: `target-not-empty`, `lnode-outside-process`, `shell-not-specification`,
-	 * `no-lnodes` or `ied-name`; `ref` names the element it is about.
+	 * `no-lnodes`, `ied-name` or `type-missing` (an LNode naming an LNodeType the project lacks, or a logical node of the
+	 * shell IED naming one the shell document lacks); `ref` names the element it is about.
 	 */
 	SPECIFICATION_STAGE_REFUSED: {
 		code: 'SCL2014',
 		message: 'The ISD of these logical nodes cannot be staged',
+	},
+	/** The selected source IED describes a specification, not a real device: a CID is written for a real IED. `meta: { ied }` */
+	IED_NOT_IMPLEMENTED: {
+		code: 'SCL2015',
+		message: 'The selected IED is not a real IED',
+	},
+	/** The selected IED has no network address (no connection of it holds an address): a CID needs one. `meta: { ied }` */
+	IED_NOT_CONNECTED: {
+		code: 'SCL2016',
+		message: 'The selected IED has no network address',
 	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
@@ -228,6 +239,14 @@ export const SCL_ERRORS = defineErrors({
 	DATAFLOW_LINK_TARGET_MISMATCH: {
 		code: 'SCL3001',
 		message: 'The signal cannot be implemented by an element of this kind',
+	},
+	/**
+	 * An unsubscribe that would change an IED whose engineering right is `fix` (exported to, or from, another project):
+	 * nothing is written. `meta: { reason: 'eng-right-fix', ied: { tagName, id } }`
+	 */
+	DATAFLOW_UNSUBSCRIBE_REFUSED: {
+		code: 'SCL3002',
+		message: 'The subscription cannot be ended: its IED may not be changed in this project',
 	},
 	/**
 	 * A commit deletes a record and leaves one of its children in the store without a parent: a bug of a hook that
@@ -256,7 +275,8 @@ export const SCL_ERRORS = defineErrors({
 	 * access point). A logical node or a logical device moved within its IED is followed, unless the logical device goes to
 	 * an access point with no connection on the subnetwork of an address it sends. A reference naming its IED outright
 	 * (an LNode, a connected access point) moves as it is.
-	 * `meta: { moved: { tagName, id }, parent: { tagName, id } }` — the first such move, and the parent it was given.
+	 * `meta: { moved: { tagName, id }, parent: { tagName, id } }` — the first such move, and the parent it was given; the
+	 * commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one (one per move and cause).
 	 */
 	MOVE_NOT_FOLLOWED: {
 		code: 'SCL4003',
@@ -267,9 +287,11 @@ export const SCL_ERRORS = defineErrors({
 	 * coherently: `data-missing`, it holds an LNode uuid without the data object the registry requires beside it;
 	 * `groups-together`, a behaviour variable (`InputVar`, `OutputVar`) holds its data group and its input or output group
 	 * at once; `out-of-scope`, a behaviour variable names an element its local path cannot reach (not at or below the
-	 * level holding its `BehaviorDescription`). `meta: { reference: { tagName, id }, uuidAttribute, reason }`; for
-	 * `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the registry's
-	 * order.
+	 * level holding its `BehaviorDescription`); `uuid-unresolved`, an existing path reference whose uuid the transaction
+	 * changes to one naming no element of the document (a reference created with such a uuid, a copy's among them, is
+	 * not refused; a reference named by a tuple is not checked). `meta: { reference: { tagName, id }, uuidAttribute,
+	 * reason }`; for `groups-together`, `uuidAttribute` is the uuid attribute of the group the transaction set last in the
+	 * registry's order. The commit throws the first, `tx.cleanUp.commitPrune({ collect: true })` lists every one.
 	 */
 	REFERENCE_INCOHERENT: {
 		code: 'SCL4004',

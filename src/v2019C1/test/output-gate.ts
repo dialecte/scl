@@ -9,6 +9,7 @@ import {
 	refusedUuidOf,
 } from './assert-scl-output'
 import { GIVEN_DOCUMENT_CHECKS, SCL_OUTPUT_CHECK } from './assert-scl-output.constants'
+import { assertEditionOneRootReason, assertGivenEditions } from './given-edition'
 
 import { XmlAssertionError } from '@dialecte/core/test'
 
@@ -51,6 +52,12 @@ export function withOutputGate<GenericTestCase extends OutputGateTestCase, Gener
 		const { testCase, project, source, target } = actParams
 		const label = caseNames.get(testCase) ?? 'test case'
 
+		await assertGivenEditions({
+			source,
+			target,
+			label,
+			editionOneRoot: testCase.editionOneRoot,
+		})
 		const baseline = await readOutputBaseline({
 			project,
 			documents: documentsOf({ source, target }),
@@ -97,6 +104,11 @@ export function assertOutputGateTestCases(params: {
 					allowInvalidFixture: testCase.allowInvalidFixture,
 					label: name,
 				})
+			},
+		}),
+		...refusalOf({
+			check: function checkEditionOneRoot() {
+				assertEditionOneRootReason({ editionOneRoot: testCase.editionOneRoot, label: name })
 			},
 		}),
 	])

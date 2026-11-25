@@ -11,7 +11,7 @@ const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
 const emptyTargetXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="root">
 		<Substation ${id}="target-sub" name="TEMPLATE" uuid="target-sub-uuid">
 			<Private ${id}="target-priv" type="eIEC61850-6-100"/>
 		</Substation>
@@ -30,7 +30,7 @@ describe('findMissingReferencedRecords', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'AllocationRoleRef with missing target → returns ref': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<Private ${id}="sub-priv" type="eIEC61850-6-100">
 							<eIEC61850-6-100:AllocationRole ${id}="ar1" name="HMI_PC" uuid="ar1-uuid"/>
@@ -49,7 +49,7 @@ describe('findMissingReferencedRecords', () => {
 		},
 		'AllocationRoleRef with target already in target DB → returns empty': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<Private ${id}="sub-priv" type="eIEC61850-6-100">
 							<eIEC61850-6-100:AllocationRole ${id}="ar1" name="HMI_PC" uuid="ar1-uuid"/>
@@ -61,7 +61,7 @@ describe('findMissingReferencedRecords', () => {
 				</SCL>
 			`,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="target-sub" name="TEMPLATE" uuid="target-sub-uuid">
 						<Private ${id}="target-priv" type="eIEC61850-6-100">
 							<eIEC61850-6-100:AllocationRole ${id}="existing-ar" name="HMI_PC" uuid="ar1-uuid"/>
@@ -76,7 +76,7 @@ describe('findMissingReferencedRecords', () => {
 		},
 		'Multiple refs with same uuid → deduplicated to single result': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<Private ${id}="sub-priv" type="eIEC61850-6-100">
 							<eIEC61850-6-100:AllocationRole ${id}="ar1" name="HMI_PC" uuid="ar1-uuid"/>
@@ -118,10 +118,7 @@ describe('cloneReferencedRecords', () => {
 		targetXml: string
 	}
 
-	const act = async ({
-		source,
-		target,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
+	async function act({ source, target }: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
 			await cloneReferencedRecords(tx, {
@@ -144,7 +141,7 @@ describe('cloneReferencedRecords', () => {
 					violations: [{ check: 'references', code: 'dangling' }],
 				},
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Private ${id}="sub-priv" type="eIEC61850-6-100">
 								<eIEC61850-6-100:AllocationRole ${id}="ar1" name="HMI_PC" uuid="ar1-uuid">
@@ -167,7 +164,7 @@ describe('cloneReferencedRecords', () => {
 			},
 			'AllocationRole already in target → not duplicated': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 							<Private ${id}="sub-priv" type="eIEC61850-6-100">
 								<eIEC61850-6-100:AllocationRole ${id}="ar1" name="HMI_PC" uuid="ar1-uuid"/>
@@ -179,7 +176,7 @@ describe('cloneReferencedRecords', () => {
 					</SCL>
 				`,
 				targetXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="target-sub" name="TEMPLATE" uuid="target-sub-uuid">
 							<Private ${id}="target-priv" type="eIEC61850-6-100">
 								<eIEC61850-6-100:AllocationRole ${id}="existing-ar" name="HMI_PC" uuid="ar1-uuid"/>

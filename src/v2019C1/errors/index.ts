@@ -18,4 +18,6 @@ export type {
 	SclImportDiagnosticCode,
 	UnresolvedReferenceDiagnostic,
 	UnsupportedXPathDiagnostic,
+	UnwrittenReferencePathDiagnostic,
+	UnwrittenReferencePathReason,
 } from './import-diagnostics.types'

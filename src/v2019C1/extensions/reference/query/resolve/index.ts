@@ -13,3 +13,5 @@ export type {
 } from './resolve-mapped-lnodes.types'
 export { resolveMappedData } from './resolve-mapped-data'
 export type { MappedData, ResolveMappedDataParams } from './resolve-mapped-data.types'
+export { resolveTuple, resolveTuples } from './resolve-tuple'
+export type { ResolvedTuplePair, TupleReferenceDraft, TupleToResolve } from './resolve-tuple.types'

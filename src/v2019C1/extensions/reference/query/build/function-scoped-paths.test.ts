@@ -1233,42 +1233,6 @@ describe('import of a signal role path through a project', () => {
 	}
 })
 
-/** A FunctionRef naming nothing gives its signal role paths no base: one that names nothing is reported. */
-describe('import of a signal role path below a FunctionRef naming nothing', () => {
-	it('no uuid, an absolute path naming nothing -> left as read, one unresolved-reference on the path', async () => {
-		const { project } = await createSclTestProject({ sourceXml: EMPTY_SCL })
-		const [entry] = await project.import(
-			[
-				new File(
-					[
-						functionXml({
-							signalRole: `<eIEC61850-6-100:LNodeInputRef ${id}="input-ref" sourceRef="S1/F1/PTRC1.Missing" />`,
-							functionRef: FUNCTION_REF_TO_NOTHING,
-						}),
-					],
-					'signal-role.scd',
-					{ type: 'text/xml' },
-				),
-			],
-			{ useCustomRecordsIds: true },
-		)
-		if (entry.status !== 'imported') throw new Error('signal-role.scd not imported')
-
-		const query = project.openDocument(entry.documentId).query
-		const writtenPath = await query.getAttribute(
-			{ tagName: 'LNodeInputRef', id: 'input-ref' },
-			{ name: 'sourceRef' },
-		)
-		expect(writtenPath).toBe('S1/F1/PTRC1.Missing')
-		expect(entry.diagnostics.map(({ code, ref }) => ({ code, ref }))).toEqual([
-			{
-				code: 'unresolved-reference',
-				ref: { tagName: 'LNodeInputRef', id: 'input-ref', attribute: 'sourceRef' },
-			},
-		])
-	})
-})
-
 /**
  * A FunctionRef whose uuid names nothing and whose path names SF1: the base of its signal role paths is
  * SF1, read from the path as the query reads it (the uuid first, then the path). The FunctionRef is

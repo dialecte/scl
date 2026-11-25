@@ -85,6 +85,8 @@ export type ImportPathIndex = {
 	/** The standard paths several targets hold: none of them is named by such a path, which names several. */
 	shared: Set<string>
 	targetsByUuid: Map<string, IndexedTarget>
+	/** The uuids of the targets with no path segment of their own (an access point, a control block): no path names them. */
+	unnamedUuids: Set<string>
 }
 
 /**

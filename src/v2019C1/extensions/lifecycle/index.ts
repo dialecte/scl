@@ -1,8 +1,10 @@
 import { apply } from './apply'
 import { makeUnique } from './constraints'
 import * as extractTransaction from './extract'
-import { classifyIeds } from './ied'
+import { exportOptions } from './extract/query'
+import { boundIeds, classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
+import { applyMove, reportMove } from './move'
 import { report } from './report'
 import { scenarioOf } from './scenario-of'
 import { sourceRoot } from './source-root'
@@ -25,10 +27,16 @@ import { checkTemplateUuids } from './validate'
  * - `transplant`  — generic clone engine (`tx.lifecycle.transplant.deep`).
  * - `update`      — instantiate-or-reconcile a project against a newer template
  *                   (`tx.lifecycle.update.fsd` / `.asd` apply the change).
+ * - `reportMove` / `applyMove` — a move within the document, reported for a merge review then written
+ *                   (`tx.lifecycle.reportMove` in a transaction the caller discards, `tx.lifecycle.applyMove`).
  * - `makeUnique`  — make an element unique where it sits, in the engine's one numbering
  *                   (`tx.lifecycle.makeUnique`); what a consumer calls after naming an element.
  * - `classifyIeds` — read-only: every IED is a real device's IED or a specification IED
  *                   (`query.lifecycle.classifyIeds()`).
+ * - `exportOptions` — read-only: the file types an IED can be exported as, or why not
+ *                   (`query.lifecycle.exportOptions({ iedRef })`).
+ * - `boundIeds`   — read-only: the IEDs tied to the LNodes an SSD extract of a scope writes, each
+ *                   fully assigned or shared (`query.lifecycle.boundIeds({ scopeRef })`).
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written. `verb: 'ied'`
@@ -49,6 +57,8 @@ export const lifecycle = {
 		report,
 		checkTemplateUuids,
 		classifyIeds,
+		exportOptions,
+		boundIeds,
 		sourceRoot,
 		scenarioOf,
 	},
@@ -59,5 +69,7 @@ export const lifecycle = {
 		update: updateTransaction,
 		apply,
 		makeUnique,
+		reportMove,
+		applyMove,
 	},
 }

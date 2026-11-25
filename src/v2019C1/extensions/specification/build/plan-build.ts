@@ -11,6 +11,7 @@ import {
 	implementedElsewhereOf,
 	orphansOf,
 	pairBound,
+	typeMissingOf,
 	valuesRemovedOf,
 } from '../query/plan-rebuild'
 import { planValues } from '../query/plan-values'
@@ -789,16 +790,10 @@ function lnTypeOf(params: {
 	const { input, options, lnode, lnClass } = params
 	const { lnType } = readAttributes({ record: lnode.record, defaults: 'none' })
 	if (lnType) {
+		const missing = typeMissingOf({ input, lnode, lnType })
+		if (missing) return { refusal: missing }
 		const type = input.types.find((candidate) => candidate.id === lnType)
-		if (!type)
-			return {
-				refusal: {
-					reason: 'type-missing',
-					ref: lnode.ref,
-					detail: `no LNodeType ${lnType} (a broken reference)`,
-				},
-			}
-		if (type.lnClass !== lnClass)
+		if (type && type.lnClass !== lnClass)
 			return {
 				refusal: {
 					reason: 'type-mismatch',

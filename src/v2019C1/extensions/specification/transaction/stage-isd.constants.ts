@@ -5,6 +5,7 @@ export const STAGE_REFUSAL_REASONS = [
 	'shell-not-specification',
 	'no-lnodes',
 	'ied-name',
+	'type-missing',
 ] as const
 
 /** The verb named in a refusal's meta: the stage refused, not the build. */
@@ -19,6 +20,3 @@ export const STAGE_FILE = {
 	what: 'ISD staging',
 	why: 'logical nodes staged with the IED built from them, for an ISD export',
 } as const
-
-/** What the shell's IED leaves behind: the files it came from are not the staged IED's. */
-export const SHELL_OMITTED_TAGS = ['IEDSourceFiles', 'MinRequestedSCDFiles'] as const

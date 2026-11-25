@@ -82,7 +82,7 @@ describe('extract IED into a target with prior Header history', () => {
 				nameStructure: 'IEDName',
 			})
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_Selected.isd' })
 		return { assertOn: 'target' }
 	}
 

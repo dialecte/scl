@@ -1,5 +1,5 @@
 import behaviours from './fixtures/uuid-references/behaviours.xml?raw'
-import { checkUuidReferencesAtCommit } from './uuid-references'
+import { planUuidReferencesAtCommit } from './uuid-references'
 
 import { toDialecteError } from '@dialecte/core'
 import { toRawRecord } from '@dialecte/core/helpers'
@@ -30,13 +30,32 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 			updates: [{ ref: { tagName: 'Function', id: 'f1' }, attributes: { name: 'F9' } }],
 			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
-		// stored-data names XCBR1 (an LNode), stored-control names CTL1 (a ControlRef): both keep their paths
-		'two references rebound, each holding its path → nothing read': {
+		// stored-data retargeted to PTRC1, stored-no-do (given its doName) to CSWI1, stored-control to CTL1: two distinct
+		// LNode uuids in one lookup, one ControlRef
+		'references retargeted, each holding its path → one lookup per target tag, no ancestor read': {
 			sourceXml: behaviours,
 			updates: [
-				{ ref: { tagName: 'OutputVar', id: 'stored-data' }, attributes: { daName: 'q' } },
+				{
+					ref: { tagName: 'OutputVar', id: 'stored-data' },
+					attributes: { lnodeUuid: 'ptrc', doName: 'Op' },
+				},
+				{
+					ref: { tagName: 'InputVar', id: 'stored-no-do' },
+					attributes: { lnodeUuid: 'cswi', doName: 'Pos' },
+				},
 				{ ref: { tagName: 'OutputVar', id: 'stored-control' }, attributes: { outputUuid: 'ctl1' } },
 			],
+			expected: {
+				outcome: 'committed',
+				written: [],
+				lookedUp: ['ControlRef', 'LNode'],
+				ancestorReads: 0,
+			},
+		},
+		// stored-data's data names edited, its uuid and path kept: no retarget, no pathless variable
+		'a reference whose data names change, its path held → nothing read': {
+			sourceXml: behaviours,
+			updates: [{ ref: { tagName: 'OutputVar', id: 'stored-data' }, attributes: { daName: 'q' } }],
 			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
 		// stored-data and stored-no-do (given its doName) both rebound to CSWI1 of F2 with no path: two LNode uuids
@@ -93,12 +112,13 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 		})
 		const reads = countQueryReads(source.query)
 		const written: string[] = []
-		const outcome = await checkUuidReferencesAtCommit({
+		const outcome = await planUuidReferencesAtCommit({
 			operations,
 			query: reads.query,
 			pending: new Map(),
+			collect: false,
 		}).then(
-			function committed(staged) {
+			function committed({ operations: staged }) {
 				written.push(...staged.flatMap(writtenAttributesOf))
 				return 'committed'
 			},

@@ -1,3 +1,4 @@
+import { refuseWith } from './commit-refusal'
 import { foldChanges } from './tuple-reference-changes'
 import { UUID_REFERENCES_PERF_SPAN } from './uuid-references.constants'
 
@@ -14,6 +15,7 @@ import { toAnyRawRecord } from '@/v2019C1/extensions/reference/query/find/collec
 import { readAttribute } from '@/v2019C1/helpers'
 import { exclusiveGroupsHeld, groupAttributeNames } from '@/v2019C1/hooks/shared/exclusive-groups'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
+import { parentRefOf } from '@/v2019C1/hooks/shared/parent-ref'
 import { PATH_PAIRS_BY_TAG } from '@/v2019C1/hooks/shared/path-references.constants'
 import {
 	hasAttributeChange,
@@ -21,6 +23,7 @@ import {
 	withAttributeValues,
 } from '@/v2019C1/hooks/shared/record-ops'
 
+import type { CommitRefusal } from './commit-plan.types'
 import type { RecordChange } from './tuple-references.types'
 import type {
 	BoundPair,
@@ -40,17 +43,24 @@ import type { AnyRawRecord } from '@dialecte/core'
  * order, nothing read for the first two:
  * - a behaviour variable given an attribute of one of its groups while it holds both (`groups-together`);
  * - a pair holding its uuid without the data object the registry requires beside it (`data-missing`);
- * - a behaviour variable left without its path whose uuid names an element (one lookup per target tag): refused when the
- *   element is out of its reach (`out-of-scope`), the paths of those elements and of their behaviours read once; in its
- *   reach (written out of reach, then moved into it), its path is written from the element.
+ * - an existing path reference whose uuid the transaction changes to one naming no element of the document
+ *   (`uuid-unresolved`; an element the transaction creates counts). A reference created with a uuid naming nothing (a
+ *   copy keeps the uuids of another document's elements by design) is not refused, and is not looked up;
+ * - a behaviour variable left without its path whose uuid names an element: refused when the element is out of its
+ *   reach (`out-of-scope`), the paths of those elements and of their behaviours read once; in its reach (written out
+ *   of reach, then moved into it), its path is written from the element.
+ * The retargeted uuids, the pathless variables and the carried ones are looked up together, one lookup per target tag.
  * A behaviour variable a move carries (its local path is read from where it sits) gets its local path written again
  * when it changes. The paths written are the only operations the step stages.
- * Nothing is read when every written pair holds its path and no behaviour variable moved: the other pairs' paths are
- * the hooks' to write. A uuid naming
- * no element is left to the routes that write it. The mirror of `writePathReferencesAtCommit` (a path to its uuid):
- * this step reads a uuid to its path. Nothing outlives the call.
+ * Nothing is read when the transaction retargets no uuid, leaves no behaviour variable without its path and moves
+ * none. The mirror of `writePathReferencesAtCommit` (a path to its uuid): this step reads a uuid to its path. Nothing
+ * outlives the call.
+ *
+ * Without `collect` the first refusal throws where it is found. With it, every refusal is listed in the order the
+ * commit judges them (the groups and data of each written reference in the transaction's order, then the retargets
+ * naming nothing, then the reach of those left without a path), the references refused are left out of the paths written, and the step goes on.
  */
-export async function checkUuidReferencesAtCommit(params: {
+export async function planUuidReferencesAtCommit(params: {
 	operations: ReadonlyArray<Scl.Operation>
 	query: Core.Query<Config>
 	pending: ReadonlyMap<string, AnyRawRecord>
@@ -58,32 +68,75 @@ export async function checkUuidReferencesAtCommit(params: {
 	gone?: ReadonlySet<string>
 	/** The elements of the subtrees the transaction moved, as the move step read them (`movedBy`, `read`). */
 	moved?: MovedElements
-}): Promise<Scl.Operation[]> {
-	const { operations, query, pending, gone, moved } = params
+	/** List every refusal instead of throwing the first. */
+	collect: boolean
+}): Promise<{ operations: Scl.Operation[]; refusals: CommitRefusal[] }> {
+	const { operations, query, pending, gone, moved, collect } = params
 	const changes = [...foldChanges({ operations, pending }).values()].filter(
 		(change) => !gone?.has(change.after.id),
 	)
 	const boundByChange = changes.map((change) => boundPairsOf({ change }))
-	// the first reference the transaction wrote that holds a problem, its groups first, then its data
-	const [first] = changes.flatMap(function refusalsOf(change, index) {
+	// each reference the transaction wrote that holds a problem, its groups first, then its data
+	const incoherent = changes.flatMap(function refusalsOf(change, index) {
 		return [
 			...groupsTogetherOf({ change }),
 			...boundByChange[index].flatMap((bound) => dataMissingOf({ bound })),
 		]
 	})
-	if (first) refuse({ refusal: first })
-	const pathless = boundByChange.flat().filter(isPathlessBehaviourPair)
-	const carried = moved ? movedBehaviourPairsOf({ moved, pending, gone, written: pathless }) : []
-	if (pathless.length === 0 && carried.length === 0) return []
+	const written = incoherent.map((refusal) => toCommitRefusal(refusal))
+	const [first] = written
+	if (first && !collect) refuseWith({ refusal: first })
+	// a reference refused is not named: its path is not written
+	const refused = new Set(incoherent.map((refusal) => refusal.record.id))
+	const retargets = boundByChange
+		.flat()
+		.filter((bound) => bound.retargeted && !refused.has(bound.record.id))
+	const pathless = boundByChange
+		.flat()
+		.filter((bound) => isPathlessBehaviourPair(bound) && !refused.has(bound.record.id))
+	const carried = moved
+		? movedBehaviourPairsOf({ moved, pending, gone, written: pathless }).filter(
+				(bound) => !refused.has(bound.record.id),
+			)
+		: []
+	if (retargets.length === 0 && pathless.length === 0 && carried.length === 0)
+		return { operations: [], refusals: written }
 
 	query.perf.start(UUID_REFERENCES_PERF_SPAN)
 	try {
-		const unnamed = await unnamedPairsOf({ query, pathless: [...pathless, ...carried] })
-		if (unnamed.length > 0) return await localPathsWritten({ query, unnamed })
+		// a create (a copy's included) keeps the uuids of another document's elements by design: only a retarget to
+		// nothing is refused
+		const targets = await findTargetsByUuid(query, {
+			sought: [...retargets, ...pathless, ...carried].map((entry) => ({
+				uuid: entry.uuid,
+				targetTagNames: entry.pair.target,
+			})),
+		})
+		const unresolved = retargets
+			.filter((_, index) => !targets[index])
+			.map((entry) =>
+				toCommitRefusal({
+					record: entry.record,
+					uuidAttribute: entry.pair.attribute.uuid,
+					reason: 'uuid-unresolved',
+				}),
+			)
+		const [firstUnresolved] = unresolved
+		if (firstUnresolved && !collect) refuseWith({ refusal: firstUnresolved })
+		const dangling = new Set(
+			retargets.filter((_, index) => !targets[index]).map((entry) => entry.record.id),
+		)
+		const unnamed = unnamedPairsOf({
+			toName: [...pathless, ...carried],
+			targets: targets.slice(retargets.length),
+		}).filter((entry) => !dangling.has(entry.record.id))
+		const refusals = [...written, ...unresolved]
+		if (unnamed.length === 0) return { operations: [], refusals }
+		const named = await localPathsWritten({ query, unnamed, collect })
+		return { operations: named.operations, refusals: [...refusals, ...named.refusals] }
 	} finally {
 		query.perf.stop(UUID_REFERENCES_PERF_SPAN)
 	}
-	return []
 }
 
 /**
@@ -105,26 +158,35 @@ function movedBehaviourPairsOf(params: {
 		return (PATH_PAIRS_BY_TAG.get(record.tagName) ?? []).flatMap(function carriedPair(pair) {
 			if (pair.resolution !== RESOLUTION_TYPE.behaviorDescription) return []
 			const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
-			return uuid ? [{ record, pair, uuid }] : []
+			return uuid ? [{ record, pair, uuid, retargeted: false }] : []
 		})
 	})
 }
 
-/** The pairs of a reference the transaction wrote (see {@link checkUuidReferencesAtCommit}), each holding its uuid. */
+/** The pairs of a reference the transaction wrote (see {@link planUuidReferencesAtCommit}), each holding its uuid. */
 function boundPairsOf(params: { change: RecordChange }): BoundPair[] {
 	const { change } = params
 	const { before, after } = change
 	return (PATH_PAIRS_BY_TAG.get(after.tagName) ?? []).flatMap(function boundPair(pair) {
 		const uuid = readAttribute({ record: after, name: pair.attribute.uuid, defaults: 'none' })
 		if (!uuid) return []
+		const retargeted = changedOn({ change, names: [pair.attribute.uuid] })
 		const written =
 			!before ||
-			hasAttributeChange({
-				oldRecord: before as Scl.RawRecord<Scl.ElementsOf>,
-				newRecord: after as Scl.RawRecord<Scl.ElementsOf>,
-				names: [pair.attribute.uuid, ...pair.companions.map((companion) => companion.name)],
-			})
-		return written ? [{ record: after, pair, uuid }] : []
+			retargeted ||
+			changedOn({ change, names: pair.companions.map((companion) => companion.name) })
+		return written ? [{ record: after, pair, uuid, retargeted }] : []
+	})
+}
+
+/** Whether the transaction changed one of `names` on a record it did not create. */
+function changedOn(params: { change: RecordChange; names: readonly string[] }): boolean {
+	const { change, names } = params
+	if (!change.before) return false
+	return hasAttributeChange({
+		oldRecord: change.before as Scl.RawRecord<Scl.ElementsOf>,
+		newRecord: change.after as Scl.RawRecord<Scl.ElementsOf>,
+		names: [...names],
 	})
 }
 
@@ -166,16 +228,13 @@ function isPathlessBehaviourPair(bound: BoundPair): boolean {
 	)
 }
 
-/** The behaviour variables to name (pathless, or carried by a move) whose uuid names an element: one lookup per target tag. */
-async function unnamedPairsOf(params: {
-	query: Core.Query<Config>
-	pathless: readonly BoundPair[]
-}): Promise<UnnamedPair[]> {
-	const { query, pathless } = params
-	const targets = await findTargetsByUuid(query, {
-		sought: pathless.map((entry) => ({ uuid: entry.uuid, targetTagNames: entry.pair.target })),
-	})
-	return pathless.flatMap(function unnamedPair(entry, index) {
+/** The behaviour variables to name (pathless, or carried by a move), each with the element its uuid names, `targets` in their order. */
+function unnamedPairsOf(params: {
+	toName: readonly BoundPair[]
+	targets: readonly (Scl.TrackedRecord<Scl.ElementsOf> | undefined)[]
+}): UnnamedPair[] {
+	const { toName, targets } = params
+	return toName.flatMap(function unnamedPair(entry, index) {
 		const target = targets[index]
 		return target ? [{ ...entry, target: toAnyRawRecord(target) }] : []
 	})
@@ -190,12 +249,13 @@ async function unnamedPairsOf(params: {
 async function localPathsWritten(params: {
 	query: Core.Query<Config>
 	unnamed: readonly UnnamedPair[]
-}): Promise<Scl.Operation[]> {
-	const { query, unnamed } = params
+	collect: boolean
+}): Promise<{ operations: Scl.Operation[]; refusals: CommitRefusal[] }> {
+	const { query, unnamed, collect } = params
 	const paths = await buildElementPaths(query, {
 		refs: unnamed.flatMap((entry) => [
 			toRef(entry.target) as Scl.Ref<Scl.ElementsOf>,
-			parentRefOf({ record: entry.record }),
+			parentRefOf({ record: entry.record, caller: 'uuidReferences' }),
 		]),
 	})
 	const composed = unnamed.map(function composedPath(entry, index) {
@@ -217,12 +277,19 @@ async function localPathsWritten(params: {
 				: null
 		return { entry, inReach, path }
 	})
-	const outOfReach = composed.find((candidate) => !candidate.inReach)
-	if (outOfReach) {
-		const { record, pair } = outOfReach.entry
-		refuse({ refusal: { record, uuidAttribute: pair.attribute.uuid, reason: 'out-of-scope' } })
-	}
-	return composed.flatMap(function writtenPath({ entry, path }) {
+	const refusals = composed
+		.filter((candidate) => !candidate.inReach)
+		.map(({ entry }) =>
+			toCommitRefusal({
+				record: entry.record,
+				uuidAttribute: entry.pair.attribute.uuid,
+				reason: 'out-of-scope',
+			}),
+		)
+	const [first] = refusals
+	if (first && !collect) refuseWith({ refusal: first })
+	const operations = composed.flatMap(function writtenPath({ entry, path, inReach }) {
+		if (!inReach) return []
 		const record = entry.record as Scl.RawRecord<Scl.ElementsOf>
 		if (!path) {
 			return throwDialecteError('ASSERTION_FAILED', {
@@ -238,23 +305,16 @@ async function localPathsWritten(params: {
 			),
 		]
 	})
+	return { operations, refusals }
 }
 
-/** The element holding a record (its BehaviorDescription, for a behaviour variable). */
-function parentRefOf(params: { record: AnyRawRecord }): Scl.Ref<Scl.ElementsOf> {
-	const { parent } = params.record
-	if (!parent) {
-		return throwDialecteError('ASSERTION_FAILED', {
-			detail: `uuidReferences: the ${params.record.tagName} "${params.record.id}" has no parent`,
-		})
-	}
-	return toRef(parent) as Scl.Ref<Scl.ElementsOf>
-}
-
-function refuse(params: { refusal: UuidReferenceRefusal }): never {
-	const { record, uuidAttribute, reason } = params.refusal
-	return throwDialecteError(SCL_ERRORS.REFERENCE_INCOHERENT, {
+/** A uuid reference refused, as the commit throws it and lists it. */
+function toCommitRefusal(refusal: UuidReferenceRefusal): CommitRefusal {
+	const { record, uuidAttribute, reason } = refusal
+	return {
+		key: 'REFERENCE_INCOHERENT',
+		code: SCL_ERRORS.REFERENCE_INCOHERENT.code,
 		meta: { reference: { tagName: record.tagName, id: record.id }, uuidAttribute, reason },
 		detail: `the ${record.tagName} "${record.id}" (${uuidAttribute}): ${reason}`,
-	})
+	}
 }

@@ -1,5 +1,6 @@
 import { assertCoherentSclReferences } from './assert-coherent-scl-references'
 import { assertValidSclXml } from './assert-valid-scl-xml'
+import { assertGivenEditions } from './given-edition'
 
 import type { OpenSclDocumentParams } from './open-scl-document.types'
 import type { Scl } from '@/v2019C1/config'
@@ -20,5 +21,11 @@ export async function openSclDocument(params: OpenSclDocumentParams): Promise<Sc
 		useCustomRecordsIds: true,
 	})
 	if (entry.status === 'failed') throw entry.error
-	return project.openDocument(entry.documentId)
+	const document = project.openDocument(entry.documentId)
+	await assertGivenEditions({
+		source: document,
+		label,
+		editionOneRoot: params.editionOneRoot,
+	})
+	return document
 }

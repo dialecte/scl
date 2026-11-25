@@ -4,17 +4,18 @@ description: Clean-up extension for @dialecte/scl v2019C1 -- post-mutation integ
 
 # Clean-up
 
-Post-mutation integrity helpers accessible via `tx.cleanUp`. Also called internally by `extract.asd`/`fsd` via `postExtractionCleanup`.
+Post-mutation integrity helpers accessible via `tx.cleanUp`, and the query `query.cleanUp.findOutOfScopeVariables`. Also called internally by `extract.asd`/`fsd` via `postExtractionCleanup`.
 
 ## Transaction methods
 
-| Method                 | Purpose                                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `orphanUuidRefs`       | Clear or delete UUID reference attributes pointing to missing targets                                   |
-| `resetLNode`           | Release the LNodes, data and signals that name a logical node or an ExtRef / ExtCtrl the document lacks |
-| `pruneEmptyContainers` | Delete the containers left holding nothing that have no reason to stay then                             |
-| `pruneUnusedTypes`     | Delete the data types nothing in the document names, with the types only they name                      |
-| `commitPrune`          | List, without writing, what the commit of the transaction will prune                                    |
+| Method                      | Purpose                                                                                                           |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `orphanUuidRefs`            | Clear or delete UUID reference attributes pointing to missing targets                                             |
+| `resetLNode`                | Release the LNodes, data and signals that name a logical node or an ExtRef / ExtCtrl the document lacks           |
+| `pruneEmptyContainers`      | Delete the containers left holding nothing that have no reason to stay then                                       |
+| `pruneUnusedTypes`          | Delete the data types nothing in the document names, with the types only they name                                |
+| `commitPrune`               | List, without writing, what the commit of the transaction will prune                                              |
+| `repairOutOfScopeVariables` | Give the behaviour variables naming what their behaviour cannot reach their counterpart in reach, else clear them |
 
 ```ts
 await doc.transaction(async (tx) => {
@@ -81,7 +82,7 @@ if (preview && preview.containers.length > 0 && !(await confirmed(preview))) pre
 else await prepared.commit()
 ```
 
-`tx.cleanUp.commitPrune` returns `{ stagedCount, containers, types, moves, released }`:
+`tx.cleanUp.commitPrune(options?: { collect?: boolean })` returns `{ stagedCount, containers, types, moves, released, refusals }`:
 
 - `containers`: each container the commit removes, in document order:
   - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
@@ -108,6 +109,10 @@ else await prepared.commit()
 - `released`: each `LNode` the commit released from a logical node the transaction deleted, with its `identity` and
   the binding it had (`from`) and is left with (`to`): `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` and
   `lnUuid`, each where the LNode names it.
+- `refusals`: with `{ collect: true }`, every refusal of the commit it lists as data, in the order the commit judges
+  them, each with the `key`, `code`, `meta` and `detail` the commit throws it with: each move the commit does not
+  follow (`MOVE_NOT_FOLLOWED`, `SCL4003`; one per move and cause, however many records it holds) and each incoherent
+  uuid reference the transaction writes (`REFERENCE_INCOHERENT`, `SCL4004`). Empty without `collect`.
 - `stagedCount`: the number of staged operations the preview read.
 
 Together they name every record the commit removes beyond the transaction's own edits, each once: a record a
@@ -115,9 +120,56 @@ container or a type holds is listed under it, not on its own, and nothing the co
 
 A preview holds only for the staged state it read: a write staged after it is not in it. Call it last, after every
 write. A container the transaction deletes itself is not listed: it is a delete, not a prune. A transaction the commit
-refuses throws the same error (a move the commit does not follow: `MOVE_NOT_FOLLOWED`). The ids of records the commit
+refuses throws the same error (a move the commit does not follow: `MOVE_NOT_FOLLOWED`). With `{ collect: true }` the
+moves it does not follow and the incoherent uuid references are listed in `refusals` instead, and the commit refuses
+with the first of them; every other refusal still throws. The rest of the preview then reads the commit as if the
+refused moves and references were accepted: show the refusals first, and the side effects only when there are none.
+
+```ts
+await doc.prepare(async (tx) => {
+	await tx.any.move(ref, { parent })
+	const preview = await tx.cleanUp.commitPrune({ collect: true })
+	if (preview.refusals.length > 0) showRefusals(preview.refusals)
+})
+```
+
+The ids of records the commit
 creates (a `Private` wrapping an element of the extension namespace, on a move or a create) are not part of the
 preview; the ids of the containers it prunes are stable.
+
+## `repairOutOfScopeVariables`
+
+A behaviour variable (`InputVar`, `OutputVar`) names data, an input or an output by its uuid and by a local path that starts at the element holding its `BehaviorDescription` (an LNode, a Function). An element outside that one cannot be named so: the commit refuses such a variable for what a transaction writes (`REFERENCE_INCOHERENT`, `reason: 'out-of-scope'`, see [errors](../api/errors)), but a project written before may hold some, and then fails to copy, instantiate or update. This verb repairs them, and its query lists them first.
+
+```ts
+query.cleanUp.findOutOfScopeVariables(): Promise<OutOfScopeVariable[]>
+tx.cleanUp.repairOutOfScopeVariables(): Promise<RepairedVariables>
+
+type OutOfScopeVariable = {
+  variable: Scl.Ref<Scl.ElementsOf>
+  uuidAttribute: string
+  target: Scl.Ref<Scl.ElementsOf>
+  counterpart?: { ref: Scl.Ref<Scl.ElementsOf>; uuid: string }
+}
+type RepairedVariables = {
+  rescoped: OutOfScopeVariable[]
+  cleared: OutOfScopeVariable[]
+  left: OutOfScopeVariable[]
+}
+```
+
+```ts
+const listed = await doc.query.cleanUp.findOutOfScopeVariables() // review first
+const { rescoped, cleared, left } = await doc.transaction((tx) =>
+	tx.cleanUp.repairOutOfScopeVariables(),
+)
+```
+
+`findOutOfScopeVariables` (`doc.query.cleanUp.findOutOfScopeVariables`) lists, one entry per pair (the `InputVar`s first, then the `OutputVar`s, each in document order), every stored variable whose uuid names an element out of its behaviour's reach. Its `counterpart` is the one element of the same tag in reach that shares the target's template lineage: an instance of it (its `templateUuid` the target's uuid), the template the target is an instance of, or another instance of that template. When no element in reach does, or several do, there is none. A variable naming nothing in the document (the [`orphanUuidRefs`](#transaction-methods) case) or in reach is not listed.
+
+`repairOutOfScopeVariables` (`tx.cleanUp.repairOutOfScopeVariables`) writes what the query answers: a variable with a counterpart gets its uuid (`rescoped`), and the hooks write its local path from it; one without has its reference cleared, its uuid, path and data names, the variable kept, as `orphanUuidRefs` clears a behaviour variable (`cleared`). A variable holding both its reference groups (data, and an input or output) is left as it is (`left`): settle its groups first (the commit refuses a rescope of it, `groups-together`). Nothing is written when nothing is listed.
+
+Each behaviour variable tag is read once, the targets by one lookup per tag, their paths and those of the behaviours in one `buildElementPaths`; only when a variable is out of reach, two lookups per target tag for the lineage and one more `buildElementPaths`.
 
 ## `resetLNode`
 

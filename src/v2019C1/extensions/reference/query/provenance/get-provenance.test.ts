@@ -27,13 +27,13 @@ type TestCase = SclTest.BaseXmlTestCase & {
 describe('getProvenance', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'no SclFileReference → empty': {
-			sourceXml: /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`,
+			sourceXml: /* xml */ `<SCL ${ns} ${id}="root"/>`,
 			expected: [],
 		},
 
 		'FunctionSclRef under a Function → function anchor': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub" name="TEMPLATE">
 						<VoltageLevel ${id}="vl" name="TEMPLATE">
 							<Bay ${id}="bay" name="TEMPLATE">
@@ -63,7 +63,7 @@ describe('getProvenance', () => {
 
 		'ApplicationSclRef under an Application → application anchor': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub" name="TEMPLATE">
 						<Private ${id}="sub-priv" type="eIEC61850-6-100">
 							<eIEC61850-6-100:Application ${id}="app" name="HMI_App" uuid="app-uuid">
@@ -89,7 +89,7 @@ describe('getProvenance', () => {
 
 		'SourceFiles under Header → document anchor': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Header ${id}="header" id="doc" version="1" revision="0" uuid="doc-uuid">
 						<SourceFiles ${id}="srcfiles">
 							<SclFileReference ${id}="sfr-d" fileType="SSD" fileUuid="ssd-uuid" version="5" revision="2"/>
@@ -111,7 +111,7 @@ describe('getProvenance', () => {
 
 		'IEDSourceFiles under an IED → ied anchor, that IED': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<IED ${id}="other-ied" name="OtherIED">
 						<AccessPoint ${id}="other-access-point" name="AP1"/>
 						<!-- no IEDSourceFiles -->
@@ -139,7 +139,7 @@ describe('getProvenance', () => {
 
 		'multiple references → one entry each': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub" name="TEMPLATE">
 						<VoltageLevel ${id}="vl" name="TEMPLATE">
 							<Bay ${id}="bay" name="TEMPLATE">

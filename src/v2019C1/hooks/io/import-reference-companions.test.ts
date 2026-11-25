@@ -308,8 +308,9 @@ describe('import of the data names of a reference read with its uuid and its pat
 					}),
 				],
 			},
-		'OutputVar naming data and a control by their uuids → exclusive-reference-groups': {
-			xml: /* xml */ `
+		'OutputVar naming data and a control by their uuids → exclusive-reference-groups, its control not in the file → unwritten-reference-path':
+			{
+				xml: /* xml */ `
 				<SCL ${ns}>
 					<Substation name="S1">
 						<Function name="F1">
@@ -323,15 +324,24 @@ describe('import of the data names of a reference read with its uuid and its pat
 					</Substation>
 				</SCL>
 			`,
-			reference: { tagName: 'OutputVar', id: 'var' },
-			expectedAttributes: { lnodeUuid: PTRC, doName: 'Op', outputUuid: CONTROL },
-			expectedDiagnostics: [
-				createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'exclusive-reference-groups', {
-					ref: { tagName: 'OutputVar', id: 'var' },
-					meta: { attributes: ['lnodeUuid', 'doName', 'outputUuid'] },
-				}),
-			],
-		},
+				reference: { tagName: 'OutputVar', id: 'var' },
+				expectedAttributes: { lnodeUuid: PTRC, doName: 'Op', outputUuid: CONTROL },
+				expectedDiagnostics: [
+					createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'exclusive-reference-groups', {
+						ref: { tagName: 'OutputVar', id: 'var' },
+						meta: { attributes: ['lnodeUuid', 'doName', 'outputUuid'] },
+					}),
+					// the control its uuid names is not in the file: no output path is written
+					createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unwritten-reference-path', {
+						ref: { tagName: 'OutputVar', id: 'var', attribute: 'outputName' },
+						meta: {
+							uuidAttribute: 'outputUuid',
+							uuidValue: CONTROL,
+							reason: 'uuid-unresolved' as const,
+						},
+					}),
+				],
+			},
 		'OutputVar naming a control only → no diagnostic': {
 			xml: /* xml */ `
 				<SCL ${ns}>

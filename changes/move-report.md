@@ -1,0 +1,5 @@
+### Added
+
+- `tx.lifecycle.reportMove({ ref, parent, before? })` reports a move of an element within its document for a merge review, before it is written: a `DiffReport` holding one `moved` node and its group, the element's `move` (where from and to, the records it carries, the references that follow it, a reorder, a name taken at the new parent with the name the engine proposes) and every refusal up front (core's refusal of the anchors, a move the commit does not follow, an all-identity key shared at the new parent), or `nothingToMove`. It runs in a transaction the caller discards.
+- `tx.lifecycle.applyMove({ ref, parent, before?, rename? })` writes the move as reported: the editable attributes `rename` gives, the name numbered when taken at the new parent (the proposed name when none is given), an `IDENTITY_COLLISION` refused.
+- The types `MoveReport`, `MovedElement`, `NameTaken`, `MoveRefusal`, `MoveAnchorRefusalKey`, `ReportMoveParams` and `ApplyMoveParams` are exported from the package entry.

@@ -1,5 +1,7 @@
 import { buildIed } from './build-ied'
-import { SHELL_OMITTED_TAGS, STAGE_FILE, STAGE_VERB } from './stage-isd.constants'
+import { copyIedShell, lnodeTypeIdsOf } from './copy-ied-shell'
+import { SHELL_FRAME_LN_CLASS } from './copy-ied-shell.constants'
+import { STAGE_FILE, STAGE_VERB } from './stage-isd.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -21,7 +23,10 @@ import { readAttributes } from '@/v2019C1/helpers'
 
 import type { StageIsdParams, StageIsdResult, StageRefusalReason } from './stage-isd.types'
 import type { Scl, Config } from '@/v2019C1/config'
-import type { IedProcessPlan } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
+import type {
+	IedProcessPlan,
+	ProcessIndex,
+} from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -35,9 +40,10 @@ import type * as Core from '@dialecte/core'
  *
  * Refuses with `SPECIFICATION_STAGE_REFUSED` before any write (`meta: { reason, stage: 'stageIsd', ref? }`): a staging
  * document already holding an IED or a process part (`target-not-empty`); no LNode (`no-lnodes`); an IED name the
- * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); an LNode the project does not hold
- * or holds outside its substations, lines and processes (`lnode-outside-process`); checked in that order, the first
- * refusing. An LNode given twice is staged once. The build's own refusals pass through
+ * schema refuses (`ied-name`); a shell IED of a real device (`shell-not-specification`); a logical node of the shell IED
+ * naming an LNodeType the shell document lacks (`type-missing`); an LNode the project does not hold or holds outside its
+ * substations, lines and processes (`lnode-outside-process`); an LNode naming an LNodeType the project lacks
+ * (`type-missing`); checked in that order, the first refusing. An LNode given twice is staged once. The build's own refusals pass through
  * (`SPECIFICATION_BUILD_REFUSED`).
  *
  * @intent stage an ISD built from logical nodes for a supplier, export an ISD of an allocation role, build an IED from logical nodes in a staging document
@@ -62,18 +68,25 @@ export async function stageIsd(
 		item: { who: STAGE_FILE.who, what: STAGE_FILE.what, why: STAGE_FILE.why },
 	})
 	const staged = await stageLNodes(tx, { sourceQuery: params.sourceQuery, plan: read.plan })
-	const ied = await copyShell(tx, params)
+	const shellCopy = await copyIedShell(tx, {
+		shell: params.shell,
+		iedName: params.iedName,
+		...(params.iedUuid ? { iedUuid: params.iedUuid } : {}),
+	})
+	const ied = shellCopy.ied
 	const build = await buildIed(tx, {
 		...params.build,
 		ied,
 		lnodes: params.lnodes.flatMap((lnode) => staged.get(lnode.id) ?? []),
 		contextQuery: params.sourceQuery,
 		ldNameAlsoFits: [params.iedName, TEMPLATE_ISD_IED_NAME],
+		shellTypes: shellCopy.shellTypes,
 	})
 	return {
 		ied,
 		build,
 		released: read.bound.flatMap((id) => staged.get(id) ?? []),
+		shellLeftOut: shellCopy.leftOut,
 	}
 }
 
@@ -103,6 +116,14 @@ async function readStage(
 		})
 	}
 	if (shellIed.kind === 'implemented') refuse({ reason: 'shell-not-specification', ref: shell.ied })
+	const shellUntyped = await shellLnNamingNoType({ shell })
+	if (shellUntyped) {
+		refuse({
+			reason: 'type-missing',
+			ref: shellUntyped.ln,
+			detail: `the shell's logical node names the LNodeType ${shellUntyped.lnType}, which the shell document does not hold`,
+		})
+	}
 
 	const section = await readProcessSection(sourceQuery)
 	const index = indexProcessSection(section)
@@ -111,6 +132,14 @@ async function readStage(
 		return !rootIds.has(index.byId.get(lnode.id)?.ancestry[1]?.id ?? '')
 	})
 	if (outside) refuse({ reason: 'lnode-outside-process', ref: outside })
+	const untyped = await lnodeNamingNoType({ sourceQuery, lnodes, index })
+	if (untyped) {
+		refuse({
+			reason: 'type-missing',
+			ref: untyped.lnode,
+			detail: `the LNode names the LNodeType ${untyped.lnType}, which the project does not hold`,
+		})
+	}
 
 	// an LNode given twice is staged once (the build drops a repeat itself)
 	const ids = new Set(lnodes.map((lnode) => lnode.id))
@@ -154,35 +183,55 @@ async function stageLNodes(
 	return staged
 }
 
-/** The shell IED copied without the files it came from nor any lineage, named `iedName`, `iedUuid` stamped when given. */
-async function copyShell(
-	tx: Core.Transaction<Config>,
-	params: StageIsdParams,
-): Promise<Scl.Ref<'IED'>> {
-	const { shell, iedName, iedUuid } = params
-	const root = await tx.getRoot()
-	const copied = await deep(tx, {
-		sourceQuery: shell.query,
-		ref: shell.ied,
-		targetParent: root,
-		withTypes: { keepNameFrom: 'source' },
-		omit: [...SHELL_OMITTED_TAGS],
-	})
-	await finalizeClonedIdentity(tx, {
-		cloneMappings: copied.cloneMappings,
-		mode: 'strip',
-		unlinked: new Set(copied.cloneMappings.flatMap((mapping) => mapping.source.id ?? [])),
-	})
-	const ied = { tagName: 'IED' as const, id: copied.record.id }
-	await tx.update(ied, { attributes: { name: iedName, ...(iedUuid ? { uuid: iedUuid } : {}) } })
-	return ied
+/**
+ * The first LN0 or LPHD of the shell IED (the logical nodes whose types the shell copy imports) whose `lnType` names no
+ * LNodeType of the shell document, with that type.
+ */
+async function shellLnNamingNoType(params: {
+	shell: StageIsdParams['shell']
+}): Promise<{ ln: Scl.Ref<'LN' | 'LN0'>; lnType: string } | undefined> {
+	const { shell } = params
+	const held = await shell.query.findDescendants(shell.ied, { collect: ['LN0', 'LN'] })
+	const typeIds = await lnodeTypeIdsOf({ query: shell.query })
+	const frames = [
+		...(held.LN0 ?? []),
+		...(held.LN ?? []).filter(
+			(record) => readAttributes({ record, defaults: 'none' }).lnClass === SHELL_FRAME_LN_CLASS,
+		),
+	]
+	for (const record of frames) {
+		const { lnType } = readAttributes({ record, defaults: 'none' })
+		if (lnType && !typeIds.has(lnType))
+			return { ln: { tagName: record.tagName, id: record.id }, lnType }
+	}
+	return undefined
 }
 
-function refuse(params: { reason: StageRefusalReason; ref?: Scl.Ref<Scl.ElementsOf> }): never {
-	const { reason, ref } = params
+/** The first LNode given whose `lnType` names no LNodeType of the project, with that type; the types read once. */
+async function lnodeNamingNoType(params: {
+	sourceQuery: Core.Query<Config>
+	lnodes: readonly Scl.Ref<'LNode'>[]
+	index: ProcessIndex
+}): Promise<{ lnode: Scl.Ref<'LNode'>; lnType: string } | undefined> {
+	const { sourceQuery, lnodes, index } = params
+	const typeIds = await lnodeTypeIdsOf({ query: sourceQuery })
+	for (const lnode of lnodes) {
+		const record = index.byId.get(lnode.id)?.record
+		const lnType = record ? readAttributes({ record, defaults: 'none' }).lnType : undefined
+		if (lnType && !typeIds.has(lnType)) return { lnode, lnType }
+	}
+	return undefined
+}
+
+function refuse(params: {
+	reason: StageRefusalReason
+	ref?: Scl.Ref<Scl.ElementsOf>
+	detail?: string
+}): never {
+	const { reason, ref, detail } = params
 	throwDialecteError(SCL_ERRORS.SPECIFICATION_STAGE_REFUSED, {
 		...(ref ? { ref } : {}),
 		meta: { reason, stage: STAGE_VERB, ...(ref ? { ref } : {}) },
-		detail: `${STAGE_VERB}: ${reason}`,
+		detail: `${STAGE_VERB}: ${detail ?? reason}`,
 	})
 }

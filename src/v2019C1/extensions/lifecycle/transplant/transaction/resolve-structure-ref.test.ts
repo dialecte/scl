@@ -44,7 +44,7 @@ describe('resolveStructureRef', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
 		'Function under Substation → resolves to Substation': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl-uuid">
 							<Bay ${id}="bay1" name="TEMPLATE" uuid="bay-uuid"/>
@@ -58,7 +58,7 @@ describe('resolveStructureRef', () => {
 		},
 		'Function under Bay → resolves to Bay': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl-uuid">
 							<Bay ${id}="bay1" name="TEMPLATE" uuid="bay-uuid">
@@ -73,7 +73,7 @@ describe('resolveStructureRef', () => {
 		},
 		'FunctionCategory under Substation Private → resolves to Substation': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<Private ${id}="priv1" type="eIEC61850-6-100">
 							<eIEC61850-6-100:FunctionCategory ${id}="fcat1" name="PROTECTION" uuid="fcat-uuid"/>
@@ -89,7 +89,7 @@ describe('resolveStructureRef', () => {
 		},
 		'Application under Bay Private → resolves to Bay': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub-uuid">
 						<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl-uuid">
 							<Bay ${id}="bay1" name="TEMPLATE" uuid="bay-uuid">
@@ -126,7 +126,7 @@ describe('createAncestryResolver - a satellite directly in a cloned function’s
 		const { privateType } = params
 		return {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root-s" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root-s">
 					<Substation ${id}="sub-s" name="TEMPLATE" uuid="sub-s-uuid">
 						<VoltageLevel ${id}="vl-s" name="TEMPLATE" uuid="vl-s-uuid">
 							<Bay ${id}="bay-s" name="TEMPLATE" uuid="bay-s-uuid">
@@ -141,7 +141,7 @@ describe('createAncestryResolver - a satellite directly in a cloned function’s
 				</SCL>
 			`,
 			targetXml: /* xml */ `
-				<SCL ${ns} ${id}="root-t" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root-t">
 					<Substation ${id}="sub-t" name="S1" uuid="sub-t-uuid">
 						<VoltageLevel ${id}="vl-t" name="V1" uuid="vl-t-uuid">
 							<Bay ${id}="bay-t" name="B1" uuid="bay-t-uuid">

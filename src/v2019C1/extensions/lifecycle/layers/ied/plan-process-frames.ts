@@ -33,6 +33,7 @@ export function planProcessFrames(params: PlanProcessFramesParams): IedProcessPl
 		lnodes,
 		iedUuids,
 		internalService: options.internalService === true,
+		keepMappings: options.keepMappings === true,
 	})
 	return {
 		roots: index.roots

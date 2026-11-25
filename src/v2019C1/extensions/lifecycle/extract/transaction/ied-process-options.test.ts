@@ -9,12 +9,12 @@ import { describe } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { IedExtractParams } from './ied.types'
+import type { IsdExtractParams } from './ied.types'
 import type { SclTest } from '@/v2019C1/test'
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	options?: Pick<
-		IedExtractParams,
+		IsdExtractParams,
 		'labels' | 'applications' | 'allocationRoles' | 'powerSystemRelations'
 	>
 }

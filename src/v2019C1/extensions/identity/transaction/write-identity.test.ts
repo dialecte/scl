@@ -1,3 +1,6 @@
+// a function of an instance (bay B1 of a level template) holding an LNode, a subfunction and a variable, and the
+// copies already placed (lineage as copied): into a function of the same template, into one of another template, onto a plain bay
+import copyDoc from './fixtures/a-bay-function-its-subfunction-and-variable-with-their-copies.xml?raw'
 import { writeIdentity } from './write-identity'
 
 import { describe, expect } from 'vitest'
@@ -220,7 +223,7 @@ describe('writeIdentity', () => {
 		},
 
 		'preserve: an element copied into a function of the same template keeps its lineage': {
-			sourceXml: copyDoc(),
+			sourceXml: copyDoc,
 			write: { mode: 'preserve' },
 			cloneMappings: [copied({ from: 'source-lnode', to: 'into-same-template', tagName: 'LNode' })],
 			expected: [
@@ -229,7 +232,7 @@ describe('writeIdentity', () => {
 		},
 
 		'preserve: an element copied into a function of another template loses its lineage': {
-			sourceXml: copyDoc(),
+			sourceXml: copyDoc,
 			write: { mode: 'preserve' },
 			cloneMappings: [
 				copied({ from: 'source-lnode', to: 'into-other-template', tagName: 'LNode' }),
@@ -239,7 +242,7 @@ describe('writeIdentity', () => {
 
 		'preserve: a subfunction copied into another template loses its lineage, and so does what it holds':
 			{
-				sourceXml: copyDoc(),
+				sourceXml: copyDoc,
 				write: { mode: 'preserve' },
 				cloneMappings: [
 					copied({ from: 'source-subfunction', to: 'copied-subfunction', tagName: 'SubFunction' }),
@@ -252,7 +255,7 @@ describe('writeIdentity', () => {
 			},
 
 		'preserve: what a subfunction holds, listed before it, loses its lineage with it': {
-			sourceXml: copyDoc(),
+			sourceXml: copyDoc,
 			write: { mode: 'preserve' },
 			cloneMappings: [
 				copied({ from: 'source-sub-lnode', to: 'copied-sub-lnode', tagName: 'LNode' }),
@@ -265,7 +268,7 @@ describe('writeIdentity', () => {
 		},
 		'preserve: a subfunction copied into a function of the same template keeps its lineage, and so does what it holds':
 			{
-				sourceXml: copyDoc(),
+				sourceXml: copyDoc,
 				write: { mode: 'preserve' },
 				cloneMappings: [
 					copied({ from: 'source-subfunction', to: 'same-subfunction', tagName: 'SubFunction' }),
@@ -279,7 +282,7 @@ describe('writeIdentity', () => {
 
 		'preserve: a function copied from a level of an instance onto another level keeps its lineage (it sits on a level)':
 			{
-				sourceXml: copyDoc(),
+				sourceXml: copyDoc,
 				write: { mode: 'preserve' },
 				cloneMappings: [
 					copied({ from: 'source-function', to: 'copied-function', tagName: 'Function' }),
@@ -291,7 +294,7 @@ describe('writeIdentity', () => {
 
 		'preserve: an element of a hand-made function (no lineage) keeps its own wherever it is copied':
 			{
-				sourceXml: copyDoc(),
+				sourceXml: copyDoc,
 				write: { mode: 'preserve' },
 				cloneMappings: [copied({ from: 'handmade-lnode', to: 'handmade-copy', tagName: 'LNode' })],
 				expected: [
@@ -299,7 +302,7 @@ describe('writeIdentity', () => {
 				],
 			},
 		'preserve: several roots copied at once, each read from its own source parent': {
-			sourceXml: copyDoc(),
+			sourceXml: copyDoc,
 			write: { mode: 'preserve' },
 			cloneMappings: [
 				copied({ from: 'source-lnode', to: 'into-other-template', tagName: 'LNode' }),
@@ -311,7 +314,7 @@ describe('writeIdentity', () => {
 			],
 		},
 		'preserve: the parent of an element in a Private is the element holding the Private': {
-			sourceXml: copyDoc(),
+			sourceXml: copyDoc,
 			write: { mode: 'preserve' },
 			cloneMappings: [
 				copied({ from: 'source-variable', to: 'copied-variable', tagName: 'Variable' }),
@@ -393,58 +396,6 @@ const COPY_DOC_LINEAGE: Record<string, MappingSpec['sourceAttributes']> = {
 	},
 }
 
-/**
- * A function of an instance (bay `B1` of a level template) holding an LNode, a subfunction and a variable, and the
- * copies already placed (lineage as copied): into a function of the same template, into a function of another
- * template, onto a plain bay.
- */
-function copyDoc(): string {
-	const lnode = (recordId: string, templateUuid: string, uuid: string, inst: string) =>
-		/* xml */ `<LNode ${id}="${recordId}" iedName="None" lnClass="CSWI" lnInst="${inst}" uuid="${uuid}" templateUuid="${templateUuid}"/>`
-	const variable = (recordId: string, uuid: string) => /* xml */ `
-		<Private ${id}="${recordId}-private" type="eIEC61850-6-100">
-			<eIEC61850-6-100:Variable ${id}="${recordId}" name="Prefix" value="DV" uuid="${uuid}" templateUuid="variable-template" originUuid="variable-origin"/>
-		</Private>
-	`
-	return /* xml */ `
-		<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
-			<Substation ${id}="sub" name="S1">
-				<VoltageLevel ${id}="vl" name="V1">
-					<Bay ${id}="b1" name="B1" uuid="b1-uuid" templateUuid="bay-template">
-						<Function ${id}="source-function" name="Source" uuid="source-function-uuid" templateUuid="function-template">
-							${variable('source-variable', 'source-variable-uuid')}
-							${lnode('source-lnode', 'lnode-template', 'source-lnode-uuid', '1')}
-							<SubFunction ${id}="source-subfunction" name="Sub" uuid="source-subfunction-uuid" templateUuid="sub-template">
-								${lnode('source-sub-lnode', 'sub-lnode-template', 'source-sub-lnode-uuid', '2')}
-							</SubFunction>
-						</Function>
-						<Function ${id}="handmade-function" name="Handmade" uuid="handmade-function-uuid">
-							${lnode('handmade-lnode', 'handmade-lnode-template', 'handmade-lnode-uuid', '1')}
-						</Function>
-					</Bay>
-					<Bay ${id}="b2" name="B2" uuid="b2-uuid">
-						<Function ${id}="same-function" name="Same" uuid="same-function-uuid" templateUuid="function-template">
-							${lnode('into-same-template', 'lnode-template', 'copy-1', '1')}
-							${lnode('handmade-copy', 'handmade-lnode-template', 'copy-9', '3')}
-							<SubFunction ${id}="same-subfunction" name="Sub" uuid="copy-2" templateUuid="sub-template">
-								${lnode('same-sub-lnode', 'sub-lnode-template', 'copy-3', '2')}
-							</SubFunction>
-						</Function>
-						<Function ${id}="other-function" name="Other" uuid="other-function-uuid" templateUuid="other-template">
-							${variable('copied-variable', 'copy-4')}
-							${lnode('into-other-template', 'lnode-template', 'copy-5', '1')}
-							<SubFunction ${id}="copied-subfunction" name="Sub" uuid="copy-6" templateUuid="sub-template">
-								${lnode('copied-sub-lnode', 'sub-lnode-template', 'copy-7', '2')}
-							</SubFunction>
-						</Function>
-						<Function ${id}="copied-function" name="Copied" uuid="copy-8" templateUuid="function-template"/>
-					</Bay>
-				</VoltageLevel>
-			</Substation>
-		</SCL>
-	`
-}
-
 function toAttributes(spec: Record<string, string | undefined>): { name: string; value: string }[] {
 	return Object.entries(spec)
 		.filter((entry): entry is [string, string] => entry[1] !== undefined)
@@ -454,7 +405,7 @@ function toAttributes(spec: Record<string, string | undefined>): { name: string;
 function functionDoc(functionId: string, lineage: { templateUuid?: string }): string {
 	const templateUuid = lineage.templateUuid ? `templateUuid="${lineage.templateUuid}"` : ''
 	return /* xml */ `
-		<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+		<SCL ${ns} ${id}="root">
 			<Substation ${id}="sub" name="S1">
 				<VoltageLevel ${id}="vl" name="V1">
 					<Bay ${id}="bay" name="B1">
@@ -473,7 +424,7 @@ function allocationRoleDoc(
 	const templateUuid = lineage.templateUuid ? `templateUuid="${lineage.templateUuid}"` : ''
 	const originUuid = lineage.originUuid ? `originUuid="${lineage.originUuid}"` : ''
 	return /* xml */ `
-		<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+		<SCL ${ns} ${id}="root">
 			<Substation ${id}="sub" name="S1">
 				<Private ${id}="sub-priv" type="eIEC61850-6-100">
 					<eIEC61850-6-100:AllocationRole ${id}="${allocationRoleId}" name="R1" uuid="fresh-uuid" ${templateUuid} ${originUuid}/>

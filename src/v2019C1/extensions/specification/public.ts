@@ -4,6 +4,11 @@ export type { IedRebuildReport, LnIdentity } from './query/plan-rebuild.types'
 export { OPEN_VALUE_RULES } from './build/open-value-rules.constants'
 export { STAGE_REFUSAL_REASONS } from './transaction/stage-isd.constants'
 export type {
+	CopyIedShellParams,
+	CopyIedShellResult,
+	ShellLeftOut,
+} from './transaction/copy-ied-shell.types'
+export type {
 	StageIsdParams,
 	StageIsdResult,
 	StageRefusalReason,

@@ -1,3 +1,4 @@
+import { refuseWith } from './commit-refusal'
 import { isInMovedSubtree } from './moved-roots'
 import {
 	carriedAddressWrites,
@@ -32,7 +33,8 @@ import { identityOf } from '@/v2019C1/hooks/shared/element-identity'
 import { followAncestry } from '@/v2019C1/hooks/shared/follow-ancestry'
 import { changedAttributeNames, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
 
-import type { MovePlaces, MovedRef } from './moved-roots.types'
+import type { CommitRefusal } from './commit-plan.types'
+import type { MovePlaces, MovedRecord, MovedRef } from './moved-roots.types'
 import type {
 	FollowedMoves,
 	MoveRemoval,
@@ -51,25 +53,55 @@ import type { AnyRawRecord } from '@dialecte/core'
  * (`UNFOLLOWED_MOVE_TAGS`: what tuple references name or are, what sits only below a logical node), unless the move is a
  * logical node or a logical device moved within its IED ({@link isMovedWithinItsIed}), whose tuple references follow; and
  * refuse such a logical device moved to an access point with no connection on the subnetwork of an address it sends
- * ({@link unconnectedAddressOf}). `SCL_ERRORS.MOVE_NOT_FOLLOWED`, for the moved element. Read from the document read once.
+ * ({@link unconnectedAddressOf}). `SCL_ERRORS.MOVE_NOT_FOLLOWED`, for the first move {@link unfollowedMovesOf} lists.
  */
 export function assertMovesFollowed(places: MovePlaces): void {
+	const [first] = unfollowedMovesOf(places)
+	if (first) refuseWith({ refusal: first })
+}
+
+/**
+ * Every move of the commit it does not follow (see {@link assertMovesFollowed}), in the order the commit judges them:
+ * each logical device moved to an access point with no connection for an address it sends, in the order of the moves;
+ * then each move holding what a move does not follow, in the document order of the first such record it holds at its
+ * new place. One refusal per move and cause, however many records it holds. Read from the document read once.
+ */
+export function unfollowedMovesOf(places: MovePlaces): CommitRefusal[] {
+	const refusals: CommitRefusal[] = []
 	for (const move of places.moved.values()) {
 		const unconnected = unconnectedAddressOf({ places, move })
 		if (!unconnected) continue
-		throwDialecteError(SCL_ERRORS.MOVE_NOT_FOLLOWED, {
-			meta: { moved: move.ref, parent: move.to },
-			detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" sends ${unconnected.address.tagName} "${unconnected.address.id}" on ${unconnected.subNetwork.tagName} "${unconnected.subNetwork.id}", where its new access point has no connection`,
-		})
+		refusals.push(
+			moveNotFollowed({
+				move,
+				detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" sends ${unconnected.address.tagName} "${unconnected.address.id}" on ${unconnected.subNetwork.tagName} "${unconnected.subNetwork.id}", where its new access point has no connection`,
+			}),
+		)
 	}
+	const holding = new Set<string>()
 	for (const record of places.document.records) {
 		const move = places.movedBy.get(record.id)
-		if (!move || isMovedWithinItsIed({ places, move }) || !isUnfollowed({ places, record }))
-			continue
-		throwDialecteError(SCL_ERRORS.MOVE_NOT_FOLLOWED, {
-			meta: { moved: move.ref, parent: move.to },
-			detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" holds ${record.tagName} "${record.id}", which references name by its place: a move does not follow it yet`,
-		})
+		if (!move || holding.has(move.ref.id)) continue
+		if (isMovedWithinItsIed({ places, move }) || !isUnfollowed({ places, record })) continue
+		holding.add(move.ref.id)
+		refusals.push(
+			moveNotFollowed({
+				move,
+				detail: `${move.ref.tagName} "${move.ref.id}" moved under ${move.to.tagName} "${move.to.id}" holds ${record.tagName} "${record.id}", which references name by its place: a move does not follow it yet`,
+			}),
+		)
+	}
+	return refusals
+}
+
+/** The refusal of a move the commit does not follow, for the moved element and the parent it was given. */
+function moveNotFollowed(params: { move: MovedRecord; detail: string }): CommitRefusal {
+	const { move, detail } = params
+	return {
+		key: 'MOVE_NOT_FOLLOWED',
+		code: SCL_ERRORS.MOVE_NOT_FOLLOWED.code,
+		meta: { moved: move.ref, parent: move.to },
+		detail,
 	}
 }
 

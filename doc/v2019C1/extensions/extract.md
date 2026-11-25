@@ -125,7 +125,7 @@ Returns the warnings gathered while extracting (`ExtractWarning`, a `code` and i
 
 ### `ied`
 
-Extracts a specification `IED` into a new ISD document: the IED with the data types it uses, its connections, and the part of the specification it implements.
+Extracts one `IED` into a new document, by the type of the file (`fileType`): a specification IED into an ISD (the IED with the data types it uses, its connections, and the part of the specification it implements), or a real IED into a CID ([below](#cid-of-a-real-ied)). Which types an IED can be exported as, and why not: [`exportOptions`](#exportoptions).
 
 ```ts
 tx.lifecycle.extract.ied(params: {
@@ -145,7 +145,7 @@ tx.lifecycle.extract.ied(params: {
   applications?: boolean            // default true
   allocationRoles?: boolean         // default true
   powerSystemRelations?: boolean    // default true
-}): Promise<{ warnings: ExtractWarning[] }>
+}): Promise<{ warnings: ExtractWarning[]; fileName: string }>
 ```
 
 Steps:
@@ -164,7 +164,7 @@ Steps:
    - an input or output specification naming what the file does not hold keeps its expected data without that link (`process-reference-cut`);
    - with `internalService: true`, a specified flow between two LNodes of the IED is written with `service="Internal"` and no link to its input, except a `Wired` one; the source keeps its service.
 
-Returns the warnings gathered while extracting, each with its source element for the caller to word:
+Returns the name the file is suggested to be saved as (`fileName`: the `Header` file name with `.isd`, `ISD_<IED>.isd` or `ISD_SPECIFICATION.isd`) and the warnings gathered while extracting, each with its source element for the caller to word:
 
 ```ts
 { code: 'supervision-left-out', source: Ref<'LN' | 'SupSubscription'> }
@@ -209,6 +209,74 @@ await targetDoc.transaction(async (tx) => {
 	})
 })
 ```
+
+#### CID of a real IED
+
+A CID is the file a real IED's configuration tool loads into the device: the IED as the project holds it, its own communication and the data types it needs.
+
+```ts
+tx.lifecycle.extract.ied(params: {
+  sourceQuery: Scl.Query
+  provenanceQuery?: Scl.Query        // the document recorded as its source; default sourceQuery
+  iedRef: Scl.Ref<'IED'>
+  fileType: 'CID'
+  interactingIeds: 'none' | 'publishers' // required, no default
+  includeSubstation?: boolean           // default false
+  clientRefs?: 'keep' | 'cleanAbsent'    // default 'keep'
+  tool: string
+  who: string
+  nameStructure?: string
+  as?: 'new' | 'revision'           // default 'new'; 'revision' is refused
+}): Promise<{ warnings: ExtractWarning[]; fileName: string }>
+```
+
+`interactingIeds` says which IEDs the file holds besides the selected one: none, or the IEDs its inputs are bound to with the part they send it, so that the tool can set up its subscriptions (`'publishers'`). There is no default: the caller states what the file holds.
+
+Steps:
+
+1. Refuse before anything is written, in this order: an omitted or unknown `interactingIeds`, an unknown `clientRefs`, then an `includeSubstation` that is not a boolean (`OPTION_NOT_AVAILABLE`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); an IED none of whose connections holds an `Address` (`IED_NOT_CONNECTED`, `SCL2016`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source (the `provenanceQuery` document when given) registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); `as: 'revision'` (`OPTION_NOT_AVAILABLE`). A `fileType` other than `'ISD'` or `'CID'` is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'fileType', value }`).
+2. Write the CID history header (`fileType: 'CID'`, a uuid of its own) and record the project in the `Header` (its file name, version, revision and type, as for an ISD).
+3. Write the IED as the project holds it: its name, uuids, manufacturer, values, control blocks, data sets, supervision logical nodes, vendor content, and its `IEDSourceFiles` and `MinRequestedSCDFiles` exactly as the source holds them; the data types its logical nodes use, no other.
+4. Write the `Communication` holding its connections (addresses, GSE, SMV, physical connections) and their subnetworks, no connection of another IED.
+5. Reduce the references to an IED the file does not hold:
+   - an `ExtRef` bound to such an IED with no `intAddr` (made by a system tool) is left out (`input-removed`); with an `intAddr` it keeps its `intAddr`, `desc`, `pLN`, `pDO`, `pDA`, `pServT` and `uuid` and loses everything of its source: its signal and control block names and uuids, its `serviceType` (`input-unbound`); one then lacking `desc`, `intAddr` or `pDO` is told (`input-incomplete`);
+   - an `ExtCtrl` bound to such an IED is kept and loses its signal (`input-unbound`): a system tool never creates or removes one;
+   - an `Inputs` or `Outputs` left with no child is left out;
+   - an input relative to the IED (`iedName="@"`), bound to it, or not bound, is written as it is;
+   - `IEDName` and `ClientLN` naming such an IED: kept and told (`ied-reference-dangling`, the default: both lists are optional, and a report client reserves report instances in the device), or with `clientRefs: 'cleanAbsent'` left out and told (`ied-reference-left-out`); those naming the IED itself stay;
+   - `Association` and `KDC` naming such an IED: kept and told (`ied-reference-dangling`), they are the device's configuration;
+   - an `LGOS` or `LSVS` whose reference names a control block the file does not hold: kept and told (`supervision-source-absent`), its values are the device's data model.
+
+With `interactingIeds: 'publishers'`, the file also holds each IED the selected IED receives from, cut to what it sends:
+
+- the senders are read from its inputs: the control block an input names (by its names and its service, else by its control block uuid) and the logical node it names (by its names, else by its uuid; an input polling data names no control block); and every control block of another IED naming the selected IED as a receiver or report client, whether an input is bound to it or not;
+- each sender keeps what that block or logical node references: the block, its data set and the members it lists, the logical devices and logical nodes they name with their LN0, the server with its authentication, the access point, the access points serving that server; the receivers and report clients of a sent block naming the selected IED (its tool reads them to find what is sent to it); everything else is left out (values, inputs and outputs, other receivers and report clients, associations, key distribution entries, services, security, texts, private content, every logical device, logical node, data set and control block nothing names);
+- each sender is marked `engRight="fix"` (not engineered in the file), with the data types its kept logical nodes use;
+- its connections on a kept access point are written with their address, physical connection and the GSE / SMV of what it sends; a sent data set member naming nothing the sender holds is written and told (`data-set-member-unresolved`);
+- the senders count as held by the file: inputs bound to them are written as they are, receivers and report clients naming them stay under `clientRefs: 'cleanAbsent'`, a supervision of a sent block is not told.
+
+With `includeSubstation: true` the file holds the substation part related to the IED: the frames (substation, voltage level, bay, function) holding the LNodes it implements, names and identifiers as in the project, data specifications keeping their mapping to the IED's logical nodes, no application, allocation role or power system relation; an LNode of another IED is left out, and an input or output specification naming it loses that link and is told (`process-reference-cut`).
+
+Returns `fileName` (`<IED>.cid`) and the warnings:
+
+```ts
+{ code: 'input-removed', source: Ref<'ExtRef'>, iedName: string }
+{ code: 'input-unbound', source: Ref<'ExtRef' | 'ExtCtrl'>, iedName: string, attributes: string[] }
+{ code: 'input-incomplete', source: Ref<'ExtRef'>, missing: string[] }
+{ code: 'ied-reference-dangling', source: Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>, iedName: string }
+{ code: 'ied-reference-left-out', source: Ref<'IEDName' | 'ClientLN'>, iedName: string }
+{ code: 'supervision-source-absent', source: Ref<'LN'>, reference: string }
+{ code: 'data-set-member-unresolved', source: Ref<'FCDA'> }
+```
+
+#### `exportOptions`
+
+```ts
+query.lifecycle.exportOptions(params: { iedRef: Scl.Ref<'IED'> }): Promise<IedExportOption[]>
+// IedExportOption = { fileType: 'ISD' | 'CID', offered: true } | { fileType, offered: false, refusal: { key, meta: { ied } } }
+```
+
+The file types `extract.ied` writes for the IED, ISD then CID, each offered or refused with the key and data of the error the export would throw (`IED_NOT_SPECIFICATION` for an ISD of a real IED, `IED_NOT_IMPLEMENTED` or `IED_NOT_CONNECTED` for a CID): a menu shows the entries from it without deriving the rule again. An IED the document does not hold is refused as by the export (`ELEMENT_NOT_FOUND`).
 
 ### Options
 
