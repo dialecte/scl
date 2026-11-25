@@ -95,9 +95,11 @@ export async function foldCrossCuttingSatellites(
 	})
 	// on a first placement, one the project holds by its uuid already is not placed again, nor listed; nor one left
 	// applying to nothing, the project's copy making each of its applications already
-	const held = placementListing
-		? await findHeldSatelliteIds(query, { satellites: resolvedTargets })
-		: new Set<string>()
+	// a copy's source is the project: every satellite is held there, none brought from another file
+	const held =
+		placementListing && params.diffPolicy.sourceIsProject !== true
+			? await findHeldSatelliteIds(query, { satellites: resolvedTargets })
+			: new Set<string>()
 	// what applies where the project's copy of it applies already does not apply there twice, as the apply places it
 	const duplicates = placementListing
 		? collectDuplicateApplications({

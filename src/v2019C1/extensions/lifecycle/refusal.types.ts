@@ -16,7 +16,9 @@ export type LifecycleRefusalCode = Extract<
  *    (`OPTION_NOT_AVAILABLE`);
  *  - `source-not-updated`: an update of an IED placed from another file than an ISD (`OPTION_NOT_AVAILABLE`);
  *  - `no-instance` / `not-an-instance` / `several-instances`: an update that does not start from one instance the
- *    project holds (`TARGET_INSTANCE_REQUIRED`).
+ *    project holds (`TARGET_INSTANCE_REQUIRED`);
+ *  - `copy-not-offered`: a copy from another document, with another verb than fsd / asd, of another root, merged onto
+ *    the functions it composes, or of an application whose functions sit under several parents (`OPTION_NOT_AVAILABLE`).
  */
 export type LifecycleRefusalReason =
 	| 'other-file'
@@ -29,6 +31,7 @@ export type LifecycleRefusalReason =
 	| 'no-instance'
 	| 'not-an-instance'
 	| 'several-instances'
+	| 'copy-not-offered'
 
 /**
  * A lifecycle operation refused, as data: the error's key (`code`), why (`reason`), the error's `meta` exactly as the

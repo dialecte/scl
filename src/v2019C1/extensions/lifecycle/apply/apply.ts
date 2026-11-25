@@ -3,6 +3,7 @@ import { assertReportFits } from './assert-report-fits'
 import { recheckAfterApply } from './recheck-after-apply'
 import { releaseWrittenImplementation } from './release-written-implementation'
 
+import { assertCopyFits } from '@/v2019C1/extensions/lifecycle/copy/assert-copy-fits'
 import {
 	allGroups,
 	assertDecisionsCoherent,
@@ -86,6 +87,8 @@ export async function apply(
 	// the report tells what THIS run places: what an earlier run placed is forgotten first, whatever follows
 	clearAnnotations({ report })
 
+	// a copy the apply does not offer is refused before the report is read
+	await assertCopyFits({ query: tx, target: params })
 	// a report made for another target, or naming what the document no longer holds, is refused whatever the track
 	await assertReportFits(tx, { report, target: params, decisionMappings })
 	// mapping choices the report cannot honour are refused before any write
@@ -206,6 +209,9 @@ async function runVerb(
 	},
 ): Promise<AppliedInstances> {
 	const { target, report, decisions, removalBase, placeholderLineages } = params
+	// as the report places it: on the levels its template says, or under the anchor itself (a copy)
+	const resolvePlacement =
+		scenarioPolicy({ scenario: target.scenario }).placement === 'template-levels'
 	switch (target.verb) {
 		case 'fsd': {
 			const functions = await updateFsd(tx, {
@@ -220,7 +226,7 @@ async function runVerb(
 				decisions,
 				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 				decisionMappings: target.resolution?.mappings,
-				resolvePlacement: true,
+				resolvePlacement,
 			})
 			return { verb: 'fsd', functions }
 		}
@@ -253,7 +259,7 @@ async function runVerb(
 				decisions,
 				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 				decisionMappings: target.resolution?.mappings,
-				resolvePlacement: true,
+				resolvePlacement,
 				sharedFunctions: target.resolution?.sharedFunctions,
 			})
 			return { verb: 'asd', applications, functions }

@@ -130,7 +130,8 @@ export type {
 	MoveAnchorRefusalKey,
 	MovedElement,
 	MoveRefusal,
+	KeyTaken,
 	MoveReport,
-	NameTaken,
 	ReportMoveParams,
 } from './move/public'
+export type { CopyUnbind, CopyWrite } from './copy/copy.types'

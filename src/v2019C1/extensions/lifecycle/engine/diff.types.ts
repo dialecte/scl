@@ -3,7 +3,10 @@ import type { LifecycleScenario, LifecycleVerb } from '../contract.types'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
+import type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'
+import type { CopyUnbind } from '@/v2019C1/extensions/lifecycle/copy/copy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
+import type { CommitRefusal } from '@/v2019C1/hooks/before-commit/commit-plan.types'
 import type { AnyRawRecord } from '@dialecte/core'
 import type { AnyRefOrRecord, AnyTreeRecord } from '@dialecte/core'
 
@@ -271,6 +274,12 @@ export type DecisionGroup = {
 	 * with the removal. Absent when nothing outside is touched, or the group removes nothing.
 	 */
 	sideEffects?: RemovalSideEffect[]
+	/**
+	 * A copy: the group placing a root (the Function copied; the Application and each Function it composes) whose key a
+	 * sibling where it lands holds already, with the values the engine numbers instead — those the apply writes unless
+	 * the review types others.
+	 */
+	keyTaken?: KeyTaken
 }
 
 /**
@@ -417,6 +426,17 @@ export type DiffReport = {
 	 * {@link OtherIedImpact}), for a consumer to show before the decision. Absent when none.
 	 */
 	otherIedImpacts?: OtherIedImpact[]
+	/**
+	 * A copy (`scenario: 'copy'`): the copied LNodes released from the IED that does not travel with it, each with what
+	 * the apply writes on its copy. Absent for another scenario.
+	 */
+	unbinds?: CopyUnbind[]
+	/**
+	 * A copy: every refusal the commit of the copy would raise (an incoherent uuid reference it creates), listed before
+	 * it is written, naming the source element; empty when none. The commit refuses with the first. Absent for another
+	 * scenario.
+	 */
+	refusals?: CommitRefusal[]
 }
 
 /**

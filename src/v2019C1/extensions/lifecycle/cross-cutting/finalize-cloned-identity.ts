@@ -13,8 +13,8 @@ import type * as Core from '@dialecte/core'
  * the mode. Every clone-then-place path goes through it (instantiate, update, reconcile, extract):
  *  - `keep` (fork) converges the clone to the source revision's uuids → {@link restoreClonedUuids}
  *    (no ref remap: refs were copied verbatim in source space and stay coherent).
- *  - `strip` / `stamp-template` / `preserve` all keep the fresh clone uuid → {@link applyUuidRemap}
- *    repoints the subtree's internal refs onto those fresh uuids.
+ *  - `strip` / `stamp-template` / `copy` all keep the fresh clone uuid → {@link applyUuidRemap}
+ *    repoints the subtree's internal refs onto those fresh uuids; a copy's lineage is the one the clone copied.
  *
  * The two touch disjoint attribute sets (`writeIdentity` reads the source attributes and writes only lineage;
  * `applyUuidRemap` reads the fresh element uuids and writes only reference attributes), so the order is free.
@@ -26,7 +26,8 @@ export async function finalizeClonedIdentity(
 	const { redirectMappings, ...write } = params
 	const { cloneMappings } = write
 
-	await writeIdentity(tx, write)
+	// a copy keeps the lineage the clone copied, as `keep` does
+	await writeIdentity(tx, write.mode === 'copy' ? { cloneMappings, mode: 'keep' } : write)
 
 	switch (write.mode) {
 		case 'keep':
@@ -36,7 +37,7 @@ export async function finalizeClonedIdentity(
 			return
 		case 'strip':
 		case 'stamp-template':
-		case 'preserve':
+		case 'copy':
 			await applyUuidRemap(tx, { cloneMappings, redirectMappings })
 			return
 		default:
