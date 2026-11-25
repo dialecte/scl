@@ -5,7 +5,7 @@ import RealIedWithSubstationPartXml from './fixtures/cid-real-ied-with-substatio
 
 import { describe, expect } from 'vitest'
 
-import { runSclTestCases } from '@/v2019C1/test'
+import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
 import type { CidExtractParams } from './ied.types'
 import type { SclTest } from '@/v2019C1/test'
@@ -35,7 +35,7 @@ const PROCESS_REFERENCE_CUT = {
 	attributes: ['source', 'sourceDoName', 'sourceLNodeUuid'],
 }
 
-const emptyTarget = /* xml */ `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="empty-target"/>`
+const emptyTarget = /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="empty-target"/>`
 
 const pub = '/default:SCL/default:IED[@name="Pub"]'
 const pub2 = '/default:SCL/default:IED[@name="Pub2"]'
