@@ -213,7 +213,7 @@ export type TakeOvers = 'all' | readonly TakeOver[]
  * nothing is written (decisions still to take).
  *
  * It runs inside apply's progress plan, as its last phase: a progress plan it opens on `tx.progress` it closes in a
- * `finally`, whether it returns or throws. Left open, it would take apply's next steps until apply ends.
+ * `finally`, whether it returns or throws. Left open, it would take apply's last step until apply ends.
  */
 export type AfterApplyHook = (
 	tx: Scl.Transaction,
