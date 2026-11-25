@@ -8,7 +8,12 @@ import type { ScenarioPolicy } from './scenario-policy.types'
  *  - `template` reconciles the instances of a template, by that lineage;
  *  - `fork` reconciles the previous revision of the same file, by the uuids both share, which it keeps — on what it
  *    places too, with no provenance of its own: the project holds the file's elements, not instances of them, and
- *    takes the file's renames; a name a sibling of the project already holds is numbered.
+ *    takes the file's renames; a name a sibling of the project already holds is numbered;
+ *  - `copy` places a copy of an element of the document itself under the parent the consumer picked: every element a
+ *    uuid of its own and its lineage as copied (a copy of an instance is another instance of its template), no
+ *    provenance (the copy is no placement from a file), every function an application composes copied with it, the
+ *    references it carries kept as written; matched to nothing, matching by uuid finds the shared elements it is
+ *    classified by (a category, a role) where they are, reused.
  */
 export const SCENARIO_POLICIES = {
 	instantiate: {
@@ -22,6 +27,9 @@ export const SCENARIO_POLICIES = {
 		removalBase: 'none',
 		namesFollow: 'project',
 		subNetworkSettings: 'source',
+		placement: 'template-levels',
+		composedFunctions: 'missing',
+		outsideReferences: 'leave-out',
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -34,6 +42,9 @@ export const SCENARIO_POLICIES = {
 		removalBase: 'lineage',
 		namesFollow: 'project',
 		subNetworkSettings: 'project',
+		placement: 'template-levels',
+		composedFunctions: 'missing',
+		outsideReferences: 'leave-out',
 	},
 	fork: {
 		matchKey: 'uuid',
@@ -46,5 +57,23 @@ export const SCENARIO_POLICIES = {
 		removalBase: 'revision',
 		namesFollow: 'source',
 		subNetworkSettings: 'source',
+		placement: 'template-levels',
+		composedFunctions: 'missing',
+		outsideReferences: 'leave-out',
+	},
+	copy: {
+		matchKey: 'uuid',
+		matchesInstances: false,
+		refsAlwaysAdded: true,
+		identityMode: 'keep',
+		bumpsCollisions: true,
+		placementIdentity: 'copy',
+		writesProvenance: false,
+		removalBase: 'none',
+		namesFollow: 'project',
+		subNetworkSettings: 'source',
+		placement: 'anchor',
+		composedFunctions: 'all',
+		outsideReferences: 'keep',
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

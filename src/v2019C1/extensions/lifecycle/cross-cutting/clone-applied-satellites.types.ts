@@ -9,6 +9,16 @@ import type * as Core from '@dialecte/core'
 
 export type CloneAppliedSatellitesParams = {
 	sourceQuery: Core.Query<Config>
+	/**
+	 * The source is the document placed into (a copy): every element of it is held by its uuid, the held elements of
+	 * the source are no copy of anything, and a reference the source holds is never one the placement wrote.
+	 */
+	sourceIsProject?: boolean
+	/**
+	 * A reference of a satellite naming what the placement does not place is kept as written (a copy: inside one document
+	 * the element it names is there), not left out.
+	 */
+	keepsOutsideReferences?: boolean
 	primaryRef: Scl.Ref<Scl.ElementsOf>
 	/** What travels with the primary (the functions an application composes): what applies to them is placed too. */
 	composedRefs?: readonly Scl.Ref<Scl.ElementsOf>[]

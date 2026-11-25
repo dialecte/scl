@@ -9,6 +9,7 @@ import { resolveDefinition } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
+import { assertCopyFits, describeCopy } from '@/v2019C1/extensions/lifecycle/copy'
 import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
@@ -63,6 +64,8 @@ export async function report(
 	// what the report lists and names is shared by all it describes: the names it gives to the
 	// elements to create are those apply gives them, one after the other
 	const pass = createReportPass()
+	// a copy the report does not offer is refused before anything is read beyond the documents
+	await assertCopyFits({ query, target })
 	assertRevisionBaseFits({ scenario: target.scenario, baseQuery: target.baseQuery })
 	// what the report is made for, read first: a source an IED is not placed from is refused before anything is diffed
 	const reportTarget = await reportTargetOf(query, target)
@@ -80,7 +83,11 @@ export async function report(
 		referencesByName: target.resolution?.referencesByName,
 	})
 	// what the resolution tells every diff of the report, read once as well
-	const diffPolicy = readDiffPolicy({ resolution: target.resolution })
+	// a copy reads the document it is placed into (its entry refused any other): the source is the project
+	const diffPolicy = readDiffPolicy({
+		resolution: target.resolution,
+		sourceIsProject: scenarioPolicy({ scenario: target.scenario }).placementIdentity === 'copy',
+	})
 	const report = await reportVerb(query, {
 		target,
 		pass,
@@ -116,6 +123,16 @@ export async function report(
 	if (revisionBase) report.revisionBase = revisionBase
 
 	await tagEditableAttributes({ query, sourceQuery: target.sourceQuery, groups: allGroups(report) })
+	// a copy: the LNodes it releases, the refusals of its commit, the key a sibling holds where each root lands
+	if (target.scenario === 'copy' && (target.verb === 'fsd' || target.verb === 'asd')) {
+		const copied = await describeCopy(query, { target, report })
+		report.unbinds = copied.unbinds
+		report.refusals = copied.refusals
+		for (const group of allGroups(report)) {
+			const keyTaken = copied.keysTaken.get(group.id)
+			if (keyTaken) group.keyTaken = keyTaken
+		}
+	}
 
 	// what a removal makes the delete hooks do outside it, read before anything is decided
 	await listRemovalSideEffects(query, { groups: allGroups(report) })
@@ -165,6 +182,10 @@ async function reportVerb(
 	},
 ): Promise<DiffReport> {
 	const { target, pass, removalBase, placeholderLineages, diffPolicy } = params
+	// started above the level a function or an application was made for, it lands on the level its template says; a
+	// copy lands under the anchor itself
+	const resolvePlacement =
+		scenarioPolicy({ scenario: target.scenario }).placement === 'template-levels'
 	switch (target.verb) {
 		case 'fsd':
 			return reportFsd(query, {
@@ -177,7 +198,7 @@ async function reportVerb(
 				decisionMappings: target.resolution?.mappings,
 				diffPolicy,
 				placeholderLineages,
-				resolvePlacement: true,
+				resolvePlacement,
 				removalBase,
 			})
 		case 'ssd':
@@ -204,7 +225,7 @@ async function reportVerb(
 				diffPolicy,
 				placeholderLineages,
 				anchor: target.anchor,
-				resolvePlacement: true,
+				resolvePlacement,
 				sharedFunctions: target.resolution?.sharedFunctions,
 				removalBase,
 			})

@@ -30,7 +30,7 @@ tx.lifecycle.apply({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, repor
 The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`; `LifecycleTarget` is a verb arm (`LifecycleVerbTarget`) and a scenario arm (`LifecycleRevisionBase`): only `scenario: 'fork'` takes `baseQuery`.
 
 - `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)), or `'ied'` (then `ref` is an `IED` and `anchor` the project's `SCL` — see [An IED](#an-ied-—-verb-ied)) — the **layer**;
-- `scenario`: `'instantiate'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`);
+- `scenario`: `'instantiate'` | `'copy'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`); `'copy'` copies a Function or an Application inside the document itself (see [a copy](#a-copy-inside-one-document-—-scenario-copy));
 - `anchor`: the target parent the instance lives under / is placed into.
 - `baseQuery`: for a `fork` only, the **previous revision** of the file — the one the project was forked from. An element the project holds that the newer revision lacks is removed when the previous revision held it, and is the project's own otherwise (see [the fork](#scenario-—-instantiate-vs-template-vs-fork)). `report` and `apply` each read it once. Refused with `REVISION_BASE_OTHER_FILE` when its `Header` names another file than the newer revision's (both carry a `uuid`, and they differ); another scenario given one is refused with `REVISION_BASE_WITHOUT_FORK`.
 - `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, boundLogicalNodeTypes?, referencesByName?, sharedFunctions?, consumerManagedTags?, afterApply? }` (type `Resolution`). `apply` reads all of it but `boundLogicalNodeTypes` and `consumerManagedTags`; `report` reads `mappings`, `boundLogicalNodeTypes`, `referencesByName`, `sharedFunctions` and `consumerManagedTags`, so the report is re-derived from the consumer's choices and shows their consequence:
@@ -290,6 +290,53 @@ The scenarios are **distinct operations**, chosen by the consumer. For an IED, [
 
 - **fast** (`false`) — first-time instantiate or a conflict-free change → `apply` writes headless (pass no `decisions`): it writes what the report lists, each group at its suggested action — an element the project added is kept, a reference the report kept stays. Decisions supplied anyway are honored, user value edits included;
 - **full** (`true`) — the instance exists and something changed → `apply` needs `decisions`. Without them it writes **nothing** and returns the report so the caller can drive the review; with them it applies only the accepted groups (across both layers for an ASD).
+
+### A copy inside one document — `scenario: 'copy'`
+
+`verb: 'fsd'` with `ref` a `Function`, or `verb: 'asd'` with `ref` an `Application`, `sourceQuery` the document's own
+query and `anchor` the parent the consumer picked: `report` lists the copy as a first placement, `apply` writes it.
+
+- **Identity**: every element of the copy gets a uuid of its own; its `templateUuid` / `originUuid` stay as copied — a
+  copy of an instance is another instance of its template, which a `template` update then reaches with the original.
+  No provenance is written: the `FunctionSclRef` / `ApplicationSclRef` the original holds is copied as it is.
+- **Placement**: under the anchor itself — no level is resolved, a reference to a level of the topology still names that
+  level. An application is copied with **every** function it composes (all under the anchor, the application in its
+  `Private`), its `FunctionRef`s naming the copies; a role (`AllocationRole`) or a category it shares is reused, given
+  one reference to each copy; a variable or a behaviour applying to what it copies is copied with it, named apart.
+- **Names**: a name a sibling holds where the copy lands is numbered (`F1` -> `F1_1`), a typed name taken too. The
+  report gives it on the group of each root it places (the Function; the Application and each Function it composes):
+  `keyTaken: { constraint, values, takenBy, proposed }` — the values `apply` writes unless the review types others.
+- **Outside references** the copy carries (a signal input from another function, a terminal on a node of another bay)
+  are kept as written.
+- **LNodes**: no IED travels with the copy, so each copied LNode bound to one is released from it — `iedName` `None`,
+  `ldInst` and `lnUuid` removed, its prefix, class and instance as its `LNodeSpecNaming` gives them, the specification
+  IED that names removed (its logical device kept), the references of its implementation (a `DOS` / `SDS` / `DAS`
+  mapping, a `SourceRef` / `ControlRef` naming an `ExtRef` / `ExtCtrl`) cleared. The report lists each as `unbinds`
+  (`CopyUnbind`: the LNode, its `LNodeSpecNaming` and its references, each with the attributes written and removed), the
+  original untouched.
+- **Refusals up front**: `report.refusals` lists every refusal the commit of the copy would raise (an incoherent uuid
+  reference it copies: two exclusive groups held together, data missing beside a uuid, a behaviour variable naming an
+  element out of its reach where the copy lands — `REFERENCE_INCOHERENT`, by the source element); the commit refuses
+  with the first.
+- **Refused** with `OPTION_NOT_AVAILABLE`, before anything is read beyond the documents: a copy read from another
+  document, or made with `ssd` / `ied` (`meta: { option: 'scenario', value: 'copy' }`); a root other than a `Function`
+  or an `Application` (`{ option: 'ref', value: <its tag> }`); `resolution.sharedFunctions: 'merge'`
+  (`{ option: 'sharedFunctions', value: 'merge' }`); an application whose functions sit under several parents
+  (`{ option: 'scenario', value: 'copy', reason: 'functions-under-several-parents' }`). An anchor the copy cannot sit
+  under is refused with `INVALID_PARENT_CHILD`.
+
+```ts
+const target = {
+	verb: 'fsd',
+	scenario: 'copy',
+	sourceQuery: doc.query,
+	ref: functionRef,
+	anchor: bayRef,
+} as const
+const report = await doc.query.lifecycle.report(target)
+// report.refusals, report.unbinds, and the keyTaken of the function's group, before anything is written
+await doc.transaction((tx) => tx.lifecycle.apply({ ...target, report }))
+```
 
 ### Which scenario applies — `scenarioOf`
 

@@ -634,7 +634,7 @@
 				"decisions to review before a template update",
 				"what placing an IED from an ISD/ICD/IID would add"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:59"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/report/report.ts:60"
 		},
 		{
 			"path": "doc.query.lifecycle.scenarioOf.fsd",
@@ -1172,13 +1172,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: WriteIdentityParams) => Promise<void>",
-			"summary": "Writes the instance lineage (`templateUuid` / `originUuid`) of a clone: the one place that decides it. A clone copies the lineage of every element as the source holds it; each mapping carries the source record's attributes, so the source document is read only where a mode needs a cloned root's parent.",
+			"summary": "Writes the instance lineage (`templateUuid` / `originUuid`) of a clone: the one place that decides it. A clone copies the lineage of every element as the source holds it; each mapping carries the source record's attributes, so the source document is never read.",
 			"intents": [
 				"stamp templateUuid/originUuid on cloned elements",
 				"set instance lineage after a clone",
 				"strip template lineage on extract"
 			],
-			"declaredAt": "src/v2019C1/extensions/identity/transaction/write-identity.ts:32",
+			"declaredAt": "src/v2019C1/extensions/identity/transaction/write-identity.ts:29",
 			"example": "await tx.identity.writeIdentity({ cloneMappings, mode: write.mode })"
 		},
 		{
@@ -1192,7 +1192,7 @@
 				"write a lifecycle report with user decisions",
 				"accept or skip changes from a newer FSD/ASD/SSD"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:79",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/apply/apply.ts:80",
 			"example": "await tx.lifecycle.apply({ ...lifecycleTarget, report: reported, resolution: { afterApply } })"
 		},
 		{
@@ -1205,7 +1205,7 @@
 				"write a cut and paste after its review",
 				"move an element to another parent with a new name"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/move/apply-move.ts:20"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/move/apply-move.ts:19"
 		},
 		{
 			"path": "tx.lifecycle.extract.asd",
@@ -1285,7 +1285,7 @@
 				"add an Application from a template",
 				"place an application template under a Bay"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:52"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:60"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.fsd",
@@ -1298,7 +1298,7 @@
 				"add a Function from a template under a Bay or Function",
 				"place a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:59"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:65"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.ied",

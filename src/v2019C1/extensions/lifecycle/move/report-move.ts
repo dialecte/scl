@@ -75,7 +75,7 @@ export async function reportMove(
 		subtreeSize: reordered ? 1 : planned.carried,
 		followingReferences: reordered ? 0 : followingReferencesOf({ planned }),
 		...(reordered ? { reordered: true } : {}),
-		...(judged.nameTaken ? { nameTaken: judged.nameTaken } : {}),
+		...(judged.keyTaken ? { keyTaken: judged.keyTaken } : {}),
 	}
 	const refusals: MoveRefusal[] = [
 		...planned.refusals,
@@ -199,7 +199,7 @@ function movedReport(params: {
 				mappings: [],
 			},
 		],
-		needsDecisions: move.nameTaken !== undefined,
+		needsDecisions: move.keyTaken !== undefined,
 		summary: { ...emptySummary(), moved: 1 },
 		mappings: [],
 		templateInstances: [],

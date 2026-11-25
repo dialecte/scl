@@ -1,12 +1,12 @@
 // a function of an instance (bay B1 of a level template) holding an LNode, a subfunction and a variable, and the
 // copies already placed (lineage as copied): into a function of the same template, into one of another template, onto a plain bay
-import copyDoc from './fixtures/a-bay-function-its-subfunction-and-variable-with-their-copies.xml?raw'
 import { writeIdentity } from './write-identity'
 
-import { describe, expect } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
+import type { IdentityMode } from './write-identity.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
@@ -30,10 +30,8 @@ type Expected = {
 	originUuid?: string
 }
 
-/** The write of the case; `preserve` reads the case's document as the source, `strip` names source ids. */
-type CaseWrite =
-	| { mode: 'stamp-template' | 'keep' | 'preserve' }
-	| { mode: 'strip'; unlinked: string[] }
+/** The write of the case; `strip` names source ids. */
+type CaseWrite = { mode: 'stamp-template' | 'keep' } | { mode: 'strip'; unlinked: string[] }
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	write: CaseWrite
@@ -179,148 +177,6 @@ describe('writeIdentity', () => {
 			],
 			expected: [{ tagName: 'Function', targetId: 'fn-1', templateUuid: 'tpl' }],
 		},
-
-		'preserve → lineage carried verbatim (neither stamped nor stripped)': {
-			sourceXml: functionDoc('fn-1', { templateUuid: 'carried-tpl' }),
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				{
-					targetId: 'fn-1',
-					tagName: 'Function',
-					sourceId: 'fn-1',
-					sourceAttributes: { uuid: 'fn-src-uuid', templateUuid: 'carried-tpl' },
-				},
-			],
-			expected: [{ tagName: 'Function', targetId: 'fn-1', templateUuid: 'carried-tpl' }],
-		},
-
-		'preserve on a two-level element → templateUuid AND originUuid carried verbatim (no shift)': {
-			sourceXml: allocationRoleDoc('ar-1', {
-				templateUuid: 'carried-tpl',
-				originUuid: 'carried-origin',
-			}),
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				{
-					targetId: 'ar-1',
-					tagName: 'AllocationRole',
-					sourceId: 'ar-1',
-					sourceAttributes: {
-						uuid: 'ar-src-uuid',
-						templateUuid: 'carried-tpl',
-						originUuid: 'carried-origin',
-					},
-				},
-			],
-			expected: [
-				{
-					tagName: 'AllocationRole',
-					targetId: 'ar-1',
-					templateUuid: 'carried-tpl',
-					originUuid: 'carried-origin',
-				},
-			],
-		},
-
-		'preserve: an element copied into a function of the same template keeps its lineage': {
-			sourceXml: copyDoc,
-			write: { mode: 'preserve' },
-			cloneMappings: [copied({ from: 'source-lnode', to: 'into-same-template', tagName: 'LNode' })],
-			expected: [
-				{ tagName: 'LNode', targetId: 'into-same-template', templateUuid: 'lnode-template' },
-			],
-		},
-
-		'preserve: an element copied into a function of another template loses its lineage': {
-			sourceXml: copyDoc,
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				copied({ from: 'source-lnode', to: 'into-other-template', tagName: 'LNode' }),
-			],
-			expected: [{ tagName: 'LNode', targetId: 'into-other-template' }],
-		},
-
-		'preserve: a subfunction copied into another template loses its lineage, and so does what it holds':
-			{
-				sourceXml: copyDoc,
-				write: { mode: 'preserve' },
-				cloneMappings: [
-					copied({ from: 'source-subfunction', to: 'copied-subfunction', tagName: 'SubFunction' }),
-					copied({ from: 'source-sub-lnode', to: 'copied-sub-lnode', tagName: 'LNode' }),
-				],
-				expected: [
-					{ tagName: 'SubFunction', targetId: 'copied-subfunction' },
-					{ tagName: 'LNode', targetId: 'copied-sub-lnode' },
-				],
-			},
-
-		'preserve: what a subfunction holds, listed before it, loses its lineage with it': {
-			sourceXml: copyDoc,
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				copied({ from: 'source-sub-lnode', to: 'copied-sub-lnode', tagName: 'LNode' }),
-				copied({ from: 'source-subfunction', to: 'copied-subfunction', tagName: 'SubFunction' }),
-			],
-			expected: [
-				{ tagName: 'SubFunction', targetId: 'copied-subfunction' },
-				{ tagName: 'LNode', targetId: 'copied-sub-lnode' },
-			],
-		},
-		'preserve: a subfunction copied into a function of the same template keeps its lineage, and so does what it holds':
-			{
-				sourceXml: copyDoc,
-				write: { mode: 'preserve' },
-				cloneMappings: [
-					copied({ from: 'source-subfunction', to: 'same-subfunction', tagName: 'SubFunction' }),
-					copied({ from: 'source-sub-lnode', to: 'same-sub-lnode', tagName: 'LNode' }),
-				],
-				expected: [
-					{ tagName: 'SubFunction', targetId: 'same-subfunction', templateUuid: 'sub-template' },
-					{ tagName: 'LNode', targetId: 'same-sub-lnode', templateUuid: 'sub-lnode-template' },
-				],
-			},
-
-		'preserve: a function copied from a level of an instance onto another level keeps its lineage (it sits on a level)':
-			{
-				sourceXml: copyDoc,
-				write: { mode: 'preserve' },
-				cloneMappings: [
-					copied({ from: 'source-function', to: 'copied-function', tagName: 'Function' }),
-				],
-				expected: [
-					{ tagName: 'Function', targetId: 'copied-function', templateUuid: 'function-template' },
-				],
-			},
-
-		'preserve: an element of a hand-made function (no lineage) keeps its own wherever it is copied':
-			{
-				sourceXml: copyDoc,
-				write: { mode: 'preserve' },
-				cloneMappings: [copied({ from: 'handmade-lnode', to: 'handmade-copy', tagName: 'LNode' })],
-				expected: [
-					{ tagName: 'LNode', targetId: 'handmade-copy', templateUuid: 'handmade-lnode-template' },
-				],
-			},
-		'preserve: several roots copied at once, each read from its own source parent': {
-			sourceXml: copyDoc,
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				copied({ from: 'source-lnode', to: 'into-other-template', tagName: 'LNode' }),
-				copied({ from: 'source-function', to: 'copied-function', tagName: 'Function' }),
-			],
-			expected: [
-				{ tagName: 'LNode', targetId: 'into-other-template' },
-				{ tagName: 'Function', targetId: 'copied-function', templateUuid: 'function-template' },
-			],
-		},
-		'preserve: the parent of an element in a Private is the element holding the Private': {
-			sourceXml: copyDoc,
-			write: { mode: 'preserve' },
-			cloneMappings: [
-				copied({ from: 'source-variable', to: 'copied-variable', tagName: 'Variable' }),
-			],
-			expected: [{ tagName: 'Variable', targetId: 'copied-variable' }],
-		},
 	}
 
 	async function act({
@@ -340,13 +196,6 @@ describe('writeIdentity', () => {
 			const { write } = testCase
 			if (write.mode === 'strip') {
 				await writeIdentity(tx, { cloneMappings, mode: 'strip', unlinked: new Set(write.unlinked) })
-			} else if (write.mode === 'preserve') {
-				await writeIdentity(tx, {
-					cloneMappings,
-					mode: 'preserve',
-					sourceQuery: source.query,
-					sourceRoots: cloneMappings.map((mapping) => mapping.source),
-				})
 			} else {
 				await writeIdentity(tx, { cloneMappings, mode: write.mode })
 			}
@@ -370,31 +219,6 @@ describe('writeIdentity', () => {
 
 	runSclTestCases.withExport({ testCases, act })
 })
-
-/** A copy of a record of {@link copyDoc}, read with the lineage it holds there. */
-function copied(params: { from: string; to: string; tagName: string }): MappingSpec {
-	const { from, to, tagName } = params
-	return {
-		targetId: to,
-		tagName,
-		sourceId: from,
-		sourceAttributes: COPY_DOC_LINEAGE[from] ?? {},
-	}
-}
-
-/** The lineage of the source records of {@link copyDoc}. */
-const COPY_DOC_LINEAGE: Record<string, MappingSpec['sourceAttributes']> = {
-	'source-function': { uuid: 'source-function-uuid', templateUuid: 'function-template' },
-	'source-lnode': { uuid: 'source-lnode-uuid', templateUuid: 'lnode-template' },
-	'handmade-lnode': { uuid: 'handmade-lnode-uuid', templateUuid: 'handmade-lnode-template' },
-	'source-subfunction': { uuid: 'source-subfunction-uuid', templateUuid: 'sub-template' },
-	'source-sub-lnode': { uuid: 'source-sub-lnode-uuid', templateUuid: 'sub-lnode-template' },
-	'source-variable': {
-		uuid: 'source-variable-uuid',
-		templateUuid: 'variable-template',
-		originUuid: 'variable-origin',
-	},
-}
 
 function toAttributes(spec: Record<string, string | undefined>): { name: string; value: string }[] {
 	return Object.entries(spec)
@@ -433,3 +257,9 @@ function allocationRoleDoc(
 		</SCL>
 	`
 }
+
+describe('IdentityMode', () => {
+	it('names the three modes a write takes: a copy is no mode of writeIdentity', () => {
+		expectTypeOf<IdentityMode>().toEqualTypeOf<'strip' | 'stamp-template' | 'keep'>()
+	})
+})

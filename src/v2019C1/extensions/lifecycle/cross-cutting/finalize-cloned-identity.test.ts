@@ -1,6 +1,6 @@
 import { finalizeClonedIdentity } from './finalize-cloned-identity'
 
-import { describe } from 'vitest'
+import { describe, expect } from 'vitest'
 
 import { cloneTree } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -19,8 +19,6 @@ type TestCase = SclTest.BaseXmlTestCase & {
 		under: Scl.Ref<Scl.ElementsOf>
 		retagRoot?: { from: Scl.ElementsOf; to: Scl.ElementsOf }
 	}
-	/** `preserve` reads the source document; `strip` breaks the link of the element cloned. */
-	mode: 'preserve' | 'strip'
 }
 
 /** A function of a template instance: a subfunction holding a trip LNode and a breaker LNode reading the trip. */
@@ -76,61 +74,11 @@ const signalLeftOnTheSource = [
 
 describe('finalizeClonedIdentity', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'preserve: a copy into a function of the same template keeps every lineage, its references read the copy':
-			{
-				sourceXml,
-				targetXml: targetXml('function-template'),
-				clone: { ref: subFunction, under: intoFunction },
-				mode: 'preserve',
-				expectedQueries: [
-					'//default:SubFunction[@templateUuid="subfunction-template"]/default:LNode[@templateUuid="trip-template"]',
-					'//v2019C1:SourceRef[@templateUuid="source-ref-template"]',
-					...signalRepointed,
-				],
-				unexpectedQueries: signalLeftOnTheSource,
-			},
-		'preserve: a copy into a function of another template loses every lineage, its references read the copy':
-			{
-				sourceXml,
-				targetXml: targetXml('another-template'),
-				clone: { ref: subFunction, under: intoFunction },
-				mode: 'preserve',
-				expectedQueries: [
-					'//default:SubFunction/default:LNode[@lnClass="XCBR"]',
-					...signalRepointed,
-				],
-				unexpectedQueries: [
-					'//default:SubFunction[@templateUuid]',
-					'//default:LNode[@templateUuid]',
-					'//v2019C1:SourceRef[@templateUuid]',
-					...signalLeftOnTheSource,
-				],
-			},
-		'preserve: a subfunction copied as a function onto a level of another bay is read as the subfunction it was: its lineage goes':
-			{
-				sourceXml,
-				targetXml: targetXml('function-template'),
-				clone: {
-					ref: subFunction,
-					under: { tagName: 'Bay', id: 'target-bay' } as Scl.Ref<'Bay'>,
-					retagRoot: { from: 'SubFunction', to: 'Function' },
-				},
-				mode: 'preserve',
-				expectedQueries: [
-					'//default:Bay[@name="B2"]/default:Function[@name="Sub"]',
-					...signalRepointed,
-				],
-				unexpectedQueries: [
-					'//default:Function[@name="Sub"][@templateUuid]',
-					'//default:LNode[@templateUuid]',
-				],
-			},
 		'strip: the element cloned loses its link, what it holds keeps its lineage, its references read the copy':
 			{
 				sourceXml,
 				targetXml: targetXml('function-template'),
 				clone: { ref: subFunction, under: intoFunction },
-				mode: 'strip',
 				expectedQueries: [
 					'//default:SubFunction/default:LNode[@templateUuid="trip-template"]',
 					'//v2019C1:SourceRef[@templateUuid="source-ref-template"]',
@@ -154,21 +102,93 @@ describe('finalizeClonedIdentity', () => {
 				retagRoot: testCase.clone.retagRoot,
 			})
 			if (!clone) throw new Error('nothing cloned')
-			if (testCase.mode === 'preserve') {
-				await finalizeClonedIdentity(tx, {
-					cloneMappings: clone.mappings,
-					mode: 'preserve',
-					sourceQuery: source.query,
-					sourceRoots: [testCase.clone.ref],
-				})
-			} else {
-				await finalizeClonedIdentity(tx, {
-					cloneMappings: clone.mappings,
-					mode: 'strip',
-					unlinked: new Set([testCase.clone.ref.id ?? '']),
-				})
-			}
+			await finalizeClonedIdentity(tx, {
+				cloneMappings: clone.mappings,
+				mode: 'strip',
+				unlinked: new Set([testCase.clone.ref.id ?? '']),
+			})
 		})
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+// A copy keeps the lineage of every element as the clone copied it, wherever it is pasted: a copy of an instance is
+// another instance of its template. Every element gets a uuid of its own, the references inside read the copy.
+describe('finalizeClonedIdentity - copy', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'copy into a function of the same template → every lineage as copied, fresh uuids, its references read the copy':
+			{
+				sourceXml,
+				targetXml: targetXml('function-template'),
+				clone: { ref: subFunction, under: intoFunction },
+				expectedQueries: [
+					'//default:SubFunction[@templateUuid="subfunction-template"]/default:LNode[@templateUuid="trip-template"]',
+					'//v2019C1:SourceRef[@templateUuid="source-ref-template"]',
+					...signalRepointed,
+				],
+				unexpectedQueries: [
+					...signalLeftOnTheSource,
+					'//default:SubFunction[@uuid="subfunction-uuid"]',
+					'//default:LNode[@uuid="breaker-lnode-uuid"]',
+				],
+			},
+		'copy into a function of another template → every lineage still as copied, its references read the copy':
+			{
+				sourceXml,
+				targetXml: targetXml('another-template'),
+				clone: { ref: subFunction, under: intoFunction },
+				expectedQueries: [
+					'//default:SubFunction[@templateUuid="subfunction-template"]/default:LNode[@templateUuid="trip-template"]',
+					'//default:LNode[@lnClass="XCBR"][@templateUuid="breaker-template"]',
+					'//v2019C1:SourceRef[@templateUuid="source-ref-template"]',
+					...signalRepointed,
+				],
+				unexpectedQueries: [
+					...signalLeftOnTheSource,
+					'//default:LNode[@uuid="breaker-lnode-uuid"]',
+				],
+			},
+		'a subfunction copied as a function onto a level of another bay → its lineage as copied': {
+			sourceXml,
+			targetXml: targetXml('function-template'),
+			clone: {
+				ref: subFunction,
+				under: { tagName: 'Bay', id: 'target-bay' } as Scl.Ref<'Bay'>,
+				retagRoot: { from: 'SubFunction', to: 'Function' },
+			},
+			expectedQueries: [
+				'//default:Bay[@name="B2"]/default:Function[@name="Sub"][@templateUuid="subfunction-template"]',
+				...signalRepointed,
+			],
+			unexpectedQueries: [
+				'//default:Function[@name="Sub"][@uuid="subfunction-uuid"]',
+				...signalLeftOnTheSource,
+				'//default:LNode[@uuid="breaker-lnode-uuid"]',
+			],
+		},
+	}
+
+	async function act({
+		testCase,
+		source,
+		target,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const finalized = target
+			.transaction(async function cloneAndFinalize(tx) {
+				const clone = await cloneTree(tx, {
+					sourceQuery: source.query,
+					ref: testCase.clone.ref,
+					targetParent: testCase.clone.under,
+					retagRoot: testCase.clone.retagRoot,
+				})
+				if (!clone) throw new Error('nothing cloned')
+				await finalizeClonedIdentity(tx, { cloneMappings: clone.mappings, mode: 'copy' })
+			})
+			.then(() => 'finalized')
+		await expect(finalized).resolves.toBe('finalized')
 		return { assertOn: 'target' }
 	}
 

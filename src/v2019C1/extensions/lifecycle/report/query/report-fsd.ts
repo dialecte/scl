@@ -137,14 +137,16 @@ export async function reportFsd(
 		// function) is not written, nor a variable it holds left applying to nothing: each reference told of; a reference
 		// to a level of the template it lands on (those of the structure where it lands, and the ones its placement adds)
 		// names where it landed
-		const carried = params.placementListing
-			? undefined
-			: await scopeFunctionPlacedAlone(query, {
-					sourceQuery,
-					functionRef,
-					landing,
-					placementLevels: placement.levels,
-				})
+		// a copy keeps what it carries as written
+		const carried =
+			params.placementListing || policy.outsideReferences === 'keep'
+				? undefined
+				: await scopeFunctionPlacedAlone(query, {
+						sourceQuery,
+						functionRef,
+						landing,
+						placementLevels: placement.levels,
+					})
 		const instanceDiff = await reportFunction(query, {
 			templateLevels,
 			pass: params.pass,
