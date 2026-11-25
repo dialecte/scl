@@ -87,7 +87,7 @@ describe('extract IED records the document provenanceQuery names as its source',
 				provenanceQuery: provenance.query,
 			})
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_R.isd' })
 		return { assertOn: 'target' }
 	}
 

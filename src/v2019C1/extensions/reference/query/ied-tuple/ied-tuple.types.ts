@@ -27,3 +27,20 @@ export type ControlBlockTuplePair = TupleReferencePair & {
 	targetByAttribute: NonNullable<TupleReferencePair['targetByAttribute']>
 	tuple: { controlBlock: string }
 }
+
+/** A tuple target of the document by its uuid: its tag, its address parts, its address, its id and its ancestors' ids. */
+export type IndexedTarget = {
+	id: string
+	tagName: string
+	parts: TupleTargetParts
+	address: string
+	lineage: ReadonlySet<string>
+}
+
+/** The tuple targets of the tags read: by address key (an address two targets share left out), and by uuid. */
+export type TupleTargetIndex = {
+	byAddress: ReadonlyMap<string, string>
+	byUuid: ReadonlyMap<string, IndexedTarget>
+	/** The address keys two targets share: they name several elements. */
+	shared: ReadonlySet<string>
+}

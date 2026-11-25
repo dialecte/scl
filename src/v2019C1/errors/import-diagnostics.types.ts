@@ -85,6 +85,31 @@ export type DataPathNotSplitDiagnostic = Diagnostic<'data-path-not-split'> & {
 }
 
 /**
+ * Why the import cannot write the path of a reference from its uuid: the uuid names no element of the file
+ * (`uuid-unresolved`, an element of another file), an element of a kind the reference cannot point at, or one with no
+ * path of its own, an input without an address (`wrong-target`), an element out of its behaviour's reach (`out-of-scope`), or its own behaviour's
+ * element with no data object to name (`data-missing`).
+ */
+export type UnwrittenReferencePathReason =
+	| 'uuid-unresolved'
+	| 'wrong-target'
+	| 'out-of-scope'
+	| 'data-missing'
+
+/**
+ * A reference holding a uuid whose path the import cannot write from the element that uuid names: it is kept as read.
+ * `ref` is the reference and its path attribute; `meta.pathValue` the path it holds, when it holds one.
+ */
+export type UnwrittenReferencePathDiagnostic = Diagnostic<'unwritten-reference-path'> & {
+	meta: {
+		uuidAttribute: string
+		uuidValue: string
+		reason: UnwrittenReferencePathReason
+		pathValue?: string
+	}
+}
+
+/**
  * A behaviour variable holding attributes of both its reference groups (its data, and its input or output): `ref` is
  * the variable, `attributes` the reference attributes it holds, in the registry's order.
  */
@@ -124,5 +149,6 @@ export type SclImportDiagnostic =
 	| IncoherentReferenceDiagnostic
 	| DataPathNotSplitDiagnostic
 	| ExclusiveReferenceGroupsDiagnostic
+	| UnwrittenReferencePathDiagnostic
 	| IncoherentPathNamesDiagnostic
 	| DerivedSpecificationNamingDiagnostic

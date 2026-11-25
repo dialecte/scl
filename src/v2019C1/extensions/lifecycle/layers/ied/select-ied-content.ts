@@ -16,7 +16,7 @@ import type {
 	IedContentStep,
 } from './select-ied-content.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { IedExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
+import type { IsdExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -28,7 +28,7 @@ import type * as Core from '@dialecte/core'
  */
 export async function selectIedContent(
 	query: Core.Query<Config>,
-	params: { iedRef: Scl.Ref<'IED'>; iedName: string; inputs: IedExtractParams['inputs'] },
+	params: { iedRef: Scl.Ref<'IED'>; iedName: string; inputs: IsdExtractParams['inputs'] },
 ): Promise<IedContentSelection> {
 	const { iedRef, iedName, inputs } = params
 	const {

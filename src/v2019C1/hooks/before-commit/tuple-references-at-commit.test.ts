@@ -28,12 +28,12 @@ const ENTRY_FOR_XCBR3 = {
 	fc: 'ST',
 }
 
-describe('the commit gives a reference created by names only the uuid its names name', () => {
+describe('the commit leaves a reference created by names unbound when its names name a pre-existing element', () => {
 	type TestCase = SclTest.BaseXmlTestCase & { added: Added }
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// IED7's data set; its IED holds XCBR1
-		'an entry naming XCBR1 by names → its lnUuid written': {
+		// IED7's data set; its IED holds XCBR1, which the transaction does not create
+		'an entry naming XCBR1 by names → no uuid written': {
 			sourceXml: breakersAndASubscriber,
 			added: {
 				parent: IED7_DATA_SET,
@@ -47,10 +47,11 @@ describe('the commit gives a reference created by names only the uuid its names 
 					fc: 'ST',
 				},
 			},
-			expectedQueries: ['//default:DataSet[@name="DS"]/default:FCDA[@lnInst="1"][@lnUuid="xcbr1"]'],
+			expectedQueries: ['//default:DataSet[@name="DS"]/default:FCDA[@lnInst="1"]'],
+			unexpectedQueries: ['//default:FCDA[@lnInst="1"][@lnUuid]'],
 		},
-		// IED8's inputs; IED7 holds XCBR2 and the GOOSE C1, the only control block named C1
-		"an input naming IED7's XCBR2 and its GOOSE C1 by names → its lnUuid and srcCBUuid written": {
+		// IED8's inputs; IED7 holds XCBR2 and the GOOSE C1, neither created by the transaction
+		"an input naming IED7's XCBR2 and its GOOSE C1 by names → no uuid written": {
 			sourceXml: breakersAndASubscriber,
 			added: {
 				parent: IED8_INPUTS,
@@ -67,7 +68,8 @@ describe('the commit gives a reference created by names only the uuid its names 
 					intAddr: 'pos2',
 				},
 			},
-			expectedQueries: ['//default:ExtRef[@intAddr="pos2"][@lnUuid="xcbr2"][@srcCBUuid="gc7"]'],
+			expectedQueries: ['//default:ExtRef[@intAddr="pos2"][@lnInst="2"][@srcCBName="C1"]'],
+			unexpectedQueries: ['//default:ExtRef[@intAddr="pos2"][@lnUuid or @srcCBUuid]'],
 		},
 		// IED7 holds no XCBR9
 		'an input naming a logical node nothing holds → no uuid written': {
@@ -284,25 +286,24 @@ describe('the commit gives no uuid to names naming several elements', () => {
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// a report named C1 joins the GOOSE C1; an input with no service names C1 and XCBR2
-		'an input naming by names a control block name two blocks share → its lnUuid written, no srcCBUuid':
-			{
-				sourceXml: breakersAndASubscriber,
-				report: { name: 'C1', confRev: '1' },
-				input: {
-					iedName: 'IED7',
-					ldInst: 'LD1',
-					lnClass: 'XCBR',
-					lnInst: '2',
-					doName: 'Pos',
-					srcLDInst: 'LD1',
-					srcLNClass: 'LLN0',
-					srcCBName: 'C1',
-					intAddr: 'pos2',
-				},
-				expectedQueries: ['//default:ExtRef[@intAddr="pos2"][@lnUuid="xcbr2"][@srcCBName="C1"]'],
-				unexpectedQueries: ['//default:ExtRef[@intAddr="pos2"][@srcCBUuid]'],
+		// a report named C1 joins the GOOSE C1 in the transaction; an input with no service names C1 and the existing XCBR2
+		'an input naming by names a control block name two blocks share → no srcCBUuid, no lnUuid': {
+			sourceXml: breakersAndASubscriber,
+			report: { name: 'C1', confRev: '1' },
+			input: {
+				iedName: 'IED7',
+				ldInst: 'LD1',
+				lnClass: 'XCBR',
+				lnInst: '2',
+				doName: 'Pos',
+				srcLDInst: 'LD1',
+				srcLNClass: 'LLN0',
+				srcCBName: 'C1',
+				intAddr: 'pos2',
 			},
+			expectedQueries: ['//default:ExtRef[@intAddr="pos2"][@srcCBName="C1"]'],
+			unexpectedQueries: ['//default:ExtRef[@intAddr="pos2"][@srcCBUuid or @lnUuid]'],
+		},
 	}
 
 	async function act({

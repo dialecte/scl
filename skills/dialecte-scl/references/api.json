@@ -596,6 +596,19 @@
 			"example": "await doc.query.lifecycle.classifyIeds()"
 		},
 		{
+			"path": "doc.query.lifecycle.exportOptions",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: { iedRef: Scl.Ref<'IED'>; }) => Promise<IedExportOption[]>",
+			"summary": "Query extension: the file types an IED can be exported as by `extract.ied`, in a fixed order (ISD, CID), each offered or refused with the key and data of the error the export would throw: an ISD for a specification IED only, a CID for a real IED whose connections hold a network address. A tool shows the entries from it and never re-derives the rule. Refused as the export is for an IED the document does not hold (`ELEMENT_NOT_FOUND`) or one without a name.",
+			"intents": [
+				"which exports an IED offers",
+				"can this IED be exported as a CID or an ISD",
+				"why is the CID export refused"
+			],
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/query/export-options.ts:17"
+		},
+		{
 			"path": "doc.query.lifecycle.report",
 			"root": "q",
 			"otherRoutes": [],
@@ -884,6 +897,31 @@
 				"batch reference resolution"
 			],
 			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-reference-path.ts:73"
+		},
+		{
+			"path": "doc.query.reference.resolveTuple",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: TupleToResolve) => Promise<ResolvedTuplePair[]>",
+			"summary": "The element each pair of a tuple reference names by its names (an `ExtRef`'s logical node and control block, an `FCDA`'s logical node, an `IEDName`'s access point or device...), read as the commit reads them: `reference` is the reference as the caller is about to write it (its attributes and, for an `IEDName`, its text), `parent` the element it will sit in (a reference naming its IED by where it sits, `@` or its ancestor IED, reads it from there). One entry per pair whose names name exactly one element, in the registry's order: nothing for a pair naming no element, or several, or set aside by the reference's other names, nor for a pair bound by its uuid only (an `LNode`'s). The commit never binds a reference created by names to an element that was there before: write the uuid this answers with the names. Many references: `resolveTuples`, its reads shared.",
+			"intents": [
+				"bind a reference created by names",
+				"find the element an ExtRef or FCDA names by its names",
+				"resolve a tuple reference's names to a uuid"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:31"
+		},
+		{
+			"path": "doc.query.reference.resolveTuples",
+			"root": "q",
+			"otherRoutes": [],
+			"signature": "(params: { references: readonly TupleToResolve[]; }) => Promise<ResolvedTuplePair[][]>",
+			"summary": "The answer of `resolveTuple` for each of `references`, in input order (a parent naming nothing answers nothing).",
+			"intents": [
+				"bind many references created by names",
+				"resolve the names of many tuple references to uuids in one pass"
+			],
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:47"
 		},
 		{
 			"path": "doc.query.signature.elementSignature",
@@ -1198,18 +1236,15 @@
 			"path": "tx.lifecycle.extract.ied",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: IedExtractParams) => Promise<{ warnings: ExtractWarning[]; }>",
-			"summary": "Export a specification IED into an ISD: the IED, the process part it implements and its scoped Communication, into an empty target. Requires an explicit `kind` and an explicit input mode. Copies the surviving logical-node type closure and preserves instance identity and vendor content. Supervision nodes, a supervision capability declaring them, and foreign receiver, client, association and KDC entries are left out with source-record warnings. `inputs: 'none'` leaves the inputs out; `inputs: 'later-binding'` writes each in later-binding form: its description, internal address and expected data and service, an expected value it lacks taken from what it was bound to, its service type equal to its expected service, nothing of that source; an input still lacking its description, expected data or a service is written as it is and listed. With later-binding inputs the IED is no receiver or client of its own control blocks. `internalService: true` writes a specified flow between two LNodes the file holds for the IED as an internal service with no link to its input; the source keeps the service it specifies. Removes FCDA depending on omitted supervision, dropping DataSets with no surviving native FCDA. Retained affected Report/GSE/SV controls increment confRev by 10000 once; affected LogControls are disabled. Removed DataSets are unlinked without replacing controls. Missing/invalid or overflowing counters refuse before output writes. The process part holds the IED's LNodes in their substation, line or process frame, names and identifiers as in the source: a function or subfunction holding none of them is left out, the levels and equipment above them stay, an equipment of the frame keeps the connectivity node it connects to. A behaviour description goes only when all its LNodes do, variables and process resources when they belong to the LNodes written; applications, allocation roles and power system relations travel with what they name unless their option is `false`; function categories, and every reference to one, never do. A specification of an input or output naming what the file does not hold stays with its expected data and without that link. Each LNode gets its own naming as specified naming; data specifications lose their mapping. `labels: false` leaves no label in the file. Replaces the target ISD Header/history with a fresh identity and one initial item, retaining prior history only as labelled inner text. Assigns the issuer and, for an instance, records the source at the Header and IED: the document `provenanceQuery` names when given (what the ISD holds is still read from `sourceQuery`); a template records none, the extension of that document still checked. Source type follows the registered extension: .ssd is SSD; .scd, .xml or no extension is SCD, regardless of Header fileType (the type of the `provenanceQuery` document when given). Other extensions are refused with OPTION_NOT_AVAILABLE before writes. Refuses an implemented selected IED, a target already holding an IED or a process part (a substation, line or process) and an unavailable revision start.",
+			"signature": "(params: IedExtractParams) => Promise<IedExtractResult>",
+			"summary": "Export one IED into an empty target, by the type of the file written (`fileType`): - `'ISD'`: a specification IED with the process part it implements (see `extractIsd`); - `'CID'`: a real IED for its configuration tool: the IED as the project holds it, its own communication and the data types it needs; its inputs and outputs bound to an IED the file does not hold reduced to the only form a system tool may write (an input without internal address removed, the others and every output keeping their internal address without a source); receivers and report clients by `clientRefs`; the source unchanged.",
 			"intents": [
-				"extract an IED into an ISD instance",
-				"export an ISD template for a frame agreement",
-				"export an IED named SPECIFICATION with new identifiers",
-				"copy an IED with its reachable data types",
-				"export an ISD with its process part",
-				"write the inputs of an ISD in later-binding form",
-				"mark a dataflow inside one IED as internal"
+				"export an IED into an ISD or a CID",
+				"write a CID for one IED",
+				"extract a real IED for its configuration tool",
+				"export the communication part of one IED"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:75"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:23"
 		},
 		{
 			"path": "tx.lifecycle.extract.ssd",

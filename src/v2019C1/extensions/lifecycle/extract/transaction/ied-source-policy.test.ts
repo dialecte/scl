@@ -93,7 +93,7 @@ describe('extract IED source type, read from the source file extension', () => {
 				iedRef: { tagName: 'IED', id: 'selected-ied' },
 			})
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_Selected.isd' })
 		return { assertOn: 'target' }
 	}
 
@@ -168,7 +168,7 @@ describe('extract IED source type, for a source the import does not read', () =>
 			const result = await target.transaction(async function extract(tx) {
 				return tx.lifecycle.extract.ied({ ...EXPORT, sourceQuery: projectFile.query, iedRef })
 			})
-			expect(result).toEqual({ warnings: [] })
+			expect(result).toEqual({ warnings: [], fileName: 'ISD_Selected.isd' })
 			return { assertOn: 'target' }
 		}
 
