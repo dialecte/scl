@@ -1,0 +1,33 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="template-root">
+	<Header id="Template" uuid="10000000-0000-4000-8000-000000000003"/>
+	<IED name="DFR" desc="S-IED for a disturbance recorder" manufacturer="ACME" uuid="20000000-0000-4000-8000-000000000003" dev:db-id="template-ied">
+		<Services><DynAssociation/><GOOSE max="4"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/>
+			<LDevice inst="LD0" dev:db-id="ld-ld0">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_S"/>
+				<LN lnClass="LPHD" inst="1" prefix="" lnType="LPHD_S"/>
+			</LDevice>
+			<LDevice inst="GOOSE_Monitor" dev:db-id="ld-goose-monitor">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_S">
+					<DataSet name="DS1"><FCDA ldInst="GOOSE_Monitor" prefix="" lnClass="LGOS" lnInst="1" doName="St" fc="ST"/></DataSet>
+					<GSEControl name="GC1" datSet="DS1" appID="G1" confRev="1"/>
+				</LN0>
+				<LN lnClass="LGOS" inst="1" prefix="" lnType="LGOS_S"/>
+			</LDevice>
+			<LDevice inst="DFR_Fn" dev:db-id="ld-dfr-fn">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_S"/>
+				<LN lnClass="RDRE" inst="1" prefix="" lnType="RDRE_S"/>
+				<LN lnClass="RBDR" inst="1" prefix="" lnType="RBDR_S"/>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_S" lnClass="LLN0"><DO name="Beh" type="ENS_T"/><DO name="Mod" type="ENS_T"/></LNodeType>
+		<LNodeType id="LPHD_S" lnClass="LPHD"><DO name="PhyHealth" type="ENS_T"/></LNodeType>
+		<LNodeType id="LGOS_S" lnClass="LGOS"><DO name="St" type="SPS_T"/></LNodeType>
+		<LNodeType id="RDRE_S" lnClass="RDRE"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="RBDR_S" lnClass="RBDR"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+		<DOType id="SPS_T" cdc="SPS"><DA name="stVal" fc="ST" bType="BOOLEAN"/></DOType>
+	</DataTypeTemplates>
+</SCL>

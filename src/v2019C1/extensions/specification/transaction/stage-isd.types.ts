@@ -1,4 +1,5 @@
 import type { BuildIedParams, IedBuildResult } from './build-ied.types'
+import type { ShellLeftOut } from './copy-ied-shell.types'
 import type { STAGE_REFUSAL_REASONS } from './stage-isd.constants'
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -30,4 +31,6 @@ export type StageIsdResult = {
 	build: IedBuildResult
 	/** The staged LNodes a project binding was released from. */
 	released: Scl.Ref<'LNode'>[]
+	/** What the shell IED held that a specification builds (its logical devices...): left out of the staged IED. */
+	shellLeftOut: ShellLeftOut[]
 }

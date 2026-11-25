@@ -58,8 +58,6 @@ describe('stageIsd - the staged ISD of a specification built from logical nodes'
 					`${PROT_LD}/default:LN[@lnClass="LPHD"]`,
 					// the value the PTOC1 LNode specifies
 					`${PROT_LD}/default:LN[@lnClass="PTOC"]/default:DOI[@name="StrVal"]/default:SDI[@name="setMag"]/default:DAI[@name="f"]/default:Val[.="9"]`,
-					// the shell's own logical device stays
-					'//default:IED[@name="R"]//default:LDevice[@inst="LD0"]',
 					// the frame keeps the project's uuids; the LNodes bound to the built IED, now specified on it
 					'//default:Function[@name="PROT"][@uuid="a0000000-0000-4000-8000-000000000001"]',
 					'//default:LNode[@uuid="c0000000-0000-4000-8000-000000000001"][@iedName="R"][@ldInst="PROT"][@lnClass="PTOC"]',

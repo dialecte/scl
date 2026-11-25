@@ -1,5 +1,7 @@
 import { buildIed } from './build-ied'
-import { SHELL_OMITTED_TAGS, STAGE_FILE, STAGE_VERB } from './stage-isd.constants'
+import { copyIedShell, lnodeTypeIdsOf } from './copy-ied-shell'
+import { SHELL_FRAME_LN_CLASS } from './copy-ied-shell.constants'
+import { STAGE_FILE, STAGE_VERB } from './stage-isd.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -66,7 +68,12 @@ export async function stageIsd(
 		item: { who: STAGE_FILE.who, what: STAGE_FILE.what, why: STAGE_FILE.why },
 	})
 	const staged = await stageLNodes(tx, { sourceQuery: params.sourceQuery, plan: read.plan })
-	const ied = await copyShell(tx, params)
+	const shellCopy = await copyIedShell(tx, {
+		shell: params.shell,
+		iedName: params.iedName,
+		...(params.iedUuid ? { iedUuid: params.iedUuid } : {}),
+	})
+	const ied = shellCopy.ied
 	const build = await buildIed(tx, {
 		...params.build,
 		ied,
@@ -78,6 +85,7 @@ export async function stageIsd(
 		ied,
 		build,
 		released: read.bound.flatMap((id) => staged.get(id) ?? []),
+		shellLeftOut: shellCopy.leftOut,
 	}
 }
 
@@ -174,49 +182,28 @@ async function stageLNodes(
 	return staged
 }
 
-/** The shell IED copied without the files it came from nor any lineage, named `iedName`, `iedUuid` stamped when given. */
-async function copyShell(
-	tx: Core.Transaction<Config>,
-	params: StageIsdParams,
-): Promise<Scl.Ref<'IED'>> {
-	const { shell, iedName, iedUuid } = params
-	const root = await tx.getRoot()
-	const copied = await deep(tx, {
-		sourceQuery: shell.query,
-		ref: shell.ied,
-		targetParent: root,
-		withTypes: { keepNameFrom: 'source' },
-		omit: [...SHELL_OMITTED_TAGS],
-	})
-	await finalizeClonedIdentity(tx, {
-		cloneMappings: copied.cloneMappings,
-		mode: 'strip',
-		unlinked: new Set(copied.cloneMappings.flatMap((mapping) => mapping.source.id ?? [])),
-	})
-	const ied = { tagName: 'IED' as const, id: copied.record.id }
-	await tx.update(ied, { attributes: { name: iedName, ...(iedUuid ? { uuid: iedUuid } : {}) } })
-	return ied
-}
-
-/** The first logical node of the shell IED whose `lnType` names no LNodeType of the shell document, with that type. */
+/**
+ * The first LN0 or LPHD of the shell IED (the logical nodes whose types the shell copy imports) whose `lnType` names no
+ * LNodeType of the shell document, with that type.
+ */
 async function shellLnNamingNoType(params: {
 	shell: StageIsdParams['shell']
 }): Promise<{ ln: Scl.Ref<'LN' | 'LN0'>; lnType: string } | undefined> {
 	const { shell } = params
 	const held = await shell.query.findDescendants(shell.ied, { collect: ['LN0', 'LN'] })
 	const typeIds = await lnodeTypeIdsOf({ query: shell.query })
-	for (const record of [...(held.LN0 ?? []), ...(held.LN ?? [])]) {
+	const frames = [
+		...(held.LN0 ?? []),
+		...(held.LN ?? []).filter(
+			(record) => readAttributes({ record, defaults: 'none' }).lnClass === SHELL_FRAME_LN_CLASS,
+		),
+	]
+	for (const record of frames) {
 		const { lnType } = readAttributes({ record, defaults: 'none' })
 		if (lnType && !typeIds.has(lnType))
 			return { ln: { tagName: record.tagName, id: record.id }, lnType }
 	}
 	return undefined
-}
-
-/** The ids of a document's LNodeTypes, read once. */
-async function lnodeTypeIdsOf(params: { query: Core.Query<Config> }): Promise<Set<string>> {
-	const typeRecords = await params.query.getRecordsByTagName('LNodeType')
-	return new Set(typeRecords.map((record) => readAttributes({ record, defaults: 'none' }).id ?? ''))
 }
 
 /** The first LNode given whose `lnType` names no LNodeType of the project, with that type; the types read once. */
