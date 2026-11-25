@@ -4,7 +4,10 @@ import {
 	CONTROL_BLOCK_SEED_TAGS,
 	CUT_INSIDE_TAGS,
 	KEPT_UNDER_INTERFACE,
+	LOGICAL_NODE_SEED_TAGS,
+	SENDER_UUID_ATTRIBUTES,
 } from './closure.constants'
+import { UUID_TARGET_TAGS } from './reference-closure.constants'
 
 import { invariant } from '@dialecte/core/utils'
 
@@ -14,10 +17,13 @@ import { readDataTypes } from '@/v2019C1/extensions/dataflow/query/read-data-typ
 import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
 import { TUPLE_TARGET_KINDS } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
+import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
+import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
 import { targetTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
+	InterfaceKeep,
 	ClosureModel,
 	ClosureModelIndex,
 	ClosurePlan,
@@ -62,13 +68,14 @@ export async function readClosureModel(
  * Keep each seed and everything it references in the IED section, nothing dangling. References are resolved through the
  * tuple reference registry (an IED's element is named by its IED, so two IEDs sharing names never mix):
  * - an IED seeded `whole` keeps its subtree;
+ * - a logical node seeded `interface` keeps itself, its logical device with its LN0, server, access point and IED;
  * - a control block seeded `interface` keeps its holder (LN0 or LN), logical device with its LN0, server (with its
  *   authentication), access point and IED; its data set and the members it lists; for each member, the logical node it
  *   names with its logical device, the device's LN0, server and access point; every access point serving a kept access
  *   point's server (`ServerAt`), with that element; under each connection of a kept access point, its address and
  *   physical connection and the GSE / SMV of each kept control block.
  * Under an IED kept for its interface only, everything else is left out: values, inputs and outputs, receivers and report
- * clients, associations, key distribution entries, services and security, texts and private content, and every logical
+ * clients (but those naming an IED kept whole: its tool reads them), associations, key distribution entries, services and security, texts and private content, and every logical
  * device, logical node, data set and control block nothing names; its connections on an access point left out go whole
  * (`droppedConnections`); the IED is marked `engRight="fix"` (not engineered in the file). A kept data set member whose
  * logical node the IED does not hold is listed (`unresolvedMembers`). Pure: works on the model read.
@@ -83,9 +90,7 @@ export function planClosure(params: {
 	const index = indexModel(model)
 	for (const seed of seeds) assertSeed({ index, seed })
 	const wholeIeds = new Set(seeds.flatMap((seed) => (seed.depth === 'whole' ? [seed.ref.id] : [])))
-	const blockClosures = seeds.flatMap((seed) =>
-		seed.depth === 'interface' ? [controlBlockClosure({ index, controlBlockId: seed.ref.id })] : [],
-	)
+	const blockClosures = interfaceClosures({ index, seeds })
 	const keptInIeds = new Set(blockClosures.flatMap((closure) => closure.kept))
 	const partialIeds = new Set(
 		model.IED.filter((ied) => !wholeIeds.has(ied.id) && keptInIeds.has(ied.id)).map(
@@ -105,7 +110,9 @@ export function planClosure(params: {
 		...keptConnections.flatMap((connection) =>
 			connectionClosure({ index, connection, kept: keptInIeds }),
 		),
+		...entriesNamingWholeRoots({ index, model, kept: keptInIeds, wholeIeds }),
 	])
+	const keptByIed = groupByIed({ index, ids: kept })
 	const ieds = new Map<string, IedClosure>([
 		...[...wholeIeds].map((id): [string, IedClosure] => [
 			id,
@@ -117,6 +124,7 @@ export function planClosure(params: {
 				depth: 'interface',
 				leaveOut: new Set(leftOutUnder({ index, rootId: id, kept })),
 				engRight: 'fix',
+				keep: interfaceKeep({ records: keptByIed.get(id) ?? [] }),
 			},
 		]),
 	])
@@ -140,6 +148,128 @@ export function planClosure(params: {
 	}
 }
 
+/** What each interface seed keeps: a logical node with its ancestors, a control block with what it references. */
+function interfaceClosures(params: {
+	index: ClosureModelIndex
+	seeds: readonly ClosureSeed[]
+}): { kept: string[]; unresolved: string[] }[] {
+	const { index, seeds } = params
+	return seeds.flatMap(function interfaceClosure(seed) {
+		if (seed.depth !== 'interface') return []
+		if (LOGICAL_NODE_SEED_TAGS.has(seed.ref.tagName)) {
+			return [{ kept: logicalNodeClosure({ index, logicalNodeId: seed.ref.id }), unresolved: [] }]
+		}
+		return [controlBlockClosure({ index, controlBlockId: seed.ref.id })]
+	})
+}
+
+/** The control blocks whose receivers or report clients name the IED: what is sent to it, bound by an input or not. */
+function blocksNamingIed(params: {
+	index: ClosureModelIndex
+	model: ClosureModel
+	iedName: string | undefined
+}): Core.AnyRawRecord[] {
+	const { index, model, iedName } = params
+	if (!iedName) return []
+	const holders = [
+		...model.IEDName.filter((record) => record.value === iedName).map(
+			(record) => record.parent?.id,
+		),
+		...model.ClientLN.filter(
+			(record) => readAttribute({ record, name: 'iedName' }) === iedName,
+		).map((record) => index.byId.get(record.parent?.id ?? '')?.parent?.id),
+	]
+	return holders.flatMap((id) => {
+		const record = id ? index.byId.get(id) : undefined
+		return record && CONTROL_BLOCK_SEED_TAGS.has(record.tagName) ? [record] : []
+	})
+}
+
+/** The interface seed of a control block or a logical node. */
+function seedOf(record: Core.AnyRawRecord): ClosureSeed {
+	if (LOGICAL_NODE_SEED_TAGS.has(record.tagName)) {
+		return { ref: { tagName: record.tagName as 'LN' | 'LN0', id: record.id }, depth: 'interface' }
+	}
+	return {
+		ref: {
+			tagName: record.tagName as 'GSEControl' | 'SampledValueControl' | 'ReportControl',
+			id: record.id,
+		},
+		depth: 'interface',
+	}
+}
+
+/**
+ * The receivers and report clients of a kept control block of a partial IED naming an IED kept whole: kept, so the tool of
+ * that IED finds what is sent to it in the other IEDs' control blocks.
+ */
+function entriesNamingWholeRoots(params: {
+	index: ClosureModelIndex
+	model: ClosureModel
+	kept: ReadonlySet<string>
+	wholeIeds: ReadonlySet<string>
+}): string[] {
+	const { index, model, kept, wholeIeds } = params
+	const wholeNames = new Set(
+		[...wholeIeds].map((id) => {
+			const ied = index.byId.get(id)
+			return ied ? readAttribute({ record: ied, name: 'name' }) : undefined
+		}),
+	)
+	const entries = [
+		...model.IEDName.map((record) => ({ record, name: record.value, holder: record.parent?.id })),
+		...model.ClientLN.map((record) => ({
+			record,
+			name: readAttribute({ record, name: 'iedName' }),
+			holder: index.byId.get(record.parent?.id ?? '')?.parent?.id,
+		})),
+	]
+	return entries.flatMap(({ record, name, holder }) => {
+		if (!holder || !kept.has(holder) || !wholeNames.has(name)) return []
+		return [
+			record.id,
+			...(record.tagName === 'ClientLN' && record.parent ? [record.parent.id] : []),
+		]
+	})
+}
+
+/** The kept logical nodes and control blocks, by the IED holding them, read once. */
+function groupByIed(params: {
+	index: ClosureModelIndex
+	ids: ReadonlySet<string>
+}): ReadonlyMap<string, readonly Core.AnyRawRecord[]> {
+	const { index, ids } = params
+	const grouped = new Map<string, Core.AnyRawRecord[]>()
+	for (const id of ids) {
+		const record = index.byId.get(id)
+		if (!record || !(UUID_TARGET_TAGS as readonly string[]).includes(record.tagName)) continue
+		const iedId = iedIdOf({ index, recordId: id })
+		if (!iedId) continue
+		const group = grouped.get(iedId)
+		if (group) group.push(record)
+		else grouped.set(iedId, [record])
+	}
+	return grouped
+}
+
+/** What a partial IED keeps: the uuids of its kept logical nodes and control blocks, and those control blocks. */
+function interfaceKeep(params: { records: readonly Core.AnyRawRecord[] }): InterfaceKeep {
+	const { records } = params
+	return {
+		uuids: new Set(
+			records.flatMap((record) => {
+				const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
+				return uuid ? [uuid] : []
+			}),
+		),
+		controlBlocks: new Set(
+			records
+				.filter((record) => CONTROL_BLOCK_SEED_TAGS.has(record.tagName))
+				.map((record) => record.id),
+		),
+	}
+}
+
 /** A seed names what the model holds: an IED for a whole seed, a control block for an interface seed. */
 function assertSeed(params: { index: ClosureModelIndex; seed: ClosureSeed }): void {
 	const { index, seed } = params
@@ -147,10 +277,11 @@ function assertSeed(params: { index: ClosureModelIndex; seed: ClosureSeed }): vo
 	const named =
 		seed.depth === 'whole'
 			? record?.tagName === 'IED'
-			: CONTROL_BLOCK_SEED_TAGS.has(record?.tagName ?? '')
+			: CONTROL_BLOCK_SEED_TAGS.has(record?.tagName ?? '') ||
+				LOGICAL_NODE_SEED_TAGS.has(record?.tagName ?? '')
 	invariant(named && record?.tagName === seed.ref.tagName, {
 		key: 'ASSERTION_FAILED',
-		detail: `planClosure: a ${seed.depth} seed names ${seed.depth === 'whole' ? 'an IED' : 'a control block'} of the model`,
+		detail: `planClosure: a ${seed.depth} seed names ${seed.depth === 'whole' ? 'an IED' : 'a control block or a logical node'} of the model`,
 	})
 }
 
@@ -167,7 +298,7 @@ function indexModel(model: ClosureModel): ClosureModelIndex {
 			if (!TUPLE_TARGET_KINDS.has(record.tagName)) return []
 			const ancestry = ancestryOf({ index: base, recordId: record.id })
 			const address = targetTupleAddress({ record, ancestry })
-			return address ? [[address, record.id]] : []
+			return address ? [[targetKey({ address, tagName: record.tagName }), record.id]] : []
 		}),
 	)
 	return { byId, targets }
@@ -200,8 +331,11 @@ function resolveReferrer(params: {
 	const ancestry = ancestryOf({ index, recordId: record.id })
 	for (const pair of pairs) {
 		const address = referrerTupleAddress({ pair, record, ancestry })
-		const target = address ? index.targets.get(address) : undefined
-		if (target) return target
+		if (!address) continue
+		for (const tagName of targetTagsOf({ pair, record })) {
+			const target = index.targets.get(targetKey({ address, tagName }))
+			if (target) return target
+		}
 	}
 	return undefined
 }
@@ -377,4 +511,67 @@ export function planTypeClosure(params: {
 		pending.push(...members.flatMap((member) => (member.type ? [member.type] : [])))
 	}
 	return reached
+}
+
+/**
+ * The interface seeds of what an IED's inputs receive from other IEDs: for each input bound elsewhere, the control block it
+ * names (by its names and its service, else by its control block uuid) and the logical node it names (by its names, else by
+ * its logical node uuid) — an input polling data names no control block, and the logical node it binds to always travels;
+ * and every control block of another IED naming the IED as a receiver or a report client, bound by an input or not (its tool
+ * reads them to find what is sent to it). Resolved through the tuple reference registry
+ * against the model; an input naming nothing the model holds, or the IED itself, seeds nothing. Each seed once.
+ *
+ * @intent which IEDs send to an IED, the control blocks an IED subscribes to, the senders of a CID
+ */
+export function planSenderSeeds(params: {
+	model: ClosureModel
+	iedRef: Scl.Ref<'IED'>
+	inputs: readonly Core.AnyRawRecord[]
+}): ClosureSeed[] {
+	const { model, iedRef, inputs } = params
+	const index = indexModel(model)
+	const byUuid = new Map(
+		[...index.byId.values()].flatMap((record): [string, Core.AnyRawRecord][] => {
+			const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
+			return uuid ? [[uuid, record]] : []
+		}),
+	)
+	const targets = inputs.flatMap(function senderTargetOf(input): Core.AnyRawRecord[] {
+		const pairs =
+			(TUPLE_REFERENCE_PAIRS as Record<string, readonly TupleReferencePair[] | undefined>)[
+				input.tagName
+			] ?? []
+		const byNames = pairs.flatMap(function namedTargets(pair) {
+			const address = referrerTupleAddress({ pair, record: input, ancestry: [] })
+			if (!address) return []
+			return targetTagsOf({ pair, record: input }).map((tagName) =>
+				index.byId.get(index.targets.get(targetKey({ address, tagName })) ?? ''),
+			)
+		})
+		const byUuids = SENDER_UUID_ATTRIBUTES.map((name) => {
+			const uuid = readAttribute({ record: input, name, defaults: 'none' })
+			return uuid ? byUuid.get(uuid) : undefined
+		})
+		const found = [...byNames, ...byUuids].filter(
+			(record): record is Core.AnyRawRecord => record !== undefined,
+		)
+		const controlBlock = found.find((record) => CONTROL_BLOCK_SEED_TAGS.has(record.tagName))
+		const logicalNode = found.find((record) => LOGICAL_NODE_SEED_TAGS.has(record.tagName))
+		return [controlBlock, logicalNode].filter(
+			(record): record is Core.AnyRawRecord =>
+				record !== undefined && iedIdOf({ index, recordId: record.id }) !== iedRef.id,
+		)
+	})
+	const ied = index.byId.get(iedRef.id)
+	invariant(ied, {
+		key: 'ELEMENT_NOT_FOUND',
+		ref: iedRef,
+		detail: 'planSenderSeeds: IED not in the model',
+	})
+	const iedName = readAttribute({ record: ied, name: 'name' })
+	const naming = blocksNamingIed({ index, model, iedName }).filter(
+		(record) => iedIdOf({ index, recordId: record.id }) !== iedRef.id,
+	)
+	const unique = new Map([...targets, ...naming].map((record) => [record.id, record]))
+	return [...unique.values()].map(seedOf)
 }

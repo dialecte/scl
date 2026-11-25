@@ -1,4 +1,6 @@
 import { CHILDREN } from '@/v2019C1/definition/constants.generated'
+import { EXT_REF_CONTROL_BLOCK_PAIR } from '@/v2019C1/extensions/dataflow/constants/control-blocks.constants'
+import { EXT_REF_SIGNAL } from '@/v2019C1/extensions/dataflow/constants/ext-ref-state.constants'
 import { DISPOSABLE_REFERENCE_TAGS } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
 
 /** The records a closure reads: the IEDs, their IED section, and the connections of the communication section. */
@@ -16,6 +18,8 @@ export const CLOSURE_MODEL_TAGS = [
 	'SampledValueControl',
 	'ReportControl',
 	'RptEnabled',
+	'IEDName',
+	'ClientLN',
 	'ConnectedAP',
 	'GSE',
 	'SMV',
@@ -49,7 +53,7 @@ export const KEPT_UNDER_INTERFACE: ReadonlyMap<string, ReadonlySet<string>> = ne
 	]),
 )
 
-/** The control blocks an interface seed names. */
+/** The control blocks an interface seed may name; a logical node seed is in `LOGICAL_NODE_SEED_TAGS`. */
 export const CONTROL_BLOCK_SEED_TAGS: ReadonlySet<string> = new Set([
 	'GSEControl',
 	'SampledValueControl',
@@ -74,3 +78,12 @@ export const CUT_INSIDE_TAGS: ReadonlySet<string> = new Set([
 
 /** The addresses of control blocks a connection holds, named by what they address: GSE, SMV. */
 export const CONTROL_BLOCK_ADDRESS_TAGS: ReadonlySet<string> = new Set(['GSE', 'SMV'])
+
+/** The logical nodes an interface seed may name (an input polling it names no control block). */
+export const LOGICAL_NODE_SEED_TAGS: ReadonlySet<string> = new Set(['LN', 'LN0'])
+
+/** The uuid companions an input or output names its source by: its control block's, then its logical node's. */
+export const SENDER_UUID_ATTRIBUTES = [
+	EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid,
+	EXT_REF_SIGNAL.uuid,
+] as const

@@ -1,0 +1,46 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root">
+	<!-- Bay B1 / F1 holds an LNode of Selected (its data specification Op mapped to Ind of its GGIO1, an input specification fed by the LNode of Other) and an LNode of Other -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Substation name="S1">
+		<VoltageLevel name="V1">
+			<Bay name="B1">
+				<Function name="F1">
+					<LNode iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" uuid="80000000-0000-4000-8000-0000000000a1">
+						<Private type="eIEC61850-6-100">
+							<eIEC61850-6-100:LNodeInputs>
+								<eIEC61850-6-100:SourceRef input="Block" service="GOOSE" pDO="Ind" sourceLNodeUuid="80000000-0000-4000-8000-0000000000b1" sourceDoName="Ind" dev:db-id="source-ref-other"/>
+							</eIEC61850-6-100:LNodeInputs>
+							<eIEC61850-6-100:DOS name="Op" mappedLnUuid="50000000-0000-4000-8000-000000000003" mappedDoName="Ind"/>
+						</Private>
+					</LNode>
+					<LNode iedName="Other" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000012" uuid="80000000-0000-4000-8000-0000000000b1"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS">
+			<ConnectedAP iedName="Selected" apName="AP1"><Address><P type="IP">10.0.0.1</P></Address></ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD1">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+			<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+			<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000003"/>
+		</LDevice></Server></AccessPoint>
+		<IEDSourceFiles><SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/></IEDSourceFiles>
+	</IED>
+	<IED name="Other" uuid="20000000-0000-4000-8000-000000000002">
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD1">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+			<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000012"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Status" type="SPS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="SPS_Type"/></LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO"><DO name="Ind" type="SPS_Type"/></LNodeType>
+		<DOType id="SPS_Type" cdc="SPS"><DA name="stVal" bType="BOOLEAN" fc="ST"/></DOType>
+	</DataTypeTemplates>
+</SCL>

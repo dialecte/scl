@@ -73,16 +73,17 @@ describe('extract IED as CID - refusals', () => {
 			},
 			expectedQueries: ['/default:SCL[count(*)=0]'],
 		},
-		'sending IEDs asked before they are written -> OPTION_NOT_AVAILABLE, nothing written': {
-			sourceXml: RealIedConnectedXml,
-			targetXml: emptyTarget,
-			options: { interactingIeds: 'publishers' },
-			expectedRefusal: {
-				key: 'OPTION_NOT_AVAILABLE',
-				meta: { option: 'interactingIeds', value: 'publishers' },
+		'substation part asked with a value that is not a boolean -> OPTION_NOT_AVAILABLE, nothing written':
+			{
+				sourceXml: RealIedConnectedXml,
+				targetXml: emptyTarget,
+				options: { includeSubstation: 'yes' },
+				expectedRefusal: {
+					key: 'OPTION_NOT_AVAILABLE',
+					meta: { option: 'includeSubstation', value: 'yes' },
+				},
+				expectedQueries: ['/default:SCL[count(*)=0]'],
 			},
-			expectedQueries: ['/default:SCL[count(*)=0]'],
-		},
 		'client references mode not offered -> OPTION_NOT_AVAILABLE, nothing written': {
 			sourceXml: RealIedConnectedXml,
 			targetXml: emptyTarget,
