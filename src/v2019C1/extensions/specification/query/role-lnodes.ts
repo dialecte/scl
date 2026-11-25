@@ -1,8 +1,9 @@
-import { readImplementations } from './read-implementations'
 import { FUNCTION_REF_ATTRIBUTES, FUNCTION_TAGS, LNODE_PATH_TAGS } from './role-lnodes.constants'
 
 import { throwDialecteError } from '@dialecte/core'
 
+import { classifyIeds } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds'
+import { readImplementations } from '@/v2019C1/extensions/reference/query/resolve/read-implementations'
 import { resolveReferencePaths } from '@/v2019C1/extensions/reference/query/resolve/resolve-reference-path'
 import { readAttributes } from '@/v2019C1/helpers'
 
@@ -51,7 +52,8 @@ export async function roleLNodes(
 		resolved.flatMap((entry) => (entry.function ? [entry.function] : [])),
 	)
 	const lnodes = await readLNodesInDocumentOrder(query, { functions })
-	const { byLNode, ieds } = await readImplementations(query, { lnodes })
+	const classifications = await classifyIeds(query)
+	const { byLNode, ieds } = await readImplementations(query, { lnodes, classifications })
 
 	const lnodeRefs = lnodes.map(toLNodeRef)
 	const lnodesByIed = Map.groupBy(

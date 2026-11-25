@@ -1,9 +1,11 @@
 import type { Scl } from '@/v2019C1/config'
-import type { IedKind } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.types'
+import type { IedKind, IedKindEntry } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.types'
 
 export type ReadImplementationsParams = {
 	/** The LNodes asked about, as read. */
 	lnodes: readonly Scl.TrackedRecord<'LNode'>[]
+	/** Every IED of the document with its kind (`classifyIeds`), in document order. */
+	classifications: readonly IedKindEntry[]
 }
 
 /** The IED implementing an LNode: its ref, its name and its kind. */
