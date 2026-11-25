@@ -102,6 +102,28 @@ describe('tx.cleanUp.commitPrune({ collect: true }) - every refusal of the commi
 				'REFERENCE_INCOHERENT SCL4004 OutputVar <out-of-reach> lnodeUuid out-of-scope',
 			],
 		},
+		// stored-data retargeted to "ghost", which no LNode holds, after a variable created with no data object
+		'a reference written with no data, then one retargeted to nothing → both listed, data first, then the retarget':
+			{
+				sourceXml: severalRefusalsXml,
+				write: async function writeThenRetarget(tx) {
+					const created = await tx.any.addChild(FUNCTION_BEHAVIOUR, {
+						tagName: 'InputVar',
+						attributes: { varName: 'in', lnodeUuid: 'xcbr' },
+					})
+					await tx.any.update(
+						{ tagName: 'OutputVar', id: 'stored-data' } as Scl.Ref<Scl.ElementsOf>,
+						{
+							attributes: { lnodeUuid: 'ghost' },
+						},
+					)
+					return { 'no-data': created.id }
+				},
+				refusals: [
+					'REFERENCE_INCOHERENT SCL4004 InputVar <no-data> lnodeUuid data-missing',
+					'REFERENCE_INCOHERENT SCL4004 OutputVar stored-data lnodeUuid uuid-unresolved',
+				],
+			},
 		// the steps after the move step still run: the reference is judged too
 		'a move the commit does not follow and an incoherent reference → both listed': {
 			sourceXml: severalRefusalsXml,

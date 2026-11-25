@@ -14,6 +14,7 @@ import type {
 	IncoherentReferenceDiagnostic,
 	UnresolvedReferenceDiagnostic,
 	UnsupportedXPathDiagnostic,
+	UnwrittenReferencePathDiagnostic,
 } from '@/v2019C1/errors/import-diagnostics.types'
 import type { DiagnosticRef } from '@dialecte/core'
 
@@ -39,6 +40,14 @@ export function unsupportedXPathDiagnostic(params: {
 	meta: UnsupportedXPathDiagnostic['meta']
 }): UnsupportedXPathDiagnostic {
 	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unsupported-xpath-reference', params)
+}
+
+/** A reference holding a uuid whose path cannot be written from the element that uuid names, and why. */
+export function unwrittenReferencePathDiagnostic(params: {
+	ref: DiagnosticRef
+	meta: UnwrittenReferencePathDiagnostic['meta']
+}): UnwrittenReferencePathDiagnostic {
+	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unwritten-reference-path', params)
 }
 
 /** A reference whose path and uuid name two different elements, with the elements involved. */

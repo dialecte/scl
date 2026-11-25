@@ -93,22 +93,22 @@ describe('delete cascade over a reference added by names only', () => {
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
-		// an entry for the breaker's quality, added with no lnUuid: its commit writes the breaker's
-		'an entry added naming the breaker by names only, the breaker deleted → its commit gave it the uuid, it goes':
-			{
-				sourceXml: breakerSubscribedAndControlled,
-				entry: {
-					ldInst: 'LD1',
-					lnClass: 'XCBR',
-					lnInst: '1',
-					doName: 'Pos',
-					daName: 'q',
-					fc: 'ST',
-				},
-				deleted: { tagName: 'LN', id: 'xcbr7' },
-				expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="2"]'],
-				unexpectedQueries: ['//default:FCDA'],
+		// an entry for the breaker's quality, added with its names and the breaker's lnUuid (the caller resolved them)
+		'an entry added naming the breaker by names and uuid, the breaker deleted → it goes': {
+			sourceXml: breakerSubscribedAndControlled,
+			entry: {
+				ldInst: 'LD1',
+				lnClass: 'XCBR',
+				lnInst: '1',
+				doName: 'Pos',
+				daName: 'q',
+				fc: 'ST',
+				lnUuid: 'xcbr7',
 			},
+			deleted: { tagName: 'LN', id: 'xcbr7' },
+			expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="2"]'],
+			unexpectedQueries: ['//default:FCDA'],
+		},
 	}
 
 	async function act({

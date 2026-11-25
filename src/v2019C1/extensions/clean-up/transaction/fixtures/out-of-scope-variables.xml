@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- F1's behaviour reads two LNodes of F2 by uuid alone, both out of its reach: XCBR1 ("x2"), of which F1 holds an
+     instance XCBR1 ("x1", its templateUuid "x2"), and XCBR5 ("x5"), of which F1 holds none -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+    <Substation name="S1" dev:db-id="s1">
+        <Function name="F1" dev:db-id="f1">
+            <Private type="eIEC61850-6-100" dev:db-id="f1-private">
+                <eIEC61850-6-100:BehaviorDescription name="B" dev:db-id="bd">
+                    <eIEC61850-6-100:InputVar varName="pos" lnodeUuid="x2" doName="Pos" daName="stVal" dev:db-id="var-pos"/>
+                    <eIEC61850-6-100:InputVar varName="other" lnodeUuid="x5" doName="Pos" daName="stVal" dev:db-id="var-other"/>
+                </eIEC61850-6-100:BehaviorDescription>
+            </Private>
+            <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="x1" templateUuid="x2" dev:db-id="x1"/>
+        </Function>
+        <Function name="F2" dev:db-id="f2">
+            <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="x2" dev:db-id="x2"/>
+            <LNode iedName="None" lnClass="XCBR" lnInst="5" lnType="XCBR_T" uuid="x5" dev:db-id="x5"/>
+        </Function>
+    </Substation>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type"><DO name="Pos" type="DPC_T" dev:db-id="pos"/></LNodeType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dpc"><DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="st"/></DOType>
+    </DataTypeTemplates>
+</SCL>
