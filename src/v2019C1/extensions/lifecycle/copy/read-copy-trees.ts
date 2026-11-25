@@ -1,5 +1,3 @@
-import { EVERY_TAG } from './copy.constants'
-
 import type { Config, Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
@@ -15,14 +13,12 @@ export async function readCopyTrees(
 	const { refs } = params
 	if (refs.length === 0) return []
 	const roots = await query.any.getRecords([...refs])
-	const below = (await query.findDescendantsOfEach([...refs], {
-		collect: EVERY_TAG,
-	} as never)) as unknown as Readonly<Record<string, readonly AnyTrackedRecord[] | undefined>>[]
+	const below = await query.any.findDescendantsOfEach([...refs])
 	return roots.flatMap(function treeOf(root, position): AnyTreeRecord[] {
 		if (!root) return []
 		const held = new Map(
 			Object.values(below[position] ?? {})
-				.flatMap((records) => records ?? [])
+				.flat()
 				.map((record) => [record.id, record] as const),
 		)
 		return [assemble({ record: root, held })]

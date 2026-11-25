@@ -163,7 +163,7 @@ function indexFrameLandings(frame: FramePlacement): FrameLandings {
  * The level of the target structure a satellite's nearest structural ancestor maps onto, as `resolveStructureRef`; one
  * held outside the substations (a line, a process) goes to the outermost level of the structure.
  */
-function readStructureLevel(params: {
+export function readStructureLevel(params: {
 	ancestors: readonly AnyTrackedRecord[]
 	structure: TargetStructure
 }): Scl.Ref<Scl.ElementsOf> {

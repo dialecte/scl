@@ -1,4 +1,3 @@
-import { COPY_ROOT_TAGS } from './copy.constants'
 import { listCopyRefusals } from './list-copy-refusals'
 import { planCopyUnbinds } from './plan-copy-unbinds'
 import { readCopyTrees } from './read-copy-trees'
@@ -41,18 +40,30 @@ export async function describeCopy(
 	const trees = read.filter((tree) => rootIds.has(tree.id) || !inRoots.has(tree.id))
 	const unbinds = planCopyUnbinds({ trees: trees.filter((tree) => rootIds.has(tree.id)) })
 	const refusals = await listCopyRefusals({ query, trees, unbinds, anchor })
+	// judged in the order the apply places them — each function, then the application —, each told apart from those
+	// placed before it, as `placeUniquely` numbers them in turn
+	const groupOf = new Map(
+		allGroups(report).flatMap((group) => {
+			const sourceId = group.primary.sourceRef?.id
+			return group.change === 'added' && sourceId && rootIds.has(sourceId)
+				? [[sourceId, group.id] as const]
+				: []
+		}),
+	)
 	const keysTaken = new Map<string, KeyTaken>()
-	for (const group of allGroups(report)) {
-		const sourceId = group.primary.sourceRef?.id
-		if (group.change !== 'added' || !sourceId || !rootIds.has(sourceId)) continue
-		const root = trees.find((tree) => tree.id === sourceId)
-		if (!root) continue
+	const placedBefore: AnyTreeRecord[] = []
+	for (const rootRef of [...rootRefs.slice(1), ...rootRefs.slice(0, 1)]) {
+		const root = trees.find((tree) => tree.id === rootRef.id)
+		const groupId = groupOf.get(rootRef.id ?? '')
+		if (!root || !groupId) continue
 		const { keyTaken } = await judgeKeyTaken(query, {
 			parentRef: anchor,
 			tagName: placedTagOf({ root, anchor }),
 			candidate: attributesOf(root),
+			placedBefore,
 		})
-		if (keyTaken) keysTaken.set(group.id, keyTaken)
+		if (keyTaken) keysTaken.set(groupId, keyTaken)
+		placedBefore.push(withValues({ record: root, values: keyTaken?.proposed ?? {} }))
 	}
 	return { unbinds, refusals, keysTaken }
 }
@@ -90,4 +101,19 @@ function placedTagOf(params: {
 /** A record's attributes by name. */
 function attributesOf(record: AnyTreeRecord): Record<string, string | undefined> {
 	return Object.fromEntries(record.attributes.map((attribute) => [attribute.name, attribute.value]))
+}
+
+/** A root as placed: its key's values the ones the engine proposes, told apart from the source it is read from. */
+function withValues(params: {
+	record: AnyTreeRecord
+	values: Readonly<Record<string, string>>
+}): AnyTreeRecord {
+	const { record, values } = params
+	return {
+		...record,
+		id: `${record.id}-placed`,
+		attributes: record.attributes.map((attribute) =>
+			attribute.name in values ? { ...attribute, value: values[attribute.name] } : attribute,
+		),
+	}
 }

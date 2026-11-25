@@ -1,5 +1,6 @@
 import type { IdentityCollision } from './find-identity-collision.types'
 import type { Scl } from '@/v2019C1/config'
+import type { AnyTreeRecord } from '@dialecte/core'
 
 /**
  * A key of an element (a schema `key` or `unique` constraint it falls under where it sits) that a sibling holds already,
@@ -22,6 +23,11 @@ export type JudgeKeyTakenParams = {
 	candidate: Readonly<Record<string, string | undefined>>
 	/** The element itself when it sits there already (a move): not compared with itself. */
 	excludeId?: string
+	/**
+	 * What the same operation places there before the element, as it lands (a copy of an application: the functions
+	 * placed before it): compared with as siblings, numbered after.
+	 */
+	placedBefore?: readonly AnyTreeRecord[]
 }
 
 /** What a placement shares with its siblings: a key it can be told apart on, or one it cannot (a refusal). */

@@ -19,8 +19,10 @@ export async function judgeKeyTaken(
 ): Promise<JudgedKey> {
 	const { parentRef, tagName, excludeId } = params
 	const candidate: Record<string, string | undefined> = { ...params.candidate }
-	const scope = await readConstraintScope(query, { parentRef, childTag: tagName })
-	if (scope.constraints.length === 0) return {}
+	const read = await readConstraintScope(query, { parentRef, childTag: tagName })
+	if (read.constraints.length === 0) return {}
+	// what the operation placed there before it counts as a sibling
+	const scope = { ...read, children: [...read.children, ...(params.placedBefore ?? [])] }
 	const identityCollision = identityCollisionInScope({ scope, tagName, candidate, excludeId })
 	const judged: JudgedKey = identityCollision ? { identityCollision } : {}
 	for (const constraint of scope.constraints) {

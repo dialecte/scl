@@ -1,15 +1,16 @@
 import { COPY_ROOT_TAGS } from './copy.constants'
 
+import { readStructureLevel } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/resolve-target-structure'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference'
 import { buildElementPaths } from '@/v2019C1/extensions/reference/query/build/build-element-path'
-import { localSegments } from '@/v2019C1/extensions/reference/query/build/local-segments'
 import { toAnyRawRecord } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.helpers'
-import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
+import { readAttribute } from '@/v2019C1/helpers'
 import {
 	boundPairsOf,
 	dataMissingOf,
 	groupsTogetherOf,
+	isInReach,
 	toCommitRefusal,
 } from '@/v2019C1/hooks/before-commit/uuid-references'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
@@ -87,9 +88,11 @@ export async function listCopyRefusals(params: ListCopyRefusalsParams): Promise<
 }
 
 /**
- * The behaviour variables naming an element outside their reach once copied: held inside a copied root, every one (the
- * element is outside the copy); held by a satellite, those whose element is not at or below the level the satellite
- * lands on. A variable naming nothing is no refusal (the commit does not look a created one up).
+ * The behaviour variables naming an element outside their reach once copied, as the commit judges a variable left
+ * without its path (`isInReach`): held inside a copied root, every one (the element is outside the copy); held by a
+ * satellite, those whose element is not at or below the level the satellite lands on — the level `cloneAppliedSatellites`
+ * places it on (`readStructureLevel`). A variable naming nothing is no refusal (the commit does not look a created one
+ * up). The targets, the satellites' ancestors and the paths are read once each.
  */
 async function findOutOfReach(
 	query: Core.Query<Config>,
@@ -114,10 +117,9 @@ async function findOutOfReach(
 		).values(),
 	]
 	const landing = await landingLevels(query, { satellites, anchor })
-	const levelRefs = satellites.flatMap((satellite) => {
-		const level = landing.get(satellite.id)
-		return level ? [level] : []
-	})
+	const levelRefs = [
+		...new Map([...landing.values()].map((level) => [level.id ?? '', level])).values(),
+	]
 	const paths = await buildElementPaths(query, {
 		refs: [
 			...levelRefs,
@@ -130,19 +132,13 @@ async function findOutOfReach(
 	return named.flatMap(function judged({ pair, root }, index) {
 		if (COPY_ROOT_TAGS.has(root.tagName)) return [pair]
 		const level = landing.get(root.id)
-		const context = level ? levelPaths.get(level.id ?? '') : undefined
+		const behaviorContext = level ? levelPaths.get(level.id ?? '')?.segments : undefined
 		const targetPath = paths[levelRefs.length + index]
-		const inReach =
-			context !== null &&
-			context !== undefined &&
-			targetPath !== null &&
-			targetPath !== undefined &&
-			localSegments({ context: context.segments, segments: targetPath.segments }) !== null
-		return inReach ? [] : [pair]
+		return isInReach({ targetPath, behaviorContext }) ? [] : [pair]
 	})
 }
 
-/** The level of the structure each satellite lands on where the copy is pasted: the one of the tag it sits on. */
+/** The level each satellite lands on where the copy is pasted, as `cloneAppliedSatellites` places it. */
 async function landingLevels(
 	query: Core.Query<Config>,
 	params: { satellites: readonly AnyTreeRecord[]; anchor: Scl.Ref<Scl.ElementsOf> },
@@ -154,14 +150,14 @@ async function landingLevels(
 		satellites.map(
 			(satellite) => ({ tagName: satellite.tagName, id: satellite.id }) as Scl.Ref<Scl.ElementsOf>,
 		),
+		{ stopAtTagName: 'Substation' },
 	)
-	const landing = new Map<string, Scl.Ref<Scl.ElementsOf>>()
-	satellites.forEach(function landingOf(satellite, index) {
-		const level = (ancestries[index] ?? []).find((ancestor) => isTopologyLevel(ancestor.tagName))
-		const target = level ? structure[level.tagName as keyof typeof structure] : undefined
-		if (target) landing.set(satellite.id, target as Scl.Ref<Scl.ElementsOf>)
-	})
-	return landing
+	return new Map(
+		satellites.map((satellite, index) => [
+			satellite.id,
+			readStructureLevel({ ancestors: ancestries[index] ?? [], structure }),
+		]),
+	)
 }
 
 /** A tree and what it holds, at every depth, in document order. */

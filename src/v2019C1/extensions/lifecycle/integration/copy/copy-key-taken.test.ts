@@ -1,5 +1,6 @@
 import { applyCopy, ref, reportCopy } from './copy-helpers'
 import functionXml from './fixtures/a-function-to-copy.xml?raw'
+import numberedXml from './fixtures/an-application-composing-two-numbered-functions.xml?raw'
 import applicationsXml from './fixtures/applications-to-copy.xml?raw'
 
 import { describe, expect } from 'vitest'
@@ -10,7 +11,8 @@ import type { CopyCase } from './copy-helpers.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 
-// a-function-to-copy.xml: B1 holds F1 (f1); applications-to-copy.xml: B1 holds A1 (a1) composing F1 (f1) and F2 (f2).
+// a-function-to-copy.xml: B1 holds F1 (f1); applications-to-copy.xml: B1 holds A1 (a1) composing F1 (f1) and F2 (f2);
+// an-application-composing-two-numbered-functions.xml: B1 holds A1 composing F1 (f1) and F1_1 (f11).
 
 // The report tells, on the group placing each root of the copy, the key a sibling where it lands holds already and the
 // values the engine numbers instead; the apply writes those values.
@@ -41,6 +43,21 @@ describe('copy - the key taken where it lands, reported as the apply writes it',
 				'//default:Bay[@name="B1"]/default:Function[@name="F2_1"]',
 			],
 		},
+		// B1 holds A1, F1 and F1_1, both composed by A1: each function is numbered after the one placed before it
+		'A1 composing F1 and F1_1 beside itself in B1 → F1_2 then F1_3 proposed and written, as placed in turn':
+			{
+				sourceXml: numberedXml,
+				copy: { verb: 'asd', ref: ref('Application', 'a1'), anchor: ref('Bay', 'b1') },
+				expected: [
+					'Application uniqueChildNameInBay name=A1 taken by Application a1 → name=A1_1',
+					'Function uniqueChildNameInBay name=F1 taken by Function f1 → name=F1_2',
+					'Function uniqueChildNameInBay name=F1_1 taken by Function f11 → name=F1_3',
+				],
+				expectedQueries: [
+					'//default:Bay[@name="B1"]/default:Function[@name="F1_2"]',
+					'//default:Bay[@name="B1"]/default:Function[@name="F1_3"]',
+				],
+			},
 		// B2 holds nothing: nothing is taken
 		'F1 to B2 → no key taken': {
 			sourceXml: functionXml,

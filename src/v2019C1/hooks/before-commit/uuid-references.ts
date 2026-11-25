@@ -32,6 +32,10 @@ import type {
 	UuidReferenceRefusal,
 } from './uuid-references.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type {
+	ElementPath,
+	PathSegmentWithRef,
+} from '@/v2019C1/extensions/reference/query/build/path-segment.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -262,10 +266,7 @@ async function localPathsWritten(params: {
 		const targetPath = paths[index * 2]
 		// the level above the BehaviorDescription: its path, the BehaviorDescription's own segment left out
 		const behaviorContext = paths[index * 2 + 1]?.segments.slice(0, -1)
-		const inReach =
-			targetPath !== null &&
-			behaviorContext !== undefined &&
-			localSegments({ context: behaviorContext, segments: targetPath.segments }) !== null
+		const inReach = isInReach({ targetPath, behaviorContext })
 		const path =
 			inReach && targetPath
 				? composeReferencePath({
@@ -306,6 +307,23 @@ async function localPathsWritten(params: {
 		]
 	})
 	return { operations, refusals }
+}
+
+/**
+ * Whether a behaviour variable's element is in its reach: at or below the level above its BehaviorDescription
+ * (`behaviorContext`, that level's path). An element with no path, or a variable with no context, is out of reach.
+ */
+export function isInReach(params: {
+	targetPath: ElementPath | null | undefined
+	behaviorContext: readonly PathSegmentWithRef[] | undefined
+}): boolean {
+	const { targetPath, behaviorContext } = params
+	return (
+		targetPath !== null &&
+		targetPath !== undefined &&
+		behaviorContext !== undefined &&
+		localSegments({ context: behaviorContext, segments: targetPath.segments }) !== null
+	)
 }
 
 /** A uuid reference refused, as the commit throws it and lists it. */

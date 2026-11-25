@@ -1,6 +1,5 @@
 import { foldSatelliteCompanions } from './satellite-companions'
 
-import { isSameDocument } from '@/v2019C1/extensions/lifecycle/copy/same-document'
 import {
 	findHeldSatelliteIds,
 	resolveAppliedSatellites,
@@ -98,7 +97,7 @@ export async function foldCrossCuttingSatellites(
 	// applying to nothing, the project's copy making each of its applications already
 	// a copy's source is the project: every satellite is held there, none brought from another file
 	const held =
-		placementListing && !(await isSameDocument({ query, otherQuery: sourceQuery }))
+		placementListing && params.diffPolicy.sourceIsProject !== true
 			? await findHeldSatelliteIds(query, { satellites: resolvedTargets })
 			: new Set<string>()
 	// what applies where the project's copy of it applies already does not apply there twice, as the apply places it

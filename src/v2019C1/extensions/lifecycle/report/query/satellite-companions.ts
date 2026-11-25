@@ -1,7 +1,6 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
-import { isSameDocument } from '@/v2019C1/extensions/lifecycle/copy/same-document'
 import { describeContribution } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import {
 	leaveOutTellingOutOfScope,
@@ -118,7 +117,7 @@ export async function foldSatelliteCompanions(
 	const matchKey = params.matchKey ?? 'templateUuid'
 	const firstTime = instanceScopeId === undefined
 	// a copy reads the document it is placed into: a reference the source holds is never one the placement wrote
-	const sourceIsProject = await isSameDocument({ query, otherQuery: sourceQuery })
+	const sourceIsProject = params.diffPolicy.sourceIsProject === true
 
 	const group = report.groups.find((candidate) => candidate.primary.sourceRef?.id === primaryRef.id)
 

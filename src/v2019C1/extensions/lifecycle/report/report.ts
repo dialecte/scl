@@ -83,7 +83,11 @@ export async function report(
 		referencesByName: target.resolution?.referencesByName,
 	})
 	// what the resolution tells every diff of the report, read once as well
-	const diffPolicy = readDiffPolicy({ resolution: target.resolution })
+	// a copy reads the document it is placed into (its entry refused any other): the source is the project
+	const diffPolicy = readDiffPolicy({
+		resolution: target.resolution,
+		sourceIsProject: scenarioPolicy({ scenario: target.scenario }).placementIdentity === 'copy',
+	})
 	const report = await reportVerb(query, {
 		target,
 		pass,
