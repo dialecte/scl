@@ -4,6 +4,7 @@ import * as extractTransaction from './extract'
 import { exportOptions } from './extract/query'
 import { classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
+import { applyMove, reportMove } from './move'
 import { report } from './report'
 import { scenarioOf } from './scenario-of'
 import { sourceRoot } from './source-root'
@@ -26,6 +27,8 @@ import { checkTemplateUuids } from './validate'
  * - `transplant`  — generic clone engine (`tx.lifecycle.transplant.deep`).
  * - `update`      — instantiate-or-reconcile a project against a newer template
  *                   (`tx.lifecycle.update.fsd` / `.asd` apply the change).
+ * - `reportMove` / `applyMove` — a move within the document, reported for a merge review then written
+ *                   (`tx.lifecycle.reportMove` in a transaction the caller discards, `tx.lifecycle.applyMove`).
  * - `makeUnique`  — make an element unique where it sits, in the engine's one numbering
  *                   (`tx.lifecycle.makeUnique`); what a consumer calls after naming an element.
  * - `classifyIeds` — read-only: every IED is a real device's IED or a specification IED
@@ -63,5 +66,7 @@ export const lifecycle = {
 		update: updateTransaction,
 		apply,
 		makeUnique,
+		reportMove,
+		applyMove,
 	},
 }

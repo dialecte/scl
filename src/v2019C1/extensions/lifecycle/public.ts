@@ -115,3 +115,13 @@ export type {
 	IedExportOption,
 	IedExportRefusal,
 } from './extract/query/export-options.types'
+
+export type {
+	ApplyMoveParams,
+	MoveAnchorRefusalKey,
+	MovedElement,
+	MoveRefusal,
+	MoveReport,
+	NameTaken,
+	ReportMoveParams,
+} from './move/public'

@@ -5,6 +5,7 @@ export const STAGE_REFUSAL_REASONS = [
 	'shell-not-specification',
 	'no-lnodes',
 	'ied-name',
+	'type-missing',
 ] as const
 
 /** The verb named in a refusal's meta: the stage refused, not the build. */
