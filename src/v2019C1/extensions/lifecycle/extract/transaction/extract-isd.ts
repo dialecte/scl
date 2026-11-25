@@ -1,6 +1,6 @@
 import { INPUT_MODES, ISD_FILE_EXTENSION, ISD_KINDS } from './ied.constants'
 import { readIedSourceFileType } from './read-ied-source-file-type'
-import { readSelectedIedName, refuseTargetNotEmpty } from './refuse-ied-export'
+import { refuseTargetNotEmpty } from './refuse-ied-export'
 import { nameTemplate, writeTemplateIdentity } from './template-identity'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -9,6 +9,7 @@ import { SCL_ERRORS } from '@/v2019C1/errors'
 import { startFile } from '@/v2019C1/extensions/history/transaction/start-file'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { readIedExportRefusals } from '@/v2019C1/extensions/lifecycle/extract/query/read-ied-export-refusals'
+import { readSelectedIedName } from '@/v2019C1/extensions/lifecycle/extract/query/read-selected-ied-name'
 import { applyIedProcessEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-ied-process-edits'
 import { applyRecordEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-record-edits'
 import { applySupervisionDependencies } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-supervision-dependencies'
@@ -102,7 +103,9 @@ async function refuseUnavailableExtraction(
 		})
 	}
 	const iedName = await readSelectedIedName(sourceQuery, { iedRef })
-	const refusal = (await readIedExportRefusals(sourceQuery, { iedRef, iedName })).ISD
+	const refusal = (
+		await readIedExportRefusals(sourceQuery, { iedRef, iedName, fileTypes: ['ISD'] })
+	).ISD
 	if (refusal) {
 		throwDialecteError(SCL_ERRORS[refusal.key], {
 			ref: iedRef,

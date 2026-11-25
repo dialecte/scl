@@ -13,21 +13,25 @@ import type * as Core from '@dialecte/core'
  */
 export async function readIedExportRefusals(
 	query: Core.Query<Config>,
-	params: { iedRef: Scl.Ref<'IED'>; iedName: string },
-): Promise<Record<IedExportFileType, IedExportRefusal | undefined>> {
-	const { iedRef, iedName } = params
+	params: {
+		iedRef: Scl.Ref<'IED'>
+		iedName: string
+		/** The file types asked for: the network address is read only when a CID is. */
+		fileTypes: readonly IedExportFileType[]
+	},
+): Promise<Partial<Record<IedExportFileType, IedExportRefusal>>> {
+	const { iedRef, iedName, fileTypes } = params
 	const meta = { ied: { tagName: 'IED' as const, id: iedRef.id } }
 	const classifications = await classifyIeds(query)
 	const implemented = classifications.some(function isSelectedImplemented(classification) {
 		return classification.ied.id === iedRef.id && classification.kind === 'implemented'
 	})
-	if (!implemented) {
-		return { ISD: undefined, CID: { key: 'IED_NOT_IMPLEMENTED', meta } }
-	}
+	if (!implemented) return { CID: { key: 'IED_NOT_IMPLEMENTED', meta } }
+	if (!fileTypes.includes('CID')) return { ISD: { key: 'IED_NOT_SPECIFICATION', meta } }
 	const connected = await holdsAnAddress(query, { iedRef, iedName })
 	return {
 		ISD: { key: 'IED_NOT_SPECIFICATION', meta },
-		CID: connected ? undefined : { key: 'IED_NOT_CONNECTED', meta },
+		...(connected ? {} : { CID: { key: 'IED_NOT_CONNECTED', meta } }),
 	}
 }
 

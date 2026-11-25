@@ -1,11 +1,14 @@
 import {
 	INPUT_LATER_BINDING_NEEDS,
 	INPUT_SOURCE_ATTRIBUTES,
+	INPUT_UUID_ATTRIBUTES,
 	INTERNAL_ADDRESS,
+	OUTPUT_UUID_ATTRIBUTES,
 	OUTPUT_SOURCE_ATTRIBUTES,
 	REFERENCE_HOLDER_TAGS,
 	IED_RELATIVE_PREFIX,
 	SUPERVISIONS,
+	UUID_TARGET_TAGS,
 } from './reference-closure.constants'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -88,6 +91,10 @@ async function readHolderRecords(
 		Association = [],
 		KDC = [],
 		LN = [],
+		LN0 = [],
+		GSEControl = [],
+		SampledValueControl = [],
+		ReportControl = [],
 	} = await query.findDescendants(params.iedRef, { collect: [...REFERENCE_HOLDER_TAGS] })
 	return {
 		Inputs: Inputs.filter(isNativeRecord),
@@ -99,6 +106,10 @@ async function readHolderRecords(
 		Association: Association.filter(isNativeRecord),
 		KDC: KDC.filter(isNativeRecord),
 		LN: LN.filter(isNativeRecord),
+		LN0: LN0.filter(isNativeRecord),
+		GSEControl: GSEControl.filter(isNativeRecord),
+		SampledValueControl: SampledValueControl.filter(isNativeRecord),
+		ReportControl: ReportControl.filter(isNativeRecord),
 	}
 }
 
@@ -117,7 +128,40 @@ async function readLanding(params: {
 			.map((record) => readAttribute({ record, name: 'name' }))
 			.filter((name) => name !== undefined && !insideIeds.has(name)),
 	)
-	return { insideIeds, presentIeds }
+	const insideUuids = new Set(
+		rootRecords.flatMap(({ records }) =>
+			uuidsOf(UUID_TARGET_TAGS.flatMap((tag): readonly Core.AnyRawRecord[] => records[tag])),
+		),
+	)
+	const destinationRoot = await destinationQuery.getRoot()
+	const destinationTargets = await destinationQuery.findDescendants(destinationRoot, {
+		collect: [...UUID_TARGET_TAGS],
+	})
+	const presentUuids = new Set(
+		uuidsOf(
+			UUID_TARGET_TAGS.flatMap(
+				(tag): readonly Core.AnyRawRecord[] => destinationTargets[tag] ?? [],
+			),
+		).filter((uuid) => !insideUuids.has(uuid)),
+	)
+	return { insideIeds, presentIeds, insideUuids, presentUuids }
+}
+
+/** The uuids the records carry. */
+function uuidsOf(records: readonly Core.AnyRawRecord[]): string[] {
+	return records.flatMap((record) => {
+		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
+		return uuid ? [uuid] : []
+	})
+}
+
+/** The class of a reference naming its target by uuid only: a logical node or control block of the closure, of the destination, or of none. */
+function classOfUuid(params: { uuids: readonly string[]; landing: Landing }): ReferenceClass {
+	const { uuids, landing } = params
+	if (uuids.every((uuid) => landing.insideUuids.has(uuid))) return 'inside'
+	return uuids.every((uuid) => landing.insideUuids.has(uuid) || landing.presentUuids.has(uuid))
+		? 'present'
+		: 'absent'
 }
 
 /** The class of a reference naming an IED by its name: the IED itself (or relative to it), one of the destination, or none. */
@@ -140,11 +184,28 @@ function decideBindings(params: {
 	]
 	return bound.flatMap(function decideBinding({ record, family }) {
 		const iedName = readAttribute({ record, name: 'iedName', defaults: 'none' })
-		if (!iedName) return []
-		const referenceClass = classOfIedName({ iedName, landing })
+		const uuids = (family === 'input' ? INPUT_UUID_ATTRIBUTES : OUTPUT_UUID_ATTRIBUTES).flatMap(
+			(name) => {
+				const uuid = readAttribute({ record, name, defaults: 'none' })
+				return uuid ? [uuid] : []
+			},
+		)
+		if (!iedName && uuids.length === 0) return []
+		const referenceClass = iedName
+			? classOfIedName({ iedName, landing })
+			: classOfUuid({ uuids, landing })
 		const action = policy[family][referenceClass]
 		assertBindingAction({ record, family, action })
-		return [decisionOf({ record, family, direction: 'outgoing', referenceClass, iedName, action })]
+		return [
+			decisionOf({
+				record,
+				family,
+				direction: 'outgoing',
+				referenceClass,
+				...(iedName ? { iedName } : {}),
+				action,
+			}),
+		]
 	})
 }
 
@@ -227,7 +288,7 @@ async function decideSupervisions(params: {
 	})
 	if (supervising.length === 0) return []
 	const index = await context.supervisionIndex()
-	const insideValues = new Set(
+	const insideValueIds = new Set(
 		[...section.controlBlocks.values()]
 			.filter((controlBlock) => rootIds.has(controlBlock.ied.id))
 			.flatMap((controlBlock) =>
@@ -241,10 +302,16 @@ async function decideSupervisions(params: {
 		query: sourceQuery,
 		logicalNodes: supervising.map(({ record }) => record),
 	})
+	// the index keeps the first value of each reference: a reference is inside when the index resolves one of its values
+	const insideReferences = new Set(
+		references
+			.filter(({ value }) => insideValueIds.has(value.id))
+			.map(({ value }) => value.value ?? ''),
+	)
 	return references.flatMap(function decideReference({ ln, value }) {
 		const reference = value.value ?? ''
 		if (reference === '') return []
-		const referenceClass: ReferenceClass = insideValues.has(value.id) ? 'inside' : 'absent'
+		const referenceClass: ReferenceClass = insideReferences.has(reference) ? 'inside' : 'absent'
 		const action = policy.supervision[referenceClass]
 		invariant(action === 'keep' || action === 'keep-listed', {
 			key: 'ASSERTION_FAILED',
@@ -362,7 +429,11 @@ function composePlan(params: {
 				(action === 'reduce' && family === 'input' && !hasInternalAddress)
 			) {
 				leaveOut.add(record.id)
-				warnings.push({ code: 'input-removed', source: ref as Scl.Ref<'ExtRef'>, iedName })
+				warnings.push({
+					code: 'input-removed',
+					source: ref as Scl.Ref<'ExtRef'>,
+					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
+				})
 				continue
 			}
 			if (action === 'reduce') {
@@ -371,7 +442,7 @@ function composePlan(params: {
 				warnings.push({
 					code: 'input-unbound',
 					source: ref as Scl.Ref<'ExtRef' | 'ExtCtrl'>,
-					iedName,
+					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
 					attributes: Object.keys(reduction.cleared),
 				})
 				if (reduction.missing.length > 0) {

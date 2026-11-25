@@ -294,6 +294,19 @@ describe('extract IED as CID - receivers, report clients, associations and super
 					},
 				],
 			},
+		'two LGOS supervising the own GOOSE of the IED by the same reference -> both kept, neither listed':
+			{
+				sourceXml: RealIedWithClientsAndSupervisionXml,
+				targetXml: emptyTarget,
+				expectedQueries: [
+					`${selected}//default:LN[@lnClass="LGOS"][@inst="2"]/default:DOI/default:DAI/default:Val[text()="SelectedLD1/LLN0.GooseOut"]`,
+					`${selected}//default:LN[@lnClass="LGOS"][@inst="3"]/default:DOI/default:DAI/default:Val[text()="SelectedLD1/LLN0.GooseOut"]`,
+				],
+				unwarnedSources: [
+					{ tagName: 'LN', id: 'lgos-self' },
+					{ tagName: 'LN', id: 'lgos-self-again' },
+				],
+			},
 		'an LGOS supervising Other, an LGOS supervising the IED itself and an LSVS naming no control block -> all kept, the two not supervising the IED listed':
 			{
 				sourceXml: RealIedWithClientsAndSupervisionXml,
@@ -341,3 +354,34 @@ async function act({
 	}
 	return { assertOn: testCase.assertOn ?? 'target' }
 }
+
+describe('extract IED as CID - an input naming its source by a uuid only', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'device input holding only the uuid of a logical node no document holds -> kept, the uuid cleared, listed':
+			{
+				sourceXml: RealIedWithInputsBoundElsewhereXml,
+				targetXml: emptyTarget,
+				expectedQueries: [
+					`${ptoc}/default:Inputs/default:ExtRef[@intAddr="UuidOnlyIn"][@pDO="Ind"]${unbound}`,
+				],
+				expectedWarnings: [
+					{ code: 'input-unbound', source: extRef('extref-UuidOnlyIn'), attributes: ['lnUuid'] },
+				],
+			},
+	}
+
+	/** The input UuidOnlyIn given a logical node uuid no document holds: a state no file of the fixture can hold. */
+	async function actOnUuidOnlyInput(
+		params: SclTest.ActParams<TestCase>,
+	): Promise<SclTest.ActResult> {
+		await params.source.transaction(async function nameByUuidOnly(tx) {
+			await tx.update(
+				{ tagName: 'ExtRef', id: 'extref-UuidOnlyIn' },
+				{ attributes: { lnUuid: '50000000-0000-4000-8000-000000000099' } },
+			)
+		})
+		return act(params)
+	}
+
+	runSclTestCases.withExport({ testCases, act: actOnUuidOnlyInput })
+})

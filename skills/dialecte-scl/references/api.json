@@ -581,7 +581,7 @@
 				"can this IED be exported as a CID or an ISD",
 				"why is the CID export refused"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/query/export-options.ts:18"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/query/export-options.ts:17"
 		},
 		{
 			"path": "doc.query.lifecycle.report",

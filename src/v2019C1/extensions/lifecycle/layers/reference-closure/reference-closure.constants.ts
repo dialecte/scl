@@ -1,10 +1,13 @@
+import { EXT_REF_CONTROL_BLOCK_PAIR } from '@/v2019C1/extensions/dataflow/constants/control-blocks.constants'
 import {
 	EXT_CTRL_LATER_BINDING,
+	EXT_CTRL_SIGNAL,
 	EXT_REF_LATER_BINDING,
+	EXT_REF_SIGNAL,
 } from '@/v2019C1/extensions/dataflow/constants/ext-ref-state.constants'
 import {
 	IED_RELATIVE_REFERENCE_PREFIX,
-	SUPERVISION_BY_CONTROL_BLOCK,
+	SUPERVISION_KINDS,
 	SUPERVISION_REFERENCE_ATTRIBUTE,
 } from '@/v2019C1/extensions/dataflow/constants/supervision.constants'
 
@@ -37,6 +40,24 @@ export const INPUT_LATER_BINDING_NEEDS: readonly string[] = [
 	...EXT_REF_LATER_BINDING.required,
 ]
 
+/** The uuid attributes an input names its source by: its logical node's and its control block's. */
+export const INPUT_UUID_ATTRIBUTES: readonly string[] = [
+	EXT_REF_SIGNAL.uuid,
+	EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid,
+]
+
+/** The uuid attribute an output names the logical node it controls by. */
+export const OUTPUT_UUID_ATTRIBUTES: readonly string[] = [EXT_CTRL_SIGNAL.uuid]
+
+/** The elements an input's or an output's uuid names: logical nodes and control blocks. */
+export const UUID_TARGET_TAGS = [
+	'LN',
+	'LN0',
+	'GSEControl',
+	'SampledValueControl',
+	'ReportControl',
+] as const
+
 /** The attribute naming the internal address an input or output lands on in its device. */
 export const INTERNAL_ADDRESS = 'intAddr'
 
@@ -45,14 +66,9 @@ export const IED_RELATIVE_PREFIX = IED_RELATIVE_REFERENCE_PREFIX
 
 /** The supervising logical node classes, their data object holding the reference, and its data attribute. */
 export const SUPERVISIONS = {
-	kinds: Object.values(SUPERVISION_BY_CONTROL_BLOCK),
+	kinds: SUPERVISION_KINDS,
 	attribute: SUPERVISION_REFERENCE_ATTRIBUTE,
 } as const
-
-/** The control blocks a supervision names. */
-export const SUPERVISED_CONTROL_BLOCK_TAGS = Object.keys(
-	SUPERVISION_BY_CONTROL_BLOCK,
-) as (keyof typeof SUPERVISION_BY_CONTROL_BLOCK)[]
 
 /** What the families hold, by tag: the elements a cut reads under each root. */
 export const REFERENCE_HOLDER_TAGS = [
@@ -65,6 +81,10 @@ export const REFERENCE_HOLDER_TAGS = [
 	'Association',
 	'KDC',
 	'LN',
+	'LN0',
+	'GSEControl',
+	'SampledValueControl',
+	'ReportControl',
 ] as const
 
 /** A file of one real IED: references it holds are kept, any other reduced, receivers and clients kept and listed. */

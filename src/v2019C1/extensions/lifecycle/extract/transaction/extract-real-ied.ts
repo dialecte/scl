@@ -5,7 +5,7 @@ import {
 	REAL_IED_EXPORT_FILES,
 } from './ied.constants'
 import { readIedSourceFileType } from './read-ied-source-file-type'
-import { readSelectedIedName, refuseTargetNotEmpty } from './refuse-ied-export'
+import { refuseTargetNotEmpty } from './refuse-ied-export'
 
 import { throwDialecteError } from '@dialecte/core'
 
@@ -13,6 +13,7 @@ import { SCL_ERRORS } from '@/v2019C1/errors'
 import { startFile } from '@/v2019C1/extensions/history/transaction/start-file'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { readIedExportRefusals } from '@/v2019C1/extensions/lifecycle/extract/query/read-ied-export-refusals'
+import { readSelectedIedName } from '@/v2019C1/extensions/lifecycle/extract/query/read-selected-ied-name'
 import { applyRecordEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-record-edits'
 import { readIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-communication'
 import { selectRealIedContent } from '@/v2019C1/extensions/lifecycle/layers/ied/select-real-ied-content'
@@ -65,7 +66,9 @@ async function refuseRealIedExport(
 		})
 	}
 	const iedName = await readSelectedIedName(sourceQuery, { iedRef })
-	const refusal = (await readIedExportRefusals(sourceQuery, { iedRef, iedName })).CID
+	const refusal = (
+		await readIedExportRefusals(sourceQuery, { iedRef, iedName, fileTypes: ['CID'] })
+	).CID
 	if (refusal) {
 		throwDialecteError(SCL_ERRORS[refusal.key], {
 			ref: iedRef,

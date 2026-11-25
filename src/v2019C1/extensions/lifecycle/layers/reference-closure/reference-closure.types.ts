@@ -71,6 +71,10 @@ export type Landing = {
 	insideIeds: ReadonlySet<string>
 	/** The names of the IEDs of the destination outside the closure. */
 	presentIeds: ReadonlySet<string>
+	/** The uuids of the logical nodes and control blocks the closure holds. */
+	insideUuids: ReadonlySet<string>
+	/** The uuids of the logical nodes and control blocks of the destination outside the closure. */
+	presentUuids: ReadonlySet<string>
 }
 
 /** One decision of the cut, before it becomes edits, left-out records and warnings. */

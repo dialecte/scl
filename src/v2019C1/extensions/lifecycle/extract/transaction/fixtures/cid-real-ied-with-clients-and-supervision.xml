@@ -1,5 +1,5 @@
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
-	<!-- Selected: a real IED whose report Rpt names report clients in Other and in itself, whose GOOSE GooseOut names receivers Other and itself, with an Association and a KDC naming Other, an LGOS supervising Other's OtherGoose, an LGOS supervising its own GooseOut and an LSVS naming a control block of no IED; the entries naming Other carry their uuid companions -->
+	<!-- Selected: a real IED whose report Rpt names report clients in Other and in itself, whose GOOSE GooseOut names receivers Other and itself, with an Association and a KDC naming Other, an LGOS supervising Other's OtherGoose, two LGOS supervising its own GooseOut by the same reference and an LSVS naming a control block of no IED; the entries naming Other carry their uuid companions -->
 	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" dev:db-id="source-header"/>
 	<Communication>
 		<SubNetwork name="StationBus" type="8-MMS">
@@ -14,11 +14,6 @@
 					</Address>
 				</GSE>
 			</ConnectedAP>
-			<ConnectedAP iedName="Other" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003">
-				<Address>
-					<P type="IP">10.0.0.2</P>
-				</Address>
-			</ConnectedAP>
 		</SubNetwork>
 	</Communication>
 	<IED name="Other" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="other-ied">
@@ -26,12 +21,7 @@
 			<Server>
 				<Authentication/>
 				<LDevice inst="OLD" uuid="40000000-0000-4000-8000-000000000003">
-					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000003">
-						<DataSet name="OtherSet">
-							<FCDA ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/>
-						</DataSet>
-						<GSEControl name="OtherGoose" datSet="OtherSet" appID="OtherApp" confRev="1" uuid="60000000-0000-4000-8000-000000000003"/>
-					</LN0>
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000003"/>
 					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000004"/>
 					<LN lnClass="IHMI" inst="1" lnType="IHMI_Type" uuid="50000000-0000-4000-8000-000000000006"/>
 				</LDevice>
@@ -67,6 +57,13 @@
 						</DOI>
 					</LN>
 					<LN lnClass="LGOS" inst="2" lnType="LGOS_Type" uuid="50000000-0000-4000-8000-000000000007" dev:db-id="lgos-self">
+						<DOI name="GoCBRef">
+							<DAI name="setSrcRef">
+								<Val>SelectedLD1/LLN0.GooseOut</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="3" lnType="LGOS_Type" uuid="50000000-0000-4000-8000-000000000009" dev:db-id="lgos-self-again">
 						<DOI name="GoCBRef">
 							<DAI name="setSrcRef">
 								<Val>SelectedLD1/LLN0.GooseOut</Val>

@@ -62,13 +62,15 @@ export type ExtractWarning =
 			/** An input bound to an IED the file does not hold, with no internal address (made by a system tool): not written. */
 			code: 'input-removed'
 			source: Scl.Ref<'ExtRef'>
-			iedName: string
+			/** The IED it names, when it names one by name rather than by uuid only. */
+			iedName?: string
 	  }
 	| {
 			/** An input or output bound to an IED the file does not hold: written without its source, the `attributes` removed. */
 			code: 'input-unbound'
 			source: Scl.Ref<'ExtRef' | 'ExtCtrl'>
-			iedName: string
+			/** The IED it names, when it names one by name rather than by uuid only. */
+			iedName?: string
 			attributes: string[]
 	  }
 	| {

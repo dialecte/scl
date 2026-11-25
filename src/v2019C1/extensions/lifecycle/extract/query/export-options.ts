@@ -1,7 +1,6 @@
 import { IED_EXPORT_FILE_TYPES } from './export-options.constants'
 import { readIedExportRefusals } from './read-ied-export-refusals'
-
-import { readSelectedIedName } from '@/v2019C1/extensions/lifecycle/extract/transaction/refuse-ied-export'
+import { readSelectedIedName } from './read-selected-ied-name'
 
 import type { IedExportOption } from './export-options.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -21,7 +20,11 @@ export async function exportOptions(
 ): Promise<IedExportOption[]> {
 	const { iedRef } = params
 	const iedName = await readSelectedIedName(query, { iedRef })
-	const refusals = await readIedExportRefusals(query, { iedRef, iedName })
+	const refusals = await readIedExportRefusals(query, {
+		iedRef,
+		iedName,
+		fileTypes: IED_EXPORT_FILE_TYPES,
+	})
 	return IED_EXPORT_FILE_TYPES.map(function optionOf(fileType): IedExportOption {
 		const refusal = refusals[fileType]
 		return refusal ? { fileType, offered: false, refusal } : { fileType, offered: true }

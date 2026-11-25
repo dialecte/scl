@@ -1,5 +1,5 @@
 <SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
-	<!-- Selected: a real IED whose LN0 holds one system input bound to Other, and whose PTOC holds device inputs bound to Other (one per data attribute), relative to itself, bound to itself, unbound, bound to Ghost (no IED of the file), one without desc, and two outputs to Other (with and without an internal address) -->
+	<!-- Selected: a real IED whose LN0 holds one system input bound to Other, and whose PTOC holds device inputs bound to Other (one per data attribute), relative to itself, bound to itself, unbound (UuidOnlyIn given only a logical node uuid by the case that needs it), bound to Ghost (no IED of the file), one without desc, and two outputs to Other (with and without an internal address) -->
 	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" dev:db-id="source-header"/>
 	<Communication>
 		<SubNetwork name="StationBus" type="8-MMS">
@@ -56,6 +56,7 @@
 							<ExtRef desc="device input relative to the IED" intAddr="RelativeIn" pDO="Op" iedName="@" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" dev:db-id="extref-RelativeIn"/>
 							<ExtRef desc="device input bound to itself" intAddr="SelfIn" pDO="Op" iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" dev:db-id="extref-SelfIn"/>
 							<ExtRef desc="device input not bound" intAddr="TemplateIn" pDO="Ind" dev:db-id="extref-TemplateIn"/>
+							<ExtRef desc="device input to be named by a uuid only" intAddr="UuidOnlyIn" pDO="Ind" dev:db-id="extref-UuidOnlyIn"/>
 							<ExtRef desc="device input bound to an absent IED" intAddr="GhostIn" pDO="Ind" iedName="Ghost" ldInst="GLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extref-GhostIn"/>
 							<ExtRef intAddr="NoDescIn" pDO="Ind" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extref-NoDescIn"/>
 						</Inputs>
