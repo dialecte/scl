@@ -176,7 +176,7 @@ type IedBuildResult = {
 | `ld-name`               | a logical device name empty, still clashing, too long, or already used by another element's logical device                                   |
 | `ln-name`               | an LNode without valid instance, prefix and instance longer than 12, an LLN0 with a prefix, a subfunction name that does not fit as a prefix |
 | `ln-collision`          | two LNodes giving one logical node, or a logical node of that identity already in the logical device                                         |
-| `type-missing`          | no type: the LNode names none and no rule answers, or names a type the document lacks                                                        |
+| `type-missing`          | no type: the LNode names none and no rule answers, or names a type the document lacks (a new LNode or one already bound)                     |
 | `type-mismatch`         | the type is of another logical node class                                                                                                    |
 | `open-value-invalid`    | a rule's answer fails the check the engine applies to its own                                                                                |
 
@@ -250,9 +250,11 @@ Steps, in the staging document:
 1. Refuse before anything is written (`SPECIFICATION_STAGE_REFUSED`, `meta: { reason, stage: 'stageIsd', ref? }`): the
    document already holds an `IED`, a `Substation`, a `Line` or a `Process` (`target-not-empty`); no LNode is given
    (`no-lnodes`); the schema refuses `iedName` as an IED name (`ied-name`); the shell IED is a real device's
-   (`shell-not-specification`, the IED classification of `lifecycle.classifyIeds`); an LNode the project does not hold, or
+   (`shell-not-specification`, the IED classification of `lifecycle.classifyIeds`); a logical node of the shell IED whose
+   `lnType` names an LNodeType the shell document lacks (`type-missing`, that LN as `ref`); an LNode the project does not hold, or
    holds outside its substations, lines and processes (`lnode-outside-process`, one in a function template for
-   instance); checked in that order, the first refusing. An LNode given twice is staged once. A shell IED the
+   instance); an LNode whose `lnType` names an LNodeType the project lacks (`type-missing`, the type in the detail);
+   checked in that order, the first refusing. An LNode given twice is staged once. A shell IED the
    shell document does not hold refuses with `ELEMENT_NOT_FOUND`.
 2. Start the file (an SCD header; the ISD records the project, not this document).
 3. Write the process frames of the LNodes as `extract.ied` frames an IED's: the levels, equipment and functions above

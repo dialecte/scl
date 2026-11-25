@@ -91,6 +91,8 @@ export type PlannedCommit = {
 	released: ReleasedLNodeBinding[]
 	/** Every refusal the steps listed in collect mode, in run order; empty otherwise. */
 	refusals: CommitRefusal[]
+	/** The records the transaction's moves carry, each moved element included, from the move step's one read. */
+	carried: number
 }
 
 /** An element a refusal of the commit names: its tag and record id. */

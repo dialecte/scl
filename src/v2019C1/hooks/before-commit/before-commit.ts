@@ -62,6 +62,7 @@ export async function planCommit(params: {
 		moveRemovals: [...(state.moveRemovals ?? [])],
 		released: [...(state.released ?? [])],
 		refusals,
+		carried: state.movePlaces?.movedBy.size ?? 0,
 	}
 }
 
