@@ -80,6 +80,7 @@ export async function stageIsd(
 		lnodes: params.lnodes.flatMap((lnode) => staged.get(lnode.id) ?? []),
 		contextQuery: params.sourceQuery,
 		ldNameAlsoFits: [params.iedName, TEMPLATE_ISD_IED_NAME],
+		shellTypes: shellCopy.shellTypes,
 	})
 	return {
 		ied,

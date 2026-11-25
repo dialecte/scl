@@ -1,11 +1,12 @@
 /**
- * What a template IED's copy leaves out: the files it came from, and what a specification builds from its LNodes (logical
+ * What a template IED's copy leaves out: the files and the checkout it came from, and what a specification builds from its LNodes (logical
  * devices with their logical nodes, data sets, control blocks and inputs; an access point's own logical nodes; the
  * associations naming them).
  */
 export const SHELL_OMITTED_TAGS = [
 	'IEDSourceFiles',
 	'MinRequestedSCDFiles',
+	'CheckoutID',
 	'LDevice',
 	'LN',
 	'LN0',

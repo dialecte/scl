@@ -20,16 +20,19 @@ import type { AnyRawRecord } from '@dialecte/core'
  * its LNodes is not copied: the template's logical devices (its own LD0 included, with their logical nodes, data sets,
  * control blocks and inputs), an access point's own logical nodes, the associations; nor the files it came from, nor any
  * lineage. The types of the template's LN0 and LPHD are imported, for the LN0 and LPHD the build adds. The copied IED is
- * named `iedName`, `iedUuid` stamped when given; its servers hold no logical device until the build writes them.
+ * named `iedName`, `iedUuid` stamped when given. Its servers hold no logical device until the build writes them, in the
+ * same transaction: a server is valid with at least one, so a server the build does not fill (an IED with several,
+ * the build choosing one) is the caller's to remove. Pass `shellTypes` to `buildIed`: the template's LN0 and LPHD types
+ * then count as the IED's own for the `lnType` rule.
  *
- * Returns the copied IED and what was left out (`leftOut`: the logical devices, then the access point logical nodes,
+ * Returns the copied IED, its `shellTypes` (as imported) and what was left out (`leftOut`: the logical devices, then the access point logical nodes,
  * then the associations), for the caller to say.
  *
  * @intent copy only the shell of a template ISD's IED, build an S-IED from a template without its logical devices
  *
  * @example
- * const { ied, leftOut } = await tx.specification.copyIedShell({ shell: { query: template.query, ied }, iedName: 'P1' })
- * await tx.specification.buildIed({ ied, lnodes })
+ * const { ied, leftOut, shellTypes } = await tx.specification.copyIedShell({ shell: { query: template.query, ied }, iedName: 'P1' })
+ * await tx.specification.buildIed({ ied, lnodes, shellTypes })
  */
 export async function copyIedShell(
 	tx: Core.Transaction<Config>,
@@ -64,10 +67,19 @@ export async function copyIedShell(
 	// a type the template does not hold is not imported: the build gives the LN0 or LPHD a type by its rules
 	const known = await lnodeTypeIdsOf({ query: shell.query })
 	const frameTypes = frameTypesOf({ lnZeros, lns }).filter((typeId) => known.has(typeId))
-	if (frameTypes.length > 0)
-		await importTypes(tx, { sourceQuery: shell.query, records: [], lnodeTypeIds: frameTypes })
+	const imported =
+		frameTypes.length > 0
+			? await importTypes(tx, {
+					sourceQuery: shell.query,
+					records: [],
+					lnodeTypeIds: frameTypes,
+					keepNameTypesFrom: 'source',
+				})
+			: undefined
+	const shellTypes = frameTypes.map((typeId) => imported?.idRemap.get(typeId) ?? typeId)
 	return {
 		ied,
+		shellTypes,
 		leftOut: [
 			...lDevices.map((record) => refOf({ record, tagName: 'LDevice' })),
 			...lns

@@ -18,4 +18,6 @@ export type CopyIedShellResult = {
 	ied: Scl.Ref<'IED'>
 	/** What the template IED held that a specification builds, in document order: left out, with what it held. */
 	leftOut: ShellLeftOut[]
+	/** The template's LN0 and LPHD types as imported (their ids in the document copied into), for `buildIed`'s `shellTypes`. */
+	shellTypes: string[]
 }

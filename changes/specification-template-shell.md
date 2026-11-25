@@ -4,4 +4,5 @@
 
 ### Added
 
-- `tx.specification.copyIedShell`: copy a template IED as the shell of an IED built from a specification (its services and access points, no logical device, no description, the types of its LN0 and LPHD), with what was left out.
+- `tx.specification.copyIedShell`: copy a template IED as the shell of an IED built from a specification (its services and access points, no logical device, no description, no checkout, the types of its LN0 and LPHD), with what was left out and those types as `shellTypes`.
+- `buildIed` and `planIed` take `shellTypes`: LNodeTypes the IED's shell offers as its own, counted as types the IED uses for the `lnType` rule (`sameClassInTargetIed`).

@@ -1511,12 +1511,12 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: CopyIedShellParams) => Promise<CopyIedShellResult>",
-			"summary": "Copy a template IED as the shell of an IED built from a specification: the IED itself (its attributes, not its `desc`), its `Services`, each `AccessPoint` with its `Server` and `Authentication`. What a specification builds from its LNodes is not copied: the template's logical devices (its own LD0 included, with their logical nodes, data sets, control blocks and inputs), an access point's own logical nodes, the associations; nor the files it came from, nor any lineage. The types of the template's LN0 and LPHD are imported, for the LN0 and LPHD the build adds. The copied IED is named `iedName`, `iedUuid` stamped when given; its servers hold no logical device until the build writes them.",
+			"summary": "Copy a template IED as the shell of an IED built from a specification: the IED itself (its attributes, not its `desc`), its `Services`, each `AccessPoint` with its `Server` and `Authentication`. What a specification builds from its LNodes is not copied: the template's logical devices (its own LD0 included, with their logical nodes, data sets, control blocks and inputs), an access point's own logical nodes, the associations; nor the files it came from, nor any lineage. The types of the template's LN0 and LPHD are imported, for the LN0 and LPHD the build adds. The copied IED is named `iedName`, `iedUuid` stamped when given. Its servers hold no logical device until the build writes them, in the same transaction: a server is valid with at least one, so a server the build does not fill (an IED with several, the build choosing one) is the caller's to remove. Pass `shellTypes` to `buildIed`: the template's LN0 and LPHD types then count as the IED's own for the `lnType` rule.",
 			"intents": [
 				"copy only the shell of a template ISD's IED",
 				"build an S-IED from a template without its logical devices"
 			],
-			"declaredAt": "src/v2019C1/extensions/specification/transaction/copy-ied-shell.ts:34"
+			"declaredAt": "src/v2019C1/extensions/specification/transaction/copy-ied-shell.ts:37"
 		},
 		{
 			"path": "tx.specification.stageIsd",
