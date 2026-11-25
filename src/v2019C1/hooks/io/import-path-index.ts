@@ -55,6 +55,7 @@ export function createImportPathIndexBuilder(params: {
 		legacyKeys: new Set(),
 		shared: new Set(),
 		targetsByUuid: new Map(),
+		unnamedUuids: new Set(),
 	}
 	const otherPaths: OtherPaths = { underStandardParent: [], underOwnNaming: [] }
 
@@ -64,7 +65,10 @@ export function createImportPathIndexBuilder(params: {
 		const standard = buildPathFromAncestry({ record, ancestry, siblings, specNamings })
 		// an element with no segment of its own (an access point, a control block) would take its
 		// parent's path: it is not named by a path
-		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) return
+		if (!standard || standard.segments.at(-1)?.ref.id !== record.id) {
+			index.unnamedUuids.add(uuid)
+			return
+		}
 		// a path another target holds already names several: neither is named by it
 		const held = index.byPath.get(standard.path)
 		const shared = index.shared.has(standard.path) || (held !== undefined && held !== uuid)
