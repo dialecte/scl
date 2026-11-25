@@ -19,7 +19,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root"/>`
 
 type TestCase = SclTest.BaseXmlTestCase & {
 	targetXml: string
@@ -51,7 +51,7 @@ function fileReference(params: {
  * a bay template. The application, the function and the subfunction record the file each was placed from.
  */
 const projectXml = /* xml */ `
-	<SCL ${ns} ${id}="project" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="project">
 		<Header id="project" uuid="project-file-uuid" ${id}="project-header"/>
 		<Substation name="S1" uuid="substation-uuid" templateUuid="substation-template" ${id}="project-substation">
 			<Private type="eIEC61850-6-100" ${id}="project-substation-private">
@@ -321,8 +321,9 @@ describe('extract, templateLink break: the element and its own content lose thei
 	runSclTestCases.withExport({ testCases, act: extractFromProject })
 })
 
-/** The reference to a file, wherever it sits. */
-const recorded = (file: string) => `//v2019C1:SclFileReference[@fileName="${file}"]`
+function recorded(file: string): string {
+	return `//v2019C1:SclFileReference[@fileName="${file}"]`
+}
 
 describe('extract: the element extracted no longer records the file it was placed from, what it holds still does', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
@@ -442,14 +443,13 @@ describe('extract options', () => {
 				source: source.document,
 				target: target.document,
 			} as SclTest.ActParams<TestCase>)
-			await expect(refused).rejects.toThrow()
-			const refusal = toDialecteError(await refused.catch((error: unknown) => error))
+			const refusal = await refused.catch((error: unknown) => error).then(toDialecteError)
 			expect({ key: refusal?.key, code: refusal?.code, meta: refusal?.meta }).toEqual({
 				key: 'OPTION_NOT_AVAILABLE',
 				code: 'SCL1009',
 				meta: { option: 'as', value: 'revision' },
 			})
-			expect(await target.document.query.getSnapshot({ as: 'xml' })).toEqual(before)
+			await expect(target.document.query.getSnapshot({ as: 'xml' })).resolves.toEqual(before)
 		})
 	}
 })

@@ -4,6 +4,7 @@ import {
 } from './assert-coherent-scl-references'
 import { assertAllowInvalidFixtureReason, assertOptOutReason } from './assert-scl-output'
 import { assertValidSclXml } from './assert-valid-scl-xml'
+import { assertGivenEditions } from './given-edition'
 import {
 	assertGivenDocuments,
 	assertOutputGateTestCases,
@@ -102,6 +103,8 @@ export async function createSclTestProject(params: {
 	allowInvalidOutput?: SclOutputOptOut
 	/** The violations the given documents may hold before the test, and why; any other violation fails the call. */
 	allowInvalidFixture?: SclOutputOptOut
+	/** The reason a given document is a first-edition file, its root stating no SCL version. */
+	editionOneRoot?: string
 }) {
 	const {
 		sourceXml,
@@ -146,6 +149,12 @@ export async function createSclTestProject(params: {
 
 	const documents: GatedDocument[] = [{ role: 'source', document: result.source.document }]
 	if (result.target) documents.push({ role: 'target', document: result.target.document })
+	await assertGivenEditions({
+		source: result.source.document,
+		target: result.target?.document,
+		label,
+		editionOneRoot: params.editionOneRoot,
+	})
 	opened.baseline = await readOutputBaseline({ project: result.project, documents })
 	// a given document that fails the checks fails the call; the hook above still destroys the project
 	assertGivenDocuments({

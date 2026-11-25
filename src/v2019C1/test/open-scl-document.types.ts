@@ -9,4 +9,6 @@ export type OpenSclDocumentParams = {
 	label: string
 	/** The reason the document NEEDS an incoherent reference: it is then left unchecked for them. */
 	allowIncoherentReferences?: string
+	/** The reason the document is a first-edition file on purpose, its root stating no SCL version. */
+	editionOneRoot?: string
 }

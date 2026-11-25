@@ -25,7 +25,7 @@ const MISSING_UUID = '5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a99'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 
 const SOURCE_XML = /* xml */ `
-	<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+	<SCL ${ALL_XMLNS_NAMESPACES}>
 		<Header id="output-gate"/>
 		<Substation name="S1">
 			<Private type="eIEC61850-6-100">
@@ -428,7 +428,7 @@ describe('runSclTestCases', () => {
 describe('withOutputGate — the documents of the project', () => {
 	const DANGLING_UUID = '5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a98'
 	const sourceXml = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="source" uuid="5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a10"/>
 			<Substation name="TEMPLATE" ${id}="source-substation">
 				<Private type="eIEC61850-6-100">
@@ -445,7 +445,7 @@ describe('withOutputGate — the documents of the project', () => {
 		</SCL>
 	`
 	const targetXml = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="target" uuid="5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a20"/>
 			<Substation name="S1" ${id}="target-substation">
 				<VoltageLevel name="V1">
@@ -456,7 +456,7 @@ describe('withOutputGate — the documents of the project', () => {
 	`
 	// a third document, imported during the act: a template the act reads from
 	const importedXml = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="imported" uuid="5b1f6c2e-3a4d-4e8f-9a0b-1c2d3e4f5a30"/>
 			<Substation name="TEMPLATE">
 				<Private type="eIEC61850-6-100">
@@ -625,7 +625,7 @@ describe('withOutputGate — the documents of the project', () => {
 
 describe('withOutputGate — the given documents', () => {
 	const DUPLICATE_BAY_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1" ${id}="v1">
@@ -636,7 +636,7 @@ describe('withOutputGate — the given documents', () => {
 		</SCL>
 	`
 	const DUPLICATE_UUID_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1">
@@ -651,7 +651,7 @@ describe('withOutputGate — the given documents', () => {
 		</SCL>
 	`
 	const PARTIAL_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1">
@@ -661,7 +661,7 @@ describe('withOutputGate — the given documents', () => {
 		</SCL>
 	`
 	const DANGLING_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<Private type="eIEC61850-6-100">

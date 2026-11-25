@@ -123,7 +123,7 @@ const emptyVoltageLevelXml = /* xml */ `
 	</SCL>
 `
 
-const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root" version="2007" revision="C" release="5"/>`
+const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root"/>`
 
 /** What an instance holds besides the template's content: the file it records. */
 const PROVENANCE_TAGS = new Set<string>(Object.values(ROOT_ANCHORS).map((anchor) => anchor.tag))

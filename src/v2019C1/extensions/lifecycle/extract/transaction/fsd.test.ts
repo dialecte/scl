@@ -22,7 +22,7 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root"/>`
 
 describe('fsd', () => {
 	// ── FunctionCategory uuid remapping across deepClone ──────────────────
@@ -40,7 +40,7 @@ describe('fsd', () => {
 			'FunctionCatRef referencing SubFunction uuid → remapped to new Function uuid, FunctionCategory preserved':
 				{
 					sourceXml: /* xml */ `
-						<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+						<SCL ${ns} ${id}="root">
 							<Substation ${id}="sub1" name="TEMPLATE">
 								<VoltageLevel ${id}="vl1" name="TEMPLATE">
 									<Bay ${id}="bay1" name="TEMPLATE"/>
@@ -92,7 +92,7 @@ describe('fsd', () => {
 		const testCases: SclTest.TestCases<ExtractFunctionCase> = {
 			'a text-only vendor Private on the function → kept with its text': {
 				sourceXml: /* xml */ `
-					<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+					<SCL ${ns} ${id}="root">
 						<Substation ${id}="sub1" name="S1">
 							<VoltageLevel ${id}="vl1" name="V1">
 								<Bay ${id}="bay1" name="B1">
@@ -184,7 +184,7 @@ const GOES_WITH: Readonly<Partial<Record<FunctionSection, readonly FunctionSecti
 }
 
 const fullFunctionXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="root">
 		<Substation ${id}="sub1" name="S1">
 			<Private type="eIEC61850-6-100" ${id}="sub1-private">
 				<eIEC61850-6-100:FunctionCategory name="PROTECTION" uuid="cat-uuid" ${id}="cat">
@@ -313,7 +313,7 @@ describe('fsd: the optional sections of the function', () => {
 
 /** A function at each level of a substation, the bay's with a subfunction. */
 const levelsXml = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="root">
 		<Substation ${id}="sub1" name="S1">
 			<VoltageLevel ${id}="vl1" name="V1">
 				<Bay ${id}="bay1" name="B1">
@@ -437,7 +437,7 @@ describe('fsd: a function that sits in a line or a process', () => {
 				key: 'OPTION_NOT_AVAILABLE',
 				meta: { option: 'placement', value: 'source-level' },
 			})
-			expect(await target.document.query.getRecordsByTagName('Header')).toEqual([])
+			await expect(target.document.query.getRecordsByTagName('Header')).resolves.toEqual([])
 		})
 	}
 })
@@ -475,7 +475,7 @@ describe("fsd: placement 'function-template' and what a function template cannot
 			'ProcessResources',
 			'Variable',
 		])
-		expect(await target.document.query.getRecordsByTagName('Header')).toEqual([])
+		await expect(target.document.query.getRecordsByTagName('Header')).resolves.toEqual([])
 	})
 
 	it('the same function, those sections left out but the vendor Private → refused with the Private alone', async () => {

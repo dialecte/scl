@@ -104,7 +104,7 @@ const projectXml = /* xml */ `
 	</SCL>
 `
 
-const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root" version="2007" revision="C" release="5"/>`
+const emptyXml = /* xml */ `<SCL ${ns} ${id}="extracted-root"/>`
 
 /** The role's reference names the behaviour description the document holds, wherever it sits. */
 const roleNamesTheLogic =

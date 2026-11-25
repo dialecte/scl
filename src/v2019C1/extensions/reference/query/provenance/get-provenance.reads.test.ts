@@ -15,7 +15,7 @@ const MANY_MOVED = 'core::store::records.getMany'
 
 // One source-file reference under a Function, an Application, the Header and an IED.
 const FOUR_ANCHORS_XML = /* xml */ `
-	<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+	<SCL ${ns} ${id}="root">
 		<Header ${id}="header" id="doc" version="1" revision="0" uuid="doc-uuid">
 			<SourceFiles ${id}="srcfiles">
 				<SclFileReference ${id}="sfr-d" fileType="SSD" fileUuid="ssd-uuid" version="5" revision="2"/>

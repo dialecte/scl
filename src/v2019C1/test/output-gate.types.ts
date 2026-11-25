@@ -66,6 +66,8 @@ export type OutputGateTestCase = CoreTest.BaseXmlTestCase & {
 	allowInvalidFixture?: SclOutputOptOut
 	/** The reason the case's given documents NEED an incoherent reference: the references family is left out. */
 	allowIncoherentReferences?: string
+	/** The reason a given document is a first-edition file on purpose, its root stating no SCL version. */
+	editionOneRoot?: string
 }
 
 export type WithOutputGateParams<GenericTestCase extends OutputGateTestCase, GenericResult> = {
