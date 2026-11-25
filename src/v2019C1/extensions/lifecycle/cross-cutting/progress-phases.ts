@@ -5,8 +5,10 @@ import type * as Core from '@dialecte/core'
  * Runs `run` inside one progress plan of weighted, labelled phases: the plan has as many steps as the phases weigh,
  * `enter` moves it to the start of a phase (the phases before it completed, one not entered jumped over) and captions
  * it. The plans of the ops run inside a phase (a clone, a type import) nest under it: their progress is the sub-bar,
- * so the main bar only moves forward. Once `run` ends the plan is filled and closed; on a throw it is closed (`endPlan`,
- * in a `finally`) and the error goes on as thrown. A caller's own open plan holds this one nested.
+ * so the main bar only moves forward. Once `run` ends the plan is filled. The plan runs through core's
+ * `tx.progress.runInPlan`: on success and on a throw the stack is cut back to where it was before it (this plan and
+ * any plan a step inside it left open), and a throw goes on as thrown. A caller's own open plan holds this one nested,
+ * and is back on top once it ends.
  */
 export async function withProgressPhases<GenericKey extends string, GenericResult>(
 	tx: { readonly progress: Core.ProgressReporter },
@@ -52,12 +54,12 @@ export async function withProgressPhases<GenericKey extends string, GenericResul
 		advanceTo({ completed, label: phases[index].label })
 	}
 
-	tx.progress.plan({ steps: total, label: phases[0]?.label })
-	try {
-		const result = await run(enter)
-		advanceTo({ completed: total })
-		return result
-	} finally {
-		tx.progress.endPlan()
-	}
+	return await tx.progress.runInPlan({
+		plan: { steps: total, label: phases[0]?.label },
+		run: async function runPhases() {
+			const result = await run(enter)
+			advanceTo({ completed: total })
+			return result
+		},
+	})
 }

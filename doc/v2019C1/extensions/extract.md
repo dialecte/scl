@@ -310,7 +310,8 @@ the clones and type imports it runs show as the sub-bar (`step`), with their cap
   `Cleaning up…` 1/20.
 - `ied`: `Checking the IED…` 1/20, `Reading the IED…` 4/20, `Writing the export…` 15/20.
 
-The plan is closed when the extract returns or throws; the commit that follows runs with its own plan.
+The plan runs through `tx.progress.runInPlan`: when the extract returns or throws, the progress stack is back as the
+extract found it, whoever catches the error. The commit that follows runs with its own plan.
 
 ### `ensureSubstationTemplateStructure`
 

@@ -166,6 +166,34 @@ describe('withProgressPhases - one plan of weighted, labelled phases', () => {
 		expect(afterCatch).toEqual({ current: 0, total: 2, label: 'Caller…', step: null })
 	})
 
+	it('a step that opens a plan and throws, caught under a caller plan → the caller plan back on top, the step plan and ours gone', async () => {
+		const { source } = await createSclTestProject({ sourceXml })
+		let afterCatch: unknown = 'not read'
+		const prepared = await source.document.prepare(async function body(tx) {
+			tx.progress.plan({ steps: 2, label: 'Caller…' })
+			tx.progress.nextStep()
+			try {
+				await withProgressPhases(tx, {
+					phases: PHASES,
+					run: async function phases(enter) {
+						enter('middle')
+						// a hook run inside a phase: opens its plan, throws before closing it
+						tx.progress.plan({ steps: 3, label: 'Hook…' })
+						tx.progress.nextStep()
+						throw new Error('the hook refused')
+					},
+				})
+			} catch {
+				// the caller goes on
+			}
+			afterCatch = source.document.state.progress
+			tx.progress.endPlan()
+		})
+		prepared.discard()
+
+		expect(afterCatch).toEqual({ current: 0, total: 2, label: 'Caller…', step: null })
+	})
+
 	it('a throw between nested plans, under prepare → the same error, progress null after', async () => {
 		const { source } = await createSclTestProject({ sourceXml })
 		const thrown = new Error('refused between phases')

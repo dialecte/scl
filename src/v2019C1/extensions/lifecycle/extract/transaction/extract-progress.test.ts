@@ -1,4 +1,5 @@
 import applicationNamingF1 from './fixtures/application-naming-f1-and-a-variable-of-f3.xml?raw'
+import cidRealIedBesideAnother from './fixtures/cid-real-ied-beside-another.xml?raw'
 import selectedIedWithSelfReferences from './fixtures/selected-ied-with-self-references.xml?raw'
 
 import { toDialecteError } from '@dialecte/core'
@@ -19,7 +20,7 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { ProgressPhase } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type * as Core from '@dialecte/core'
 
-const emptyTargetXml = /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="root" version="2007" revision="C" release="5"/>`
+const emptyTargetXml = /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES} ${CUSTOM_RECORD_ID_ATTRIBUTE}="root"/>`
 
 /** One extract entry, run on the first element of its scope's tag in the source. */
 type ExtractCase = {
@@ -88,6 +89,22 @@ const CASES: Record<string, ExtractCase> = {
 				kind: 'instance',
 				inputs: 'none',
 				issuer: 'TEST_ISSUER',
+				tool: 'TEST',
+				who: 'test',
+			})
+		},
+	},
+	cid: {
+		// an implemented IED beside another: the CID path reads and writes the selected one
+		sourceXml: cidRealIedBesideAnother,
+		phases: IED_EXTRACT_PROGRESS_PHASES,
+		scopeTag: 'IED',
+		extract: async function extractCid(tx, { sourceQuery }) {
+			return await tx.lifecycle.extract.ied({
+				sourceQuery,
+				fileType: 'CID',
+				iedRef: { tagName: 'IED', id: 'selected-ied' } as Scl.Ref<'IED'>,
+				interactingIeds: 'none',
 				tool: 'TEST',
 				who: 'test',
 			})
