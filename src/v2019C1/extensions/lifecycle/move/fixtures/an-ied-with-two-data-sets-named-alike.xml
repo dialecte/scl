@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The IED A holds LD1 (LLN0 with the data set DS1 and the GOOSE gcb1 sending it) and LD2 (LLN0 with its own data set
+     DS1); the IED B holds LDB. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" release="5" revision="C" version="2007" dev:db-id="project">
+    <IED name="A" uuid="ied-a-uuid" dev:db-id="ied-a">
+        <AccessPoint name="AP1" uuid="ap1-uuid" dev:db-id="ap1">
+            <Server dev:db-id="server">
+                <Authentication dev:db-id="authentication"/>
+                <LDevice inst="LD1" uuid="ld1-uuid" dev:db-id="ld1">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ld1-lln0-uuid" dev:db-id="ld1-lln0">
+                        <DataSet name="DS1" dev:db-id="ds1">
+                            <FCDA ldInst="LD1" prefix="" lnClass="LLN0" lnInst="" doName="Beh" daName="stVal" fc="ST" dev:db-id="fcda1"/>
+                        </DataSet>
+                        <GSEControl name="gcb1" appID="G1" datSet="DS1" confRev="1" uuid="gcb1-uuid" dev:db-id="gcb1"/>
+                    </LN0>
+                </LDevice>
+                <LDevice inst="LD2" uuid="ld2-uuid" dev:db-id="ld2">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ld2-lln0-uuid" dev:db-id="ld2-lln0">
+                        <DataSet name="DS1" dev:db-id="ld2-ds1"/>
+                    </LN0>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="B" uuid="ied-b-uuid" dev:db-id="ied-b">
+        <AccessPoint name="AP1" uuid="b-ap1-uuid" dev:db-id="b-ap1">
+            <Server dev:db-id="b-server">
+                <Authentication dev:db-id="b-authentication"/>
+                <LDevice inst="LDB" uuid="ldb-uuid" dev:db-id="ldb">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T" uuid="ldb-lln0-uuid" dev:db-id="ldb-lln0"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <DataTypeTemplates dev:db-id="types">
+        <LNodeType id="LLN0_T" lnClass="LLN0" dev:db-id="lln0-type">
+            <DO name="Beh" type="ENS_T" dev:db-id="lln0-beh"/>
+        </LNodeType>
+        <DOType id="ENS_T" cdc="ENS" dev:db-id="ens-type">
+            <DA name="stVal" bType="INT32" fc="ST" dev:db-id="ens-stval"/>
+        </DOType>
+    </DataTypeTemplates>
+</SCL>
