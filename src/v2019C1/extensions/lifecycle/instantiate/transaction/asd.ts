@@ -4,6 +4,7 @@ import { resolveTargetStructure } from './resolve-target-structure'
 import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	planCopyUnbinds,
+	resolveCopyLanding,
 	readCopyTrees,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
@@ -77,12 +78,6 @@ export async function placeApplication(
 	const { sourceQuery, applicationRef, targetParent, overrides, keepNameTypesFrom } = params
 	const { decisionMappings, leftOut } = params
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
-	// a copy is pasted under the anchor itself, inside the document it reads (a level of the topology: refused else)
-	const copy =
-		policy.placementIdentity === 'copy' && isTopologyLevel(targetParent.tagName)
-			? { placeUnder: targetParent as Scl.Ref<TopologyStructuralTag> }
-			: undefined
-
 	// capture the composed Function source refs BEFORE cloning (they are "missing" only
 	// until placed) so their clones can be collision-checked at their structural level; a copy composes copies of
 	// every one
@@ -95,6 +90,18 @@ export async function placeApplication(
 					refTagName: 'FunctionRef',
 					targetTagName: 'Function',
 				})
+	// a copy is pasted under the anchor, inside the document it reads (a level of the topology: refused else), each
+	// function where the row of the level it sits on in the source says
+	const copy =
+		policy.placementIdentity === 'copy' && isTopologyLevel(targetParent.tagName)
+			? await resolveCopyLanding(tx, {
+					sourceQuery,
+					functionRefs: composedFunctionRefs,
+					anchor: targetParent as Scl.Ref<TopologyStructuralTag>,
+					decisionMappings,
+					operation: 'instantiate.asd (copy)',
+				})
+			: undefined
 	const placedPrimaryRefs = [
 		applicationRef,
 		...(await findComposedFunctionRefs(sourceQuery, applicationRef)),
@@ -163,6 +170,7 @@ export async function placeApplication(
 		index,
 		held: content.held,
 		sourceIsProject: copy !== undefined,
+		landingOf: copy?.landingOf,
 		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
@@ -198,8 +206,9 @@ export async function placeApplication(
 	for (const functionRef of policy.bumpsCollisions ? composedFunctionRefs : []) {
 		const functionMapping = contentMappings.find((mapping) => mapping.source.id === functionRef.id)
 		if (!functionMapping) continue
-		const functionParent =
-			copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, functionRef, structure))
+		const functionParent = copy
+			? (copy.functionLandings.get(functionRef.id) ?? copy.placeUnder)
+			: await resolveStructureRef(sourceQuery, functionRef, structure)
 		await placeUniquely(tx, {
 			ref: functionMapping.target,
 			parentRef: functionParent,

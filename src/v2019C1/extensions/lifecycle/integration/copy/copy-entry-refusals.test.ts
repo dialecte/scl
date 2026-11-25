@@ -20,7 +20,7 @@ import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
 // a-function-to-copy.xml: S1/VL1/B1 holds F1 (its SF1, sf1), IED P1; applications-to-copy.xml: A1 composing F1 and F2 in
-// B1, A2 composing F3 (in B1) and F4 (in B3).
+// B1.
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
@@ -56,8 +56,8 @@ type RefusedCase = SclTest.BaseXmlTestCase & {
 const NOT_A_COPY = { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'scenario', value: 'copy' } }
 
 // What a copy cannot do yet is refused at its entry, by the report and by the apply alike, before anything is read or
-// written: another document, another verb than fsd and asd, a root other than a Function or an Application, the
-// functions of an application under several parents, an application merged onto the functions it composes.
+// written: another document, another verb than fsd and asd, a root other than a Function or an Application, an
+// application merged onto the functions it composes.
 describe('copy - refused at its entry', () => {
 	const testCases: SclTest.TestCases<RefusedCase> = {
 		// the same file imported a second time is another document
@@ -119,21 +119,6 @@ describe('copy - refused at its entry', () => {
 					anchor: ref('Bay', 'b1'),
 				}),
 			expected: { key: 'OPTION_NOT_AVAILABLE', meta: { option: 'ref', value: 'FunctionTemplate' } },
-		},
-		// A2 composes F3, in B1, and F4, in B3
-		'A2, its functions in B1 and in B3 → OPTION_NOT_AVAILABLE, functions under several parents': {
-			sourceXml: applicationsXml,
-			target: ({ query }) =>
-				copyOf({
-					verb: 'asd',
-					sourceQuery: query,
-					ref: ref('Application', 'a2'),
-					anchor: ref('Bay', 'b2'),
-				}),
-			expected: {
-				key: 'OPTION_NOT_AVAILABLE',
-				meta: { option: 'scenario', value: 'copy', reason: 'functions-under-several-parents' },
-			},
 		},
 		// A1 composes F1 and F2 in B1
 		'A1 copied merging its functions onto those it composes → OPTION_NOT_AVAILABLE': {

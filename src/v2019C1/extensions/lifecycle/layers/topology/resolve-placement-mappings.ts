@@ -8,11 +8,12 @@ import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	PlacementLevel,
+	ResolvedLevel,
+	ResolveLevelParams,
 	ResolvePlacementMappingsParams,
 } from './resolve-placement-mappings.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
-	DecisionMapping,
 	MappingReader,
 	ResolvedMapping,
 	StoredRef,
@@ -20,17 +21,6 @@ import type {
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type * as Core from '@dialecte/core'
 import type { AnyTrackedRecord } from '@dialecte/core'
-
-/** A level as resolved on its own, before it is placed among the others. */
-type ResolvedLevel = Omit<PlacementLevel, 'context' | 'parentSourceId'>
-
-type ResolveLevelParams = {
-	sourceQuery: Core.Query<Config>
-	sourceRef: StoredRef
-	/** The project element the level above lands on — none when that one is created. */
-	parentTarget?: Scl.Ref<Scl.ElementsOf>
-	decision?: DecisionMapping
-}
 
 /**
  * Decide where each structural level of a template lands in the project — the ONE answer the
@@ -147,7 +137,7 @@ async function resolveUnitLevel(
 }
 
 /** The element of the project the consumer chose for a level, when it chose one. */
-async function resolveChosenLevel(
+export async function resolveChosenLevel(
 	reader: MappingReader,
 	params: ResolveLevelParams,
 ): Promise<ResolvedLevel | undefined> {
@@ -159,7 +149,7 @@ async function resolveChosenLevel(
 	return existingLevel({ ...params, existing, reason: 'decision' })
 }
 
-function existingLevel(
+export function existingLevel(
 	params: ResolveLevelParams & { existing: AnyTrackedRecord; reason: ResolvedMapping['reason'] },
 ): ResolvedLevel {
 	const { sourceRef, parentTarget, existing, reason } = params
@@ -182,7 +172,7 @@ function existingLevel(
  * A level nothing is decided for: several levels of the project qualify (`ambiguous`), or the level
  * above is not decided itself.
  */
-function undecidedLevel(params: {
+export function undecidedLevel(params: {
 	sourceRef: StoredRef
 	parentTarget?: Scl.Ref<Scl.ElementsOf>
 	ambiguous: boolean

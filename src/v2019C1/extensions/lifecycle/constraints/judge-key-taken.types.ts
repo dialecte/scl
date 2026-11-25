@@ -11,6 +11,11 @@ import type { AnyTreeRecord } from '@dialecte/core'
 export type KeyTaken = {
 	constraint: string
 	values: Readonly<Record<string, string>>
+	/**
+	 * The sibling holding the key: an element of the document, or — for a copy, whose roots are judged in turn — a root
+	 * the copy places before this one, named by its source element (the first added group's `primary.sourceRef`: "the
+	 * copy of F1").
+	 */
 	takenBy: { tagName: string; id: string }
 	proposed: Readonly<Record<string, string>>
 }

@@ -64,7 +64,7 @@ const testCases: Record<string, TestCase> = {
 				outsideReferences: 'leave-out',
 			},
 		},
-	'copy: inside one document, fresh uuids and the lineage as copied, under the anchor, every function it composes, its outside references as written':
+	'copy: inside one document, fresh uuids and the lineage as copied, landed by the levels its content sits on, every function it composes, its outside references as written':
 		{
 			params: { scenario: 'copy' },
 			expected: {
@@ -78,7 +78,7 @@ const testCases: Record<string, TestCase> = {
 				removalBase: 'none',
 				namesFollow: 'project',
 				subNetworkSettings: 'source',
-				placement: 'anchor',
+				placement: 'source-levels',
 				composedFunctions: 'all',
 				outsideReferences: 'keep',
 			},

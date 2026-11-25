@@ -96,7 +96,8 @@ export async function cloneAppliedSatellites(
 		// the SCL Private holding it is walked through: the first ancestor is its holder
 		const [holder] = ancestors
 		const holderLanding = landings && holder ? findHolderLanding({ holder, landings }) : undefined
-		const targetParent = holderLanding ?? readStructureLevel({ ancestors, structure })
+		const targetParent =
+			holderLanding ?? params.landingOf?.(ancestors) ?? readStructureLevel({ ancestors, structure })
 		placements.push({
 			satelliteRef,
 			holderTag: holder?.tagName,

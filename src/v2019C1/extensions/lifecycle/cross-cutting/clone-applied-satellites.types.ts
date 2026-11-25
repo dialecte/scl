@@ -3,6 +3,7 @@ import type { CarriedScoping } from './carried-satellites.types'
 import type { HeldApplications } from './held-applications.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ContributionScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope.types'
+import type { LandingOf } from '@/v2019C1/extensions/lifecycle/layers/topology/source-landing.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import type { RedirectMapping } from '@/v2019C1/extensions/reference/transaction/apply-uuid-remap.types'
 import type * as Core from '@dialecte/core'
@@ -56,6 +57,11 @@ export type CloneAppliedSatellitesParams = {
 	 * `resolveAppliedSatellites`) —, each in the element the one holding it landed on.
 	 */
 	frame?: FramePlacement
+	/**
+	 * Where an element of the source lands by the level it sits on (a copy landing each source level where its row
+	 * says): a satellite held by such a level lands there, not on the structure's level of its tag.
+	 */
+	landingOf?: LandingOf
 }
 
 /** Where the elements of a topology frame landed: copied, or onto an element the project holds. */

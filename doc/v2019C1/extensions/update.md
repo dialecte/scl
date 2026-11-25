@@ -299,13 +299,28 @@ query and `anchor` the parent the consumer picked: `report` lists the copy as a 
 - **Identity**: every element of the copy gets a uuid of its own; its `templateUuid` / `originUuid` stay as copied — a
   copy of an instance is another instance of its template, which a `template` update then reaches with the original.
   No provenance is written: the `FunctionSclRef` / `ApplicationSclRef` the original holds is copied as it is.
-- **Placement**: under the anchor itself — no level is resolved, a reference to a level of the topology still names that
-  level. An application is copied with **every** function it composes (all under the anchor, the application in its
-  `Private`), its `FunctionRef`s naming the copies; a role (`AllocationRole`) or a category it shares is reused, given
-  one reference to each copy; a variable or a behaviour applying to what it copies is copied with it, named apart.
-- **Names**: a name a sibling holds where the copy lands is numbered (`F1` -> `F1_1`), a typed name taken too. The
-  report gives it on the group of each root it places (the Function; the Application and each Function it composes):
-  `keyTaken: { constraint, values, takenBy, proposed }` — the values `apply` writes unless the review types others.
+- **Placement**: the copied root under the anchor (the application in its `Private`). An application is copied with
+  **every** function it composes, its `FunctionRef`s naming the copies; a role (`AllocationRole`) or a category it
+  shares is reused, given one reference to each copy; a variable or a behaviour applying to what it copies is copied
+  with it, named apart. A reference to a level of the topology still names that level.
+- **Where the functions land — one row per source level**: functions sitting on one level of the topology land under
+  the anchor, with no row. Sitting on several (an application whose functions are in two bays), the report lists one
+  `kind: 'level'` mapping per level they sit on, top-down: a copy's row says where the **content** of that level lands
+  ("the functions of `B3` land under `VL2/B1`"), where a template's row says what the level **is** in the project. Each
+  lands under the element of the same tag and name directly under where the row above it lands (the anchor for the
+  top one) — `reason: 'name'` —, else on that place itself (`reason: 'anchor'`); when that place cannot hold what the
+  level holds, the row is the consumer's to choose and `apply` refuses until it is (`MAPPING_UNDECIDED`). The place
+  itself is the row's first candidate, the levels of its tag there follow. `resolution.mappings`, keyed by the source
+  level's record id, changes a row to another element at or below the anchor (`reason: 'decision'`); a variable or a
+  behaviour held by a source level lands where that level lands, and what its variables reach is judged there. A copy
+  creates no level and the application has no row: a choice `{ create }` is refused with `OPTION_NOT_AVAILABLE`
+  (`{ option: 'decisionMappings', value: 'create' }`), an element the document lacks or one outside the anchor with
+  `MAPPING_CHOICE_NOT_A_CANDIDATE`, one that cannot hold a function with `INVALID_PARENT_CHILD`.
+- **Names**: a name a sibling holds where the copy lands is numbered (`F1` -> `F1_1`), a typed name taken too, each
+  root judged where it lands, apart from what the copy placed there before it. The report gives it on the group of each
+  root it places (the Function; the Application and each Function it composes): `keyTaken: { constraint, values,
+  takenBy, proposed }` — the values `apply` writes unless the review types others; `takenBy` names a root the copy
+  placed before by its source element.
 - **Outside references** the copy carries (a signal input from another function, a terminal on a node of another bay)
   are kept as written.
 - **LNodes**: no IED travels with the copy, so each copied LNode bound to one is released from it — `iedName` `None`,
@@ -321,9 +336,8 @@ query and `anchor` the parent the consumer picked: `report` lists the copy as a 
 - **Refused** with `OPTION_NOT_AVAILABLE`, before anything is read beyond the documents: a copy read from another
   document, or made with `ssd` / `ied` (`meta: { option: 'scenario', value: 'copy' }`); a root other than a `Function`
   or an `Application` (`{ option: 'ref', value: <its tag> }`); `resolution.sharedFunctions: 'merge'`
-  (`{ option: 'sharedFunctions', value: 'merge' }`); an application whose functions sit under several parents
-  (`{ option: 'scenario', value: 'copy', reason: 'functions-under-several-parents' }`). An anchor the copy cannot sit
-  under is refused with `INVALID_PARENT_CHILD`.
+  (`{ option: 'sharedFunctions', value: 'merge' }`). An anchor the copy cannot sit under is refused with
+  `INVALID_PARENT_CHILD`.
 
 ```ts
 const target = {

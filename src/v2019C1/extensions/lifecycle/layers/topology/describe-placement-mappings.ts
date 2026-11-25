@@ -11,6 +11,7 @@ import type {
 	ReportMapping,
 } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
+import type { AnyTrackedRecord } from '@dialecte/core'
 
 /**
  * What the report says about each structural level of a template: where it lands, why, and the
@@ -88,7 +89,10 @@ async function describeLandingPath(
 	return parentPath ? `${parentPath}/${level.createName}` : level.createName
 }
 
-/** The elements of the project a level could land on: its kind, below where the level above lands. */
+/**
+ * The elements of the project a level could land on: its kind, below where the level above lands — and first, for a
+ * level placing what it holds (`parentIsCandidate`), that place itself.
+ */
 async function listLevelCandidates(
 	query: Core.Query<Config>,
 	level: PlacementLevel,
@@ -102,7 +106,10 @@ async function listLevelCandidates(
 		const candidate = await describeCandidate(query, toRef(sibling) as Scl.Ref<Scl.ElementsOf>)
 		candidates.push(candidate)
 	}
-	return candidates.sort(byPath)
+	const sorted = candidates.sort(byPath)
+	if (!level.parentIsCandidate) return sorted
+	const parentCandidate = await describeCandidate(query, parentTarget)
+	return [parentCandidate, ...sorted]
 }
 
 function byPath(first: MappingCandidate, second: MappingCandidate): number {
@@ -124,6 +131,7 @@ export async function describeHeldPlacement(
 ): Promise<ReportMapping[]> {
 	const reportMappings: ReportMapping[] = []
 	for (const { sourceRef, level, parentSourceId, projectOwned } of params.placement.held) {
+		const candidate = await describeCandidate(query, level)
 		reportMappings.push({
 			id: sourceRef.id,
 			tagName: sourceRef.tagName,
@@ -133,7 +141,7 @@ export async function describeHeldPlacement(
 			reason: 'lineage',
 			ambiguous: false,
 			locked: true,
-			candidates: [await describeCandidate(query, level)],
+			candidates: [candidate],
 			...(parentSourceId ? { dependsOn: parentSourceId } : {}),
 		})
 	}
@@ -159,13 +167,16 @@ export async function describeGainedLevels(
 	const { gained, held } = params.placement
 	const heldLevelIds = new Set(held.map(({ level }) => level.id))
 
+	// the levels of each one's tag under the level it lands under, read once per tag
+	const siblingsOf = await readGainedSiblings(query, { gained })
 	const reportMappings: ReportMapping[] = []
-	for (const { sourceRef, parentLevel, choiceKey, decision } of gained) {
+	for (const [index, { sourceRef, parentLevel, choiceKey, decision }] of gained.entries()) {
 		const candidates: MappingCandidate[] = []
-		for (const sibling of await query.any.getChildren(parentLevel, sourceRef.tagName)) {
+		for (const sibling of siblingsOf[index] ?? []) {
 			// a level the instance already stands on is not another level to land on
 			if (heldLevelIds.has(sibling.id)) continue
-			candidates.push(await describeCandidate(query, toRef(sibling) as Scl.Ref<Scl.ElementsOf>))
+			const candidate = await describeCandidate(query, toRef(sibling) as Scl.Ref<Scl.ElementsOf>)
+			candidates.push(candidate)
 		}
 		const sourceName = await params.sourceQuery.any.getAttribute(sourceRef, { name: 'name' })
 		const landing = decision ?? { create: { name: sourceName } }
@@ -186,4 +197,32 @@ export async function describeGainedLevels(
 		})
 	}
 	return reportMappings
+}
+
+/** The elements of each gained level's tag under the level it lands under, in its order: one read per tag. */
+async function readGainedSiblings(
+	query: Core.Query<Config>,
+	params: { gained: InstancePlacement['gained'] },
+): Promise<AnyTrackedRecord[][]> {
+	const { gained } = params
+	const tagNames = [...new Set(gained.map(({ sourceRef }) => sourceRef.tagName))]
+	const siblingsOf: AnyTrackedRecord[][] = gained.map(() => [])
+	const readByTag = await Promise.all(
+		tagNames.map(function readTag(tagName) {
+			const positions = gained.flatMap((level, index) =>
+				level.sourceRef.tagName === tagName ? [index] : [],
+			)
+			const parents = positions.map((index) => gained[index].parentLevel)
+			// dialecte-allow query-in-loop: one read per distinct tag of the gained levels, never one per level
+			return query.any
+				.getChildrenOfEach(parents, { tagName })
+				.then((children) => ({ positions, children }))
+		}),
+	)
+	for (const { positions, children } of readByTag) {
+		positions.forEach((position, index) => {
+			siblingsOf[position] = children[index] ?? []
+		})
+	}
+	return siblingsOf
 }

@@ -18,7 +18,7 @@ export type LifecycleRefusalCode = Extract<
  *  - `no-instance` / `not-an-instance` / `several-instances`: an update that does not start from one instance the
  *    project holds (`TARGET_INSTANCE_REQUIRED`);
  *  - `copy-not-offered`: a copy from another document, with another verb than fsd / asd, of another root, merged onto
- *    the functions it composes, or of an application whose functions sit under several parents (`OPTION_NOT_AVAILABLE`).
+ *    the functions it composes, or asked to create a level for a row (`OPTION_NOT_AVAILABLE`).
  */
 export type LifecycleRefusalReason =
 	| 'other-file'

@@ -32,6 +32,8 @@ export { resolvePlacementMappings } from './resolve-placement-mappings'
 export { resolvePrimaryPlacement } from './resolve-primary-placement'
 export { landPrimaries } from './land-primaries'
 export { assertPlacementDecided, findLanding } from './placement-landing'
+export { createLandingOf, resolveLevelLandings } from './source-landing'
+export type { LandingOf, LevelLandings } from './source-landing.types'
 export {
 	describeGainedLevels,
 	describeHeldPlacement,

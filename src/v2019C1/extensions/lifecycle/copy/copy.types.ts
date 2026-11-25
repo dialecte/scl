@@ -1,7 +1,10 @@
 import type { Config, Scl } from '@/v2019C1/config'
+import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'
 import type { LifecycleTarget, Resolution } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport, ReportedElement } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type { LandingOf } from '@/v2019C1/extensions/lifecycle/layers/topology'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type { CommitRefusal } from '@/v2019C1/hooks/before-commit/commit-plan.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
@@ -50,6 +53,8 @@ export type ListCopyRefusalsParams = {
 	unbinds: readonly CopyUnbind[]
 	/** The parent the copy is pasted under: a behaviour variable's reach is read from there. */
 	anchor: Scl.Ref<Scl.ElementsOf>
+	/** Where a satellite held by a source level lands, when the copy lands by its rows: its reach is read from there. */
+	landingOf?: LandingOf
 }
 
 export type AssertCopyFitsParams = {
@@ -75,4 +80,30 @@ export type CopyDescription = {
 	refusals: CommitRefusal[]
 	/** The key taken where each root lands, by the id of the group placing it. */
 	keysTaken: ReadonlyMap<string, KeyTaken>
+}
+
+export type ResolveCopyLandingParams = {
+	/** The document the copy is written in. */
+	tx: Core.Transaction<Config>
+	/** The document the copy reads: the same document, as committed. */
+	sourceQuery: Core.Query<Config>
+	/** The functions the copy places, whose levels in the source are its rows. */
+	functionRefs: readonly Scl.Ref<Scl.ElementsOf>[]
+	/** The level the consumer pasted the copy under. */
+	anchor: Scl.Ref<TopologyStructuralTag>
+	/** The consumer's choices for the rows, by source level record id. */
+	decisionMappings?: DecisionMappings
+	/** The operation, named by a refusal. */
+	operation: string
+}
+
+/**
+ * Where a copy lands: the copied root under `placeUnder` (the anchor); each function where the row of its source level
+ * says (`functionLandings`, by source record id; one absent lands under the anchor); any other element of the source
+ * (a satellite) by `landingOf` its ancestors.
+ */
+export type CopyLanding = {
+	placeUnder: Scl.Ref<TopologyStructuralTag>
+	landingOf: LandingOf
+	functionLandings: ReadonlyMap<string, Scl.Ref<TopologyStructuralTag>>
 }
