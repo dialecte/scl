@@ -30,8 +30,8 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 			updates: [{ ref: { tagName: 'Function', id: 'f1' }, attributes: { name: 'F9' } }],
 			expected: { outcome: 'committed', written: [], lookedUp: [], ancestorReads: 0 },
 		},
-		// stored-data's daName edited, its path held: no lookup. stored-data's twin (stored-no-do, given its doName) and
-		// stored-data retargeted to PTRC1, stored-control to CTL1: two LNode uuids, one ControlRef
+		// stored-data retargeted to PTRC1, stored-no-do (given its doName) to CSWI1, stored-control to CTL1: two distinct
+		// LNode uuids in one lookup, one ControlRef
 		'references retargeted, each holding its path → one lookup per target tag, no ancestor read': {
 			sourceXml: behaviours,
 			updates: [
@@ -41,7 +41,7 @@ describe('the reads of the commit checking the uuid references it writes', () =>
 				},
 				{
 					ref: { tagName: 'InputVar', id: 'stored-no-do' },
-					attributes: { lnodeUuid: 'ptrc', doName: 'Op' },
+					attributes: { lnodeUuid: 'cswi', doName: 'Pos' },
 				},
 				{ ref: { tagName: 'OutputVar', id: 'stored-control' }, attributes: { outputUuid: 'ctl1' } },
 			],

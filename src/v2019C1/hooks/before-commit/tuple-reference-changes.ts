@@ -53,7 +53,10 @@ export function referrerWork(params: { change: RecordChange }): ReferenceWork[] 
 		const action = pairAction({ pair, change })
 		return action ? [{ pair, action }] : []
 	})
-	return pairs.length > 0 ? [{ record: change.after, pairs, fillsFrom: 'any' }] : []
+	// a reference created by names binds only to what the same transaction creates, never silently to an element that
+	// was there; its caller writes the uuid of one (resolveTuple)
+	const fillsFrom = change.before ? 'any' : 'created'
+	return pairs.length > 0 ? [{ record: change.after, pairs, fillsFrom }] : []
 }
 
 /** What the commit does to one pair of a written reference, if anything. */
@@ -115,10 +118,12 @@ export function touchedTargets(params: {
 	changes: ReadonlyMap<string, RecordChange>
 }): TouchedTargets {
 	const roots = new Set<string>()
+	const created = new Set<string>()
 	const tags = new Set<string>()
 	for (const { before, after } of params.changes.values()) {
 		const isTarget = after.tagName === IED_TAG || TUPLE_TARGET_KINDS.has(after.tagName)
 		if (!isTarget) continue
+		if (!before) created.add(after.id)
 		const renamed =
 			before !== undefined &&
 			hasAttributeChange({
@@ -133,7 +138,7 @@ export function touchedTargets(params: {
 		else continue
 		roots.add(after.id)
 	}
-	return { roots, tags }
+	return { roots, created, tags }
 }
 
 /** The tuple target tags a rename of an element of `tagName` renames: its own, and those an element of it may hold. */

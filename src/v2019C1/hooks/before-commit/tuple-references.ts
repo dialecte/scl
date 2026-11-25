@@ -1,3 +1,4 @@
+import { readNamedBefore } from './tuple-named-before'
 import { readAncestries } from './tuple-names'
 import {
 	foldChanges,
@@ -12,14 +13,11 @@ import { OWN_NAMES_BY_PAIR, REQUIRED_OWN_NAMES_BY_PAIR } from './tuple-reference
 import { throwDialecteError } from '@dialecte/core'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { indexTupleTargets } from '@/v2019C1/extensions/reference/query/ied-tuple/index-tuple-targets'
 import { ownIedName } from '@/v2019C1/extensions/reference/query/ied-tuple/own-ied-name'
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
 import { targetKey } from '@/v2019C1/extensions/reference/query/ied-tuple/target-key'
 import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/target-tags-of'
-import {
-	targetTupleParts,
-	tupleAddressOf,
-} from '@/v2019C1/extensions/reference/query/ied-tuple/target-tuple-address'
 import { tuplePairApplies } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-pair-applies'
 import {
 	applyTupleReferenceWrite,
@@ -29,15 +27,13 @@ import { readAttribute } from '@/v2019C1/helpers'
 import { tupleWriteOperation } from '@/v2019C1/hooks/shared/tuple-names-operation'
 import { resolveTupleUuid } from '@/v2019C1/hooks/shared/tuple-reference-resolve'
 
-import type {
-	IndexedTarget,
-	ReferenceWork,
-	TouchedTargets,
-	TupleTargetIndex,
-} from './tuple-references.types'
+import type { NamedBefore, ReferenceWork, TouchedTargets } from './tuple-references.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
-import type { TupleTargetParts } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
+import type {
+	TupleTargetIndex,
+	TupleTargetParts,
+} from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -46,9 +42,12 @@ import type { AnyRawRecord } from '@dialecte/core'
  * wrote them in (an `FCDA` added before the logical node it names). For each pair a reference writes (an LNode's
  * binding, `followsOnly`, never), what it names being read from every attribute saying so (its names, the one standing
  * in for an absent part, the one choosing the kind of target, the parent's IED name for a `GSE` / `SMV`):
- * - a reference created, or whose names changed, with no uuid: the uuid of the one element its names name
- *   ({@link resolveTupleUuid}); none when they name nothing or several. A reference with no uuid the transaction did
- *   not write: the same, when what its names name is an element the transaction created or renamed (or one in it);
+ * - a reference whose names changed with no uuid: the uuid of the one element its names name
+ *   ({@link resolveTupleUuid}); none when they name nothing or several. A reference created with no uuid: the same, but
+ *   only an element the transaction creates (a reference created by names is never bound silently to an element that
+ *   was there before: its caller writes that uuid, `query.reference.resolveTuple`). A reference with no uuid the transaction did
+ *   not write: the same, when what its names name is an element the transaction created, renamed or moved (or one in
+ *   it) and its names did not name that element before the transaction (`readNamedBefore`);
  * - a reference whose uuid changed: its names written from the element it names (the uuid wins over names edited with
  *   it);
  * - a reference whose names changed and uuid did not: kept when its names still name what its uuid names, else the
@@ -78,13 +77,14 @@ export async function writeTupleReferencesAtCommit(params: {
 	// a parent's write first: a child naming its IED by its parent reads the parent as written
 	const work = [...written, ...waiting, ...children]
 	if (work.length === 0) return []
-	const { index, ancestries } = await readTupleTargets({ query, work, held })
+	const { index, targets, ancestries } = await readTupleTargets({ query, work, held })
+	const namedBefore = await readNamedBefore({ query, changes, waiting, targets, ancestries, held })
 	const writtenRecords = new Map<string, AnyRawRecord>()
 	return work.flatMap((referrer) => {
 		const ancestry = (ancestries.get(referrer.record.id) ?? []).map(
 			(ancestor) => writtenRecords.get(ancestor.id) ?? ancestor,
 		)
-		const operation = composeWrite({ work: referrer, index, ancestry, touched })
+		const operation = composeWrite({ work: referrer, index, ancestry, touched, namedBefore })
 		if (operation?.status === 'updated')
 			writtenRecords.set(operation.newRecord.id, operation.newRecord as AnyRawRecord)
 		return operation ? [operation] : []
@@ -93,14 +93,18 @@ export async function writeTupleReferencesAtCommit(params: {
 
 /**
  * The tuple targets of every tag the work's pairs may point at, each tag read once, indexed by address and by uuid
- * (a target in vendor payload left out), and the elements above the targets and the references, a level at a time,
- * a record already `held` taken from there.
+ * (a target in vendor payload left out, `indexTupleTargets`, shared with `query.reference.resolveTuple`), and the
+ * elements above the targets and the references, a level at a time, a record already `held` taken from there.
  */
 async function readTupleTargets(params: {
 	query: Core.Query<Config>
 	work: readonly ReferenceWork[]
 	held: ReadonlyMap<string, AnyRawRecord> | undefined
-}): Promise<{ index: TupleTargetIndex; ancestries: Map<string, AnyRawRecord[]> }> {
+}): Promise<{
+	index: TupleTargetIndex
+	targets: AnyRawRecord[]
+	ancestries: Map<string, AnyRawRecord[]>
+}> {
 	const { query, work, held } = params
 	const tags = [...new Set(work.flatMap(({ pairs }) => pairs.flatMap(({ pair }) => pair.target)))]
 	const targets = (await readTags({ query, tags })).filter((record) =>
@@ -111,33 +115,7 @@ async function readTupleTargets(params: {
 		query,
 		held,
 	})
-	return { index: indexTargets({ targets, ancestries }), ancestries }
-}
-
-/** The targets by address key and by uuid; an address two targets of one tag share names neither. */
-function indexTargets(params: {
-	targets: readonly AnyRawRecord[]
-	ancestries: ReadonlyMap<string, AnyRawRecord[]>
-}): TupleTargetIndex {
-	const byAddress = new Map<string, string>()
-	const shared = new Set<string>()
-	const byUuid = new Map<string, IndexedTarget>()
-	for (const record of params.targets) {
-		const ancestry = params.ancestries.get(record.id) ?? []
-		if (ancestry.some((ancestor) => ancestor.tagName === 'Private')) continue
-		const parts = targetTupleParts({ record, ancestry })
-		const address = parts ? tupleAddressOf({ parts }) : undefined
-		if (!parts || !address) continue
-		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
-		const key = targetKey({ address, tagName: record.tagName })
-		const known = byAddress.get(key)
-		if (known !== undefined && known !== uuid) shared.add(key)
-		byAddress.set(key, uuid)
-		const lineage = new Set([record.id, ...ancestry.map((ancestor) => ancestor.id)])
-		byUuid.set(uuid, { tagName: record.tagName, parts, address, lineage })
-	}
-	for (const key of shared) byAddress.delete(key)
-	return { byAddress, byUuid, shared }
+	return { index: indexTupleTargets({ targets, ancestries }), targets, ancestries }
 }
 
 /** The one update of a reference: the uuids its names give or no longer confirm, then the names its new uuids give. */
@@ -146,8 +124,9 @@ function composeWrite(params: {
 	index: TupleTargetIndex
 	ancestry: readonly AnyRawRecord[]
 	touched: TouchedTargets
+	namedBefore: NamedBefore
 }): Scl.Operation | undefined {
-	const { work, index, ancestry, touched } = params
+	const { work, index, ancestry, touched, namedBefore } = params
 	const { record } = work
 	const uuids: Record<string, string | undefined> = {}
 	const following: TupleReferencePair[] = []
@@ -169,7 +148,11 @@ function composeWrite(params: {
 		const resolved = address
 			? resolveTupleUuid({ address, targetTags, targetsByAddress: index.byAddress })
 			: undefined
-		if (action === 'fill' && resolved && fillAllowed({ work, uuid: resolved, index, touched }))
+		if (
+			action === 'fill' &&
+			resolved &&
+			fillAllowed({ work, pair, uuid: resolved, index, touched, namedBefore })
+		)
 			uuids[pair.attribute.uuid] = resolved
 		if (action === 'follow-uuid' && target && targetTags.includes(target.tagName)) {
 			following.push(pair)
@@ -230,17 +213,29 @@ function confirmedUuid(params: {
 	})
 }
 
-/** Whether a reference may take a uuid its names give: any, or for one the transaction did not write, a touched one. */
+/**
+ * Whether a reference may take a uuid its names give: any for a reference whose names were edited; for one the
+ * transaction created, one it created too; for one the transaction did not write, a touched one its names did not
+ * name before the transaction (`readNamedBefore`).
+ */
 function fillAllowed(params: {
 	work: ReferenceWork
+	pair: TupleReferencePair
 	uuid: string
 	index: TupleTargetIndex
 	touched: TouchedTargets
+	namedBefore: NamedBefore
 }): boolean {
-	const { work, uuid, index, touched } = params
+	const { work, pair, uuid, index, touched, namedBefore } = params
 	if (work.fillsFrom === 'any') return true
 	const lineage = index.byUuid.get(uuid)?.lineage
-	return lineage !== undefined && [...touched.roots].some((root) => lineage.has(root))
+	const allowed = work.fillsFrom === 'created' ? touched.created : touched.roots
+	if (lineage === undefined || ![...allowed].some((root) => lineage.has(root))) return false
+	// a reference the transaction did not write: bound only when its names come to name this element
+	return (
+		work.fillsFrom === 'created' ||
+		namedBefore.get(work.record.id)?.get(pair.attribute.uuid) !== uuid
+	)
 }
 
 /** The update writing the uuids, then the names of the pairs following their uuid; none when nothing changes. */

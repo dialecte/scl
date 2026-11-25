@@ -308,7 +308,7 @@ describe('an edit of the names of a subscriber naming a device', () => {
 		const subscriber = await source.transaction(async function addSubscriber(tx) {
 			return tx.any.addChild(goose, {
 				tagName: 'IEDName',
-				attributes: { apRef: 'AP1', ldInst: 'LD1' },
+				attributes: { apRef: 'AP1', ldInst: 'LD1', ldUuid: 'ld8' },
 				value: 'IED8',
 			})
 		})
