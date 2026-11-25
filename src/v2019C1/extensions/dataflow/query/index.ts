@@ -1,4 +1,5 @@
 export { all } from './all'
+export { companionsOf } from './companions-of'
 export { crossing } from './crossing'
 export { ofControlRef } from './of-control-ref'
 export { ofIed } from './of-ied'

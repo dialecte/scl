@@ -19,7 +19,7 @@ describe('delete cascade over the references naming their target by its address 
 				deleted: { tagName: 'LN', id: 'xcbr7' },
 				expectedQueries: [
 					'//default:GSEControl[@name="GC"][@confRev="2"]',
-					'//default:ExtRef[@intAddr="posStVal"][@desc="breaker position"][@serviceType="GOOSE"]',
+					'//default:ExtRef[@intAddr="posStVal"][@desc="breaker position"]',
 					'//default:ExtCtrl[@intAddr="posOper"][@desc="breaker control"]',
 				],
 				unexpectedQueries: [
@@ -28,6 +28,7 @@ describe('delete cascade over the references naming their target by its address 
 					'//default:GSEControl[@datSet]',
 					'//default:ExtRef[@iedName or @ldInst or @lnClass or @lnInst or @doName or @daName or @lnUuid]',
 					'//default:ExtRef[@srcLDInst or @srcLNClass or @srcCBName or @srcCBUuid]',
+					'//default:ExtRef[@serviceType]',
 					'//default:ExtCtrl[@iedName or @ldInst or @lnClass or @lnInst or @doName or @lnUuid]',
 				],
 			},

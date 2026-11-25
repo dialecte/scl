@@ -15,6 +15,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { SPECIFIED_IED_NAME_ATTRIBUTE } from '@/v2019C1/constants/lnode-spec-naming'
 import { isAssignedToIed } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { CONF_REV_CONTROL_TAGS } from '@/v2019C1/extensions/lifecycle/layers/ied/bump-data-set-conf-revs.constants'
+import { SERVICE_ATTRIBUTE } from '@/v2019C1/hooks/shared/input-source.constants'
 
 import type { ProjectOwnedAttributes } from './project-owned-attributes.types'
 import type { BoundLogicalNodeTypes } from '@/v2019C1/extensions/lifecycle/contract.types'
@@ -76,12 +77,17 @@ export function projectOwnedAttributes(params: {
 	return INSTANCE_CONFIGURATION_OWNED_ATTRIBUTES.get(tagName) ?? NO_PROJECT_OWNED_ATTRIBUTES
 }
 
-/** Whether an input or output of the project names a source: any of its source attributes written. */
+/**
+ * Whether an input or output of the project names a source: any of its source attributes written. The service alone
+ * names none: a template's input may say the service it expects.
+ */
 function isBound(params: {
 	owned: ProjectOwnedAttributes
 	instanceAttributes: Readonly<Record<string, string | undefined>>
 }): boolean {
-	return [...params.owned.attributes].some((name) => Boolean(params.instanceAttributes[name]))
+	return [...params.owned.attributes].some(
+		(name) => name !== SERVICE_ATTRIBUTE && Boolean(params.instanceAttributes[name]),
+	)
 }
 
 /** Whether a template's configuration revision is below the project's (both unsigned counters). */

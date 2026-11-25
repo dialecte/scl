@@ -92,7 +92,7 @@ describe('reconcile of the references to data a newer template deletes', () => {
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		// same project and quality-less template as the diff case; the deletion and both references accepted
-		"the quality's deletion and its two references accepted → the entry removed, its GOOSE revision raised, the input's source cleared":
+		"the quality's deletion and its two references accepted → the entry removed, its GOOSE revision raised, the input's source and service cleared":
 			{
 				sourceXml: templateWithoutQuality,
 				targetXml: project,
@@ -103,10 +103,11 @@ describe('reconcile of the references to data a newer template deletes', () => {
 				},
 				expectedQueries: [
 					'//default:GSEControl[@name="GC"][@confRev="2"]',
-					'//default:ExtRef[@intAddr="posQ"][@desc="breaker position quality"][@serviceType="GOOSE"]',
+					'//default:ExtRef[@intAddr="posQ"][@desc="breaker position quality"]',
 				],
 				unexpectedQueries: [
 					'//default:FCDA[@daName="q"]',
+					'//default:ExtRef[@serviceType]',
 					'//default:ExtRef[@iedName or @ldInst or @lnClass or @doName or @daName or @lnUuid]',
 					'//default:ExtRef[@srcLDInst or @srcLNClass or @srcCBName or @srcCBUuid]',
 				],

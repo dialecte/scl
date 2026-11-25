@@ -55,6 +55,11 @@ export function pairBound(params: {
 					}
 				: logicalNode.identity
 		const lnType = attributes.lnType || logicalNode.lnType
+		const missing = typeMissingOf({ input, lnode, lnType: attributes.lnType })
+		if (missing) {
+			paired.refusals.push(missing)
+			continue
+		}
 		const typeClass = input.types.find((type) => type.id === lnType)?.lnClass
 		if (typeClass !== undefined && typeClass !== to.lnClass) {
 			paired.refusals.push({
@@ -83,6 +88,21 @@ export function pairBound(params: {
 		})
 	}
 	return paired
+}
+
+/** An LNode naming an LNodeType neither document holds: refused `type-missing`, new or bound. */
+export function typeMissingOf(params: {
+	input: BuildInput
+	lnode: RequestedLNode
+	lnType: string | undefined
+}): BuildRefusal | undefined {
+	const { input, lnode, lnType } = params
+	if (!lnType || input.types.some((type) => type.id === lnType)) return undefined
+	return {
+		reason: 'type-missing',
+		ref: lnode.ref,
+		detail: `no LNodeType ${lnType} (a broken reference)`,
+	}
 }
 
 /** The logical device and logical node of the target IED an implementation names. */
