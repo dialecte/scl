@@ -1,0 +1,96 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
+	<!-- Selected: a real IED (ICD source) with values, a vendor Private, both source file lists of two entries each and two control blocks on OutSet; Other on StationBus beside it and alone on OtherBus; Unused_Type and the types of Other used by no LN of Selected -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" desc="station network">
+			<BitRate unit="b/s" multiplier="M">100</BitRate>
+			<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001">
+				<Address>
+					<P type="IP">10.0.0.1</P>
+				</Address>
+				<GSE ldInst="LD1" cbName="GooseOut" cbUuid="60000000-0000-4000-8000-000000000001">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-01</P>
+						<P type="APPID">0001</P>
+					</Address>
+				</GSE>
+				<PhysConn type="Connection">
+					<P type="Port">1</P>
+				</PhysConn>
+			</ConnectedAP>
+			<ConnectedAP iedName="Other" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003">
+				<Address>
+					<P type="IP">10.0.0.2</P>
+				</Address>
+			</ConnectedAP>
+		</SubNetwork>
+		<SubNetwork name="OtherBus" type="8-MMS">
+			<ConnectedAP iedName="Other" apName="AP2" apUuid="30000000-0000-4000-8000-000000000004"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="Other" uuid="20000000-0000-4000-8000-000000000002">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003">
+			<Server>
+				<Authentication/>
+				<LDevice inst="OLD">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<AccessPoint name="AP2" uuid="30000000-0000-4000-8000-000000000004"/>
+	</IED>
+	<IED name="Selected" manufacturer="SELECTED_VENDOR" owner="ProjectSource" originalSclVersion="2007" originalSclRevision="B" originalSclRelease="4" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<Private type="vendor.device">
+			<vendor:Settings mode="retained">device payload</vendor:Settings>
+		</Private>
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
+						<DataSet name="OutSet">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/>
+						</DataSet>
+						<ReportControl name="Rpt" datSet="OutSet" confRev="1" uuid="60000000-0000-4000-8000-000000000002"/>
+						<DOI name="Status">
+							<DAI name="stVal">
+								<Val>true</Val>
+							</DAI>
+						</DOI>
+						<GSEControl name="GooseOut" datSet="OutSet" appID="OutApp" confRev="1" uuid="60000000-0000-4000-8000-000000000001"/>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
+			<SclFileReference fileType="IID" fileName="vendor-configured" fileUuid="10000000-0000-4000-8000-000000000004" version="1" revision="1"/>
+		</IEDSourceFiles>
+		<MinRequestedSCDFiles>
+			<SclFileReference fileType="SCD" fileName="ProjectSource" fileUuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+			<SclFileReference fileType="SCD" fileName="OtherProject" fileUuid="10000000-0000-4000-8000-000000000005" version="2" revision="B"/>
+		</MinRequestedSCDFiles>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Op" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO">
+			<DO name="Ind" type="Ind_Type"/>
+		</LNodeType>
+		<LNodeType id="Unused_Type" lnClass="GGIO">
+			<DO name="Ind" type="Ind_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+		<DOType id="Ind_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

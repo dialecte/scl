@@ -222,6 +222,16 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2014',
 		message: 'The ISD of these logical nodes cannot be staged',
 	},
+	/** The selected source IED describes a specification, not a real device: a CID is written for a real IED. `meta: { ied }` */
+	IED_NOT_IMPLEMENTED: {
+		code: 'SCL2015',
+		message: 'The selected IED is not a real IED',
+	},
+	/** The selected IED has no network address (no connection of it holds an address): a CID needs one. `meta: { ied }` */
+	IED_NOT_CONNECTED: {
+		code: 'SCL2016',
+		message: 'The selected IED has no network address',
+	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`

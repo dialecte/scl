@@ -75,7 +75,7 @@ describe('extract IED reads the source type from the provenance document only', 
 				provenanceQuery: project.openDocument(provenance.documentId).query,
 			})
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_R.isd' })
 		return { assertOn: 'target' }
 	}
 

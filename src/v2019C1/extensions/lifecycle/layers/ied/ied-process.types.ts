@@ -4,12 +4,12 @@ import type { ProcessSection } from '@/v2019C1/extensions/dataflow/query/process
 import type { SectionNode } from '@/v2019C1/extensions/dataflow/query/section-node.types'
 import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
 import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { IedExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
+import type { IsdExtractParams } from '@/v2019C1/extensions/lifecycle/extract/transaction/ied.types'
 import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
 
 /** The export options that leave a part of the process part out. */
 export type ProcessOptions = Pick<
-	IedExtractParams,
+	IsdExtractParams,
 	'applications' | 'allocationRoles' | 'powerSystemRelations' | 'internalService'
 >
 
