@@ -34,19 +34,21 @@ const sourceXml = /* xml */ `
 
 const targetXml = /* xml */ `<SCL ${ns} ${id}="target-root"/>`
 
-/** The tags above a record, nearest first, every stored level kept. */
+/** The tags above a record, nearest first, every stored level kept, a vendor element named with its prefix. */
 async function storedChain(params: {
 	query: Core.Query<Config>
 	record: Scl.Ref<Scl.ElementsOf>
 }): Promise<string[]> {
 	const ancestors = await params.query.findAncestors(params.record, { unwrap: [] })
-	return ancestors.map(function tagOf(ancestor) {
-		return ancestor.tagName
+	return ancestors.map(function levelOf(ancestor) {
+		return ancestor.namespace.prefix
+			? `${ancestor.tagName}@${ancestor.namespace.prefix}`
+			: ancestor.tagName
 	})
 }
 
 describe('extract.ssd - a variable held through a vendor Private', () => {
-	it('the bay extracted → the variable placed once, in the SCL Private of the bay', async () => {
+	it('the bay extracted → the variable placed once, where the file holds it: in the vendor Private, in the SCL Private of the bay', async () => {
 		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
 		if (!target) throw new Error('target required')
 		await target.document.transaction(async function extract(tx) {
@@ -63,6 +65,6 @@ describe('extract.ssd - a variable held through a vendor Private', () => {
 		const chain = await storedChain({ query, record: variables[0] as Scl.Ref<Scl.ElementsOf> })
 
 		expect(variables).toHaveLength(1)
-		expect(chain).toEqual(['Private', 'Bay', 'VoltageLevel', 'Substation', 'SCL'])
+		expect(chain).toEqual(['Private@v', 'Private', 'Bay', 'VoltageLevel', 'Substation', 'SCL'])
 	})
 })

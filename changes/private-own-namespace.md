@@ -1,3 +1,9 @@
 ### Fixed
 
-- A `Private` of another namespace (a vendor's `<v:Private xmlns:v="…">`) is read as an ordinary element, as core 0.16 and later read it: a key held inside it is unique under it, a read of a section of the document (`collectWithAncestry` with a `select`) reaches what it holds through it, as `getTree` does, a placed instance's diff lists it as the project's own instead of its children, and `transplant.deep` no longer merges it into the SCL `Private` of the same `type` (nor an SCL `Private` into it). SCL documents answer as before.
+- A `Private` of another namespace (a vendor's `<v:Private xmlns:v="…">`) is read as an ordinary element everywhere scl steps through a `Private` itself, as core 0.16 and later read it:
+  - a key held inside it is unique under it, and a read of a section of the document (`collectWithAncestry` with a `select`) reaches what it holds through it, as `getTree` does;
+  - a placed instance's diff lists it as the project's own instead of its children;
+  - `transplant.deep` no longer merges it into the SCL `Private` of the same `type`, nor an SCL `Private` into it, and a clone keeps an empty one;
+  - an element written in an SCL `Private` (a 6-100 element added to a bay, the `LNodeSpecNaming` an import gives an `LNode`) never goes into a vendor one of the same `type`, and the naming of an `LNode` is read from its SCL `Private` only;
+  - a logical node inside one is not native.
+    SCL documents answer as before, with no more reads.

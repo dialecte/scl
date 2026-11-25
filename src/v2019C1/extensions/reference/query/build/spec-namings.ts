@@ -1,5 +1,7 @@
 import { toRawRecord } from '@dialecte/core/helpers'
 
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
 
@@ -47,7 +49,10 @@ export async function readSpecNamingsById(
 			const children = childrenHeldOf(ref)
 			return children ? [{ id: ref.id, children }] : []
 		}),
-		...privates.flatMap((privateRecord) => (privateRecord ? [privateRecord] : [])),
+		// only an SCL Private holds the LNode's naming: a vendor's Private of another namespace is its own element
+		...privates.flatMap((privateRecord) =>
+			privateRecord && isOwnTransparentElement({ record: privateRecord }) ? [privateRecord] : [],
+		),
 	]
 	for (const privateRecord of privateChildren) {
 		for (const child of privateRecord.children) {

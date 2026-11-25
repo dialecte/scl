@@ -1,9 +1,10 @@
-import { TRANSPARENT_NAMESPACES, TRANSPARENT_TAGS } from './collect-with-ancestry.constants'
+import { TRANSPARENT_TAGS } from './collect-with-ancestry.constants'
 import { noAncestry, toAnyRawRecord } from './collect-with-ancestry.helpers'
 
 import { orderByConfigSequence } from '@dialecte/core/utils'
 
 import { CHILDREN, DESCENDANTS, ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type {
 	CollectedWithAncestry,
@@ -135,7 +136,7 @@ function selectedChildren(params: {
 	for (const childRef of record.children) {
 		const tracked = recordsById.get(childRef.id)
 		if (!tracked) continue
-		const transparent = isUnwrapped({ record: tracked })
+		const transparent = isOwnTransparentElement({ record: tracked })
 		const childState = stateOfChild({ record, state, tagName: tracked.tagName, transparent })
 		if (!childState) continue
 		const child = toAnyRawRecord(tracked)
@@ -174,13 +175,4 @@ function walkChildren(params: {
 			ancestryById,
 		})
 	}
-}
-
-/**
- * Whether the walk goes through a record without reading it as part of the section: a transparent tag in a namespace
- * the dialecte declares for it (an SCL `Private`), as `getTree` unwraps; a vendor's `Private` is read as any element.
- */
-function isUnwrapped(params: { record: { tagName: string; namespace: { uri: string } } }): boolean {
-	const { record } = params
-	return TRANSPARENT_NAMESPACES.get(record.tagName)?.has(record.namespace.uri) ?? false
 }

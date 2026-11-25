@@ -18,8 +18,9 @@ describe('beforeClone', () => {
 		}
 	}
 
+	// an element of the SCL namespace, as an imported record holds it
 	const treeRecordPart = {
-		namespace: { prefix: '', uri: '' },
+		namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
 		parent: null,
 		children: [],
 		value: '',
@@ -27,17 +28,19 @@ describe('beforeClone', () => {
 	}
 
 	const V2019C1_URI = 'http://www.iec.ch/61850/2019/SCL/6-100'
-	const supportedChild = (tagName: string) => ({
-		id: `child-${tagName}`,
-		tagName,
-		attributes: [],
-		namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
-		parent: null,
-		children: [],
-		value: '',
-		status: 'unchanged' as const,
-		tree: [],
-	})
+	function supportedChild(tagName: string) {
+		return {
+			id: `child-${tagName}`,
+			tagName,
+			attributes: [],
+			namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
+			parent: null,
+			children: [],
+			value: '',
+			status: 'unchanged' as const,
+			tree: [],
+		}
+	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'uuid attribute present → uuid removed': {
