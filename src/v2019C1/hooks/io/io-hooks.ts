@@ -36,10 +36,12 @@ import {
 	incoherentReferenceRelated,
 	unresolvedReferenceDiagnostic,
 	unsupportedXPathDiagnostic,
+	unwrittenReferencePathDiagnostic,
 } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
+import { unwrittenPathReason } from '@/v2019C1/hooks/io/unwritten-path-reason'
 import { exclusiveGroupsHeld } from '@/v2019C1/hooks/shared/exclusive-groups'
 
 import type {
@@ -58,6 +60,8 @@ import type {
 	ExclusiveReferenceGroupsDiagnostic,
 	SclImportDiagnostic,
 	UnsupportedXPathDiagnostic,
+	UnwrittenReferencePathDiagnostic,
+	UnwrittenReferencePathReason,
 } from '@/v2019C1/errors/import-diagnostics.types'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { DerivedAttributeValue, ReferencePair } from '@/v2019C1/extensions/reference'
@@ -339,20 +343,38 @@ function fillPath(params: {
 }): { update?: RecordPatch; diagnostics: SclImportDiagnostic[] } {
 	const { fill, index, specNamings } = params
 	const target = index.targetsByUuid.get(fill.uuidValue)
-	if (!target || !(fill.pair.target as readonly string[]).includes(target.tagName)) {
-		return { diagnostics: [] }
+	const unwritten = {
+		recordId: fill.recordId,
+		elementTag: fill.elementTag,
+		pair: fill.pair,
+		uuidValue: fill.uuidValue,
 	}
+	// a uuid of the file naming an element no path names (an input with no address of its own) is no unknown uuid
+	if (!target) {
+		const reason = index.unnamedUuids.has(unwritten.uuidValue) ? 'wrong-target' : 'uuid-unresolved'
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason })] }
+	}
+	if (!(fill.pair.target as readonly string[]).includes(target.tagName))
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason: 'wrong-target' })] }
+	const behaviorContext = fill.ancestry
+		? behaviorContextFromAncestry({ ancestry: fill.ancestry, specNamings })
+		: undefined
 	const path = composeReferencePath({
 		pair: fill.pair,
 		referenceAttributes: fill.referenceAttributes,
 		targetPath: target.path,
-		behaviorContext: fill.ancestry
-			? behaviorContextFromAncestry({ ancestry: fill.ancestry, specNamings })
-			: undefined,
+		behaviorContext,
 		referrerContext: referrerContextFromAncestry({ pair: fill.pair, ancestry: fill.ancestry }),
 		functionBase: functionBaseSegmentsOf({ pair: fill.pair, ancestry: fill.ancestry, index }),
 	})
-	if (!path) return { diagnostics: [] }
+	if (!path) {
+		const reason = unwrittenPathReason({
+			pair: fill.pair,
+			targetPath: target.path,
+			behaviorContext,
+		})
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason })] }
+	}
 	const changes = derivedChangesOf({
 		tagName: fill.elementTag,
 		pair: fill.pair,
@@ -371,6 +393,30 @@ function fillPath(params: {
 			changes,
 		}),
 	}
+}
+
+/**
+ * What the import says of a reference holding a uuid whose path it cannot write from the element that uuid names:
+ * on its path attribute, with the uuid, why, and the path it holds when it holds one (kept as read).
+ */
+function unwrittenPathDiagnosticOf(params: {
+	recordId: string
+	elementTag: string
+	pair: ReferencePair
+	uuidValue: string
+	reason: UnwrittenReferencePathReason
+	pathValue?: string
+}): UnwrittenReferencePathDiagnostic {
+	const { recordId, elementTag, pair, uuidValue, reason, pathValue } = params
+	return unwrittenReferencePathDiagnostic({
+		ref: { tagName: elementTag, id: recordId, attribute: pair.attribute.path },
+		meta: {
+			uuidAttribute: pair.attribute.uuid,
+			uuidValue,
+			reason,
+			...(pathValue ? { pathValue } : {}),
+		},
+	})
 }
 
 /**
@@ -495,7 +541,7 @@ function resolvePending(params: {
 		attributes: [
 			{ name: pending.pair.attribute.uuid, value: resolvedUuid },
 			...(rewrite
-				? standardPathOf({ pending: withDataNames, index, uuid: resolvedUuid, specNamings })
+				? (standardPathOf({ pending: withDataNames, index, uuid: resolvedUuid, specNamings }) ?? [])
 				: []),
 			...dataNames,
 		],
@@ -614,23 +660,44 @@ function resolveWithUuid(params: {
 			pending.alwaysStandardize && pending.pair.resolution !== RESOLUTION_TYPE.lnode
 		const rewrite = formerForm || standardName
 		const standard = rewrite
-			? standardPathOf({
+			? (standardPathOf({
 					pending: withAttributes({ pending, attributes: dataNames }),
 					index,
 					uuid,
 					specNamings,
-				})
+				}) ?? [])
 			: []
 		return patchOf({ pending, index, uuid, attributes: [...standard, ...dataNames] })
 	}
 
 	const target = index.targetsByUuid.get(uuid)
-	if (!target || !(pending.pair.target as readonly string[]).includes(target.tagName)) {
-		return { diagnostics: [] }
+	const unwritten = {
+		recordId: pending.recordId,
+		elementTag: pending.elementTag,
+		pair: pending.pair,
+		uuidValue: uuid,
+		pathValue: pending.pathValue,
 	}
+	// a uuid of the file naming an element no path names (an input with no address of its own) is no unknown uuid
+	if (!target) {
+		const reason = index.unnamedUuids.has(unwritten.uuidValue) ? 'wrong-target' : 'uuid-unresolved'
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason })] }
+	}
+	if (!(pending.pair.target as readonly string[]).includes(target.tagName))
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason: 'wrong-target' })] }
 	// a path that cannot be written from the element the uuid names (outside the context a local
 	// name is read in) is kept as read; the data the path named belongs to another element
 	const standard = standardPathOf({ pending: withoutPath({ pending }), index, uuid, specNamings })
+	if (standard === null) {
+		const reason = unwrittenPathReason({
+			pair: pending.pair,
+			targetPath: target.path,
+			behaviorContext: pending.ancestry
+				? behaviorContextFromAncestry({ ancestry: pending.ancestry, specNamings })
+				: undefined,
+		})
+		return { diagnostics: [unwrittenPathDiagnosticOf({ ...unwritten, reason })] }
+	}
 	if (standard.length === 0) return { diagnostics: [] }
 	const outcome = patchOf({ pending, index, uuid, attributes: standard })
 	const pathTarget = pathUuid ? index.targetsByUuid.get(pathUuid) : undefined
@@ -808,10 +875,10 @@ function standardPathOf(params: {
 	index: ImportPathIndex
 	uuid: string
 	specNamings: ReadonlyMap<string, AnyRawRecord>
-}): { name: string; value: string }[] {
+}): { name: string; value: string }[] | null {
 	const { pending, index, uuid, specNamings } = params
 	const target = index.targetsByUuid.get(uuid)
-	if (!target) return []
+	if (!target) return null
 	const path = composeReferencePath({
 		pair: pending.pair,
 		referenceAttributes: pending.referenceAttributes,
@@ -825,7 +892,8 @@ function standardPathOf(params: {
 		}),
 		functionBase: functionBaseSegmentsOf({ pair: pending.pair, ancestry: pending.ancestry, index }),
 	})
-	if (!path || path === pending.pathValue) return []
+	if (!path) return null
+	if (path === pending.pathValue) return []
 	return [{ name: pending.pair.attribute.path, value: path }]
 }
 

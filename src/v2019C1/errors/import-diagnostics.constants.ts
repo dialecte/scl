@@ -55,6 +55,17 @@ export const SCL_IMPORT_DIAGNOSTICS = {
 			message: 'The data path of a reference is not split by the data model of the file',
 		},
 		/**
+		 * A reference holding a uuid whose path the import cannot write from the element that uuid names: the uuid names
+		 * no element of the file, an element the reference cannot point at, an element out of its behaviour's reach, or its
+		 * own behaviour's element with no data object. It is kept as read (a path it held kept, none written); `meta.reason`
+		 * says why, as the commit would.
+		 */
+		'unwritten-reference-path': {
+			severity: 'warning',
+			family: 'reference',
+			message: 'The path of a reference cannot be written from the element its uuid names',
+		},
+		/**
 		 * A behaviour variable (`InputVar`, `OutputVar`) names data and a signal at once: the two reference groups are never
 		 * set together. It is kept as read.
 		 */
