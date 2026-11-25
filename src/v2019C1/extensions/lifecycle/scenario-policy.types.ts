@@ -32,10 +32,11 @@ export type ScenarioPolicy = {
 	bumpsCollisions: boolean
 	/**
 	 * The identity of an element placed where the project holds no instance of it, and of what it holds: a uuid of
-	 * its own and the template's as its lineage (`stamp-template`), or the source's own uuid (`keep`) — then an
-	 * element of the project already carrying that uuid is the instance, wherever it sits.
+	 * its own and the template's as its lineage (`stamp-template`), the source's own uuid (`keep`) — then an
+	 * element of the project already carrying that uuid is the instance, wherever it sits —, or a uuid of its own and
+	 * the lineage as copied (`copy`: a copy of an instance is another instance of its template).
 	 */
-	placementIdentity: Extract<IdentityMode, 'stamp-template' | 'keep'>
+	placementIdentity: PlacementIdentity
 	/**
 	 * A placed function or application records the file it came from (its own `FunctionSclRef` /
 	 * `ApplicationSclRef`). An SSD placement lists the file in the project's Header in every scenario.
@@ -59,7 +60,29 @@ export type ScenarioPolicy = {
 	 * placement brings them, a fork takes the other version's).
 	 */
 	subNetworkSettings: 'project' | 'source'
+	/**
+	 * Where a placement lands: on the levels its template says, those the structure lacks created, the references to
+	 * the template's own levels naming where it landed (`template-levels`), or under the anchor itself, the levels it
+	 * names left as they are (`anchor`: a copy is pasted where the consumer picked).
+	 */
+	placement: 'template-levels' | 'anchor'
+	/**
+	 * The functions an application places with it: those the target lacks (`missing`: the project's own stand for the
+	 * others), or every one it composes (`all`: a copy composes copies, never the originals).
+	 */
+	composedFunctions: 'missing' | 'all'
+	/**
+	 * What becomes of a reference the placement carries naming what it neither places nor lands on: left out and told of
+	 * (`leave-out`), or kept as written (`keep`: inside one document the element it names is there).
+	 */
+	outsideReferences: 'leave-out' | 'keep'
 }
+
+/**
+ * The identity a placement writes: the template's lineage stamped (`stamp-template`), the source's uuids (`keep`), or a
+ * uuid of its own with the lineage as copied (`copy`).
+ */
+export type PlacementIdentity = Extract<IdentityMode, 'stamp-template' | 'keep'> | 'copy'
 
 /** Whose names a matched element keeps: see {@link ScenarioPolicy.namesFollow}. */
 export type NamesFollow = 'project' | 'source'

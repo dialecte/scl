@@ -36,13 +36,16 @@ else prepared.discard()
 - `move`: the `element`, `from`, `to`, `subtreeSize` (the records it carries, itself included, a `Private` wrapper left
   out), `followingReferences` (the references whose uuid, path or names the commit rewrites to follow it, those it clears
   left out; an address only carried along with its control block is not one),
-  `reordered: true` when it only changes place among its parent's children, and `nameTaken` when a sibling at the new
-  parent holds its name: the `attribute`, `value`, `constraint`, `collidesWith` and the `proposed` name, numbered as
-  `tx.lifecycle.makeUnique` numbers (`F1` -> `F1_1`). A name taken sets `needsDecisions`; it is never a refusal;
+  `reordered: true` when it only changes place among its parent's children, and `keyTaken` when a sibling at the new
+  parent holds its key (its name): the `constraint`, the key's `values` the element holds, `takenBy` (the sibling) and
+  the `proposed` values of its editable fields, numbered as `tx.lifecycle.makeUnique` numbers (`{ name: 'F1' }` ->
+  `{ name: 'F1_1' }`) — the shape a copy's report gives (`KeyTaken`). A key taken sets `needsDecisions`; it is never a
+  refusal;
 - `refusals`: every reason the move cannot be written, each with the `key`, `code`, `meta` and `detail` of its error:
-  core's refusal of the anchors (`MAX_OCCURRENCES_REACHED`, `MOVE_INTO_OWN_SUBTREE`, `MOVE_BEFORE_NOT_SIBLING`,
-  `PROTECTED_ROOT`, `ELEMENT_NOT_FOUND` for the element or the parent; nothing staged, no instance), a move the commit
-  does not follow (`MOVE_NOT_FOLLOWED`), and a key none of whose fields can be changed shared at the new parent
+  core's refusal of the anchors (`INVALID_PARENT_CHILD`, `MAX_OCCURRENCES_REACHED`, `MOVE_INTO_OWN_SUBTREE`,
+  `MOVE_BEFORE_NOT_SIBLING`, `PROTECTED_ROOT`, `ELEMENT_NOT_FOUND` for the element or the parent; nothing staged, no
+  instance), a move the commit does not follow (`MOVE_NOT_FOLLOWED`), a uuid reference the move leaves that cannot be
+  named coherently (`REFERENCE_INCOHERENT`), and a key none of whose fields can be changed shared at the new parent
   (`IDENTITY_COLLISION`);
 - `nothingToMove: true`, and nothing else, when the element already sits where it is asked to go.
 
@@ -51,7 +54,10 @@ What the commit removes beside the move is not in the report: the commit preview
 
 ## `applyMove`
 
-`tx.lifecycle.applyMove({ ref, parent, before?, rename? })` moves the element, refuses an `IDENTITY_COLLISION` at its new
+`tx.lifecycle.applyMove({ ref, parent, before?, rename? })` moves the element (core's refusal of the anchors thrown as
+the report lists it: `INVALID_PARENT_CHILD`, `MAX_OCCURRENCES_REACHED`, `MOVE_INTO_OWN_SUBTREE`, `MOVE_BEFORE_NOT_SIBLING`,
+`PROTECTED_ROOT`, `ELEMENT_NOT_FOUND`), refuses an `IDENTITY_COLLISION` at its new
 parent, then writes the editable attributes `rename` gives (the others are ignored); a name taken there, typed or not,
 is numbered, so without a `rename` the name the report proposed is written. It returns the moved record. A move the
-commit does not follow is refused at the commit (`MOVE_NOT_FOLLOWED`), as the report listed it.
+commit does not follow (`MOVE_NOT_FOLLOWED`) and a uuid reference that cannot be named coherently
+(`REFERENCE_INCOHERENT`) are refused at the commit, as the report listed them.

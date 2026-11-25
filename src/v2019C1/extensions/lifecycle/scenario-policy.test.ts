@@ -22,6 +22,9 @@ const testCases: Record<string, TestCase> = {
 			removalBase: 'none',
 			namesFollow: 'project',
 			subNetworkSettings: 'source',
+			placement: 'template-levels',
+			composedFunctions: 'missing',
+			outsideReferences: 'leave-out',
 		},
 	},
 	'template: the instances matched by their lineage': {
@@ -37,6 +40,9 @@ const testCases: Record<string, TestCase> = {
 			removalBase: 'lineage',
 			namesFollow: 'project',
 			subNetworkSettings: 'project',
+			placement: 'template-levels',
+			composedFunctions: 'missing',
+			outsideReferences: 'leave-out',
 		},
 	},
 	'fork: the previous revision matched by the uuids both share, kept, on what it places too, its names followed':
@@ -53,6 +59,28 @@ const testCases: Record<string, TestCase> = {
 				removalBase: 'revision',
 				namesFollow: 'source',
 				subNetworkSettings: 'source',
+				placement: 'template-levels',
+				composedFunctions: 'missing',
+				outsideReferences: 'leave-out',
+			},
+		},
+	'copy: inside one document, fresh uuids and the lineage as copied, under the anchor, every function it composes, its outside references as written':
+		{
+			params: { scenario: 'copy' },
+			expected: {
+				matchKey: 'uuid',
+				matchesInstances: false,
+				refsAlwaysAdded: true,
+				identityMode: 'keep',
+				bumpsCollisions: true,
+				placementIdentity: 'copy',
+				writesProvenance: false,
+				removalBase: 'none',
+				namesFollow: 'project',
+				subNetworkSettings: 'source',
+				placement: 'anchor',
+				composedFunctions: 'all',
+				outsideReferences: 'keep',
 			},
 		},
 	'no scenario asked: template': {
@@ -73,6 +101,9 @@ const testCases: Record<string, TestCase> = {
 				removalBase: 'revision',
 				namesFollow: 'source',
 				subNetworkSettings: 'source',
+				placement: 'template-levels',
+				composedFunctions: 'missing',
+				outsideReferences: 'leave-out',
 			},
 		},
 	'placed afresh within a template update: the template identity, matched to no instance, its references its own':
@@ -87,8 +118,23 @@ describe('scenarioPolicy', () => {
 		expect(scenarioPolicy(params)).toEqual(expected)
 	})
 
+	it('the copy row places with its own identity: lineage as copied, never the source uuids', () => {
+		expectTypeOf<(typeof SCENARIO_POLICIES)['copy']['placementIdentity']>().toEqualTypeOf<'copy'>()
+		expectTypeOf<(typeof SCENARIO_POLICIES)['copy']['identityMode']>().toEqualTypeOf<'keep'>()
+		const row = (SCENARIO_POLICIES as Partial<Record<string, ScenarioPolicy>>)['copy']
+		expect({ placementIdentity: row?.placementIdentity, identityMode: row?.identityMode }).toEqual({
+			placementIdentity: 'copy',
+			identityMode: 'keep',
+		})
+	})
+
 	it('has one row per scenario, no more', () => {
 		expectTypeOf<keyof typeof SCENARIO_POLICIES>().toEqualTypeOf<LifecycleScenario>()
-		expect(Object.keys(SCENARIO_POLICIES).sort()).toEqual(['fork', 'instantiate', 'template'])
+		expect(Object.keys(SCENARIO_POLICIES).sort()).toEqual([
+			'copy',
+			'fork',
+			'instantiate',
+			'template',
+		])
 	})
 })

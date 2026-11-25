@@ -15,7 +15,7 @@ type RefusedCase = SclTest.BaseXmlTestCase & {
 	/** Each refusal the report lists, `<key> <code>`, in its order. */
 	refusals: string[]
 	/** The name taken, `<value> → <proposed>`, when there is one. */
-	nameTaken?: string
+	keyTaken?: string
 	/** The element moved, `<id> -> <parent id>`; absent when core refused the anchors. */
 	moved?: string
 	/** The instances of the report: none when core refused the anchors. */
@@ -92,7 +92,7 @@ describe('tx.lifecycle.reportMove - every refusal listed up front', () => {
 			sourceXml: dataSetsXml,
 			move: { ref: ref('DataSet', 'ds1'), parent: ref('LN0', 'ld2-lln0') },
 			refusals: ['MOVE_NOT_FOLLOWED SCL4003'],
-			nameTaken: 'DS1 → DS1_1',
+			keyTaken: 'name=DS1 → name=DS1_1',
 			moved: 'ds1 -> ld2-lln0',
 			instances: 1,
 			staged: 3,
@@ -115,10 +115,12 @@ describe('tx.lifecycle.reportMove - every refusal listed up front', () => {
 			staged,
 		}) {
 			const { move } = report
-			const taken = move?.nameTaken
+			const taken = move?.keyTaken
 			return {
 				refusals: report.refusals.map((refusal) => `${refusal.key} ${refusal.code}`),
-				nameTaken: taken ? `${taken.value} → ${taken.proposed}` : undefined,
+				keyTaken: taken
+					? `${describeValues(taken.values)} → ${describeValues(taken.proposed)}`
+					: undefined,
 				moved: move ? `${move.element.id} -> ${move.to.id}` : undefined,
 				instances: report.instances.length,
 				staged,
@@ -126,7 +128,7 @@ describe('tx.lifecycle.reportMove - every refusal listed up front', () => {
 		})
 		await expect(described).resolves.toEqual({
 			refusals: testCase.refusals,
-			nameTaken: testCase.nameTaken,
+			keyTaken: testCase.keyTaken,
 			moved: testCase.moved,
 			instances: testCase.instances,
 			staged: testCase.staged,
@@ -210,4 +212,11 @@ async function reported(params: {
 	if (failure) throw failure
 	if (!report) throw new Error('no report')
 	return { report, staged }
+}
+
+/** The values of a key, field by field. */
+function describeValues(values: Readonly<Record<string, string>>): string {
+	return Object.entries(values)
+		.map(([field, value]) => `${field}=${value}`)
+		.join(' ')
 }

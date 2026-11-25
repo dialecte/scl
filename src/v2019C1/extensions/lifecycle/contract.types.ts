@@ -30,13 +30,17 @@ export type UpdateMode = 'template' | 'fork'
  *  - `instantiate` — place a NEW instance of the template (duplicates allowed;
  *    a sibling name collision is resolved). Re-applying the same template yields
  *    another instance, never a silent no-op.
+ *  - `copy` — copy a Function (`fsd`) or an Application with the functions it composes (`asd`) of the document itself
+ *    under the parent the consumer picked (`sourceQuery` the document's own query): a uuid of its own on every element,
+ *    the lineage as copied, the copied LNodes released from their IED, a name a sibling holds numbered. Another document,
+ *    another verb, another root are refused with `OPTION_NOT_AVAILABLE`.
  *  - `template` / `fork` — the two {@link UpdateMode} reconcile modes.
  *
  * Picked explicitly by the consumer (or auto-detected from the source↔target
  * relationship) — it cannot be inferred reliably (a same-version re-upload is a
  * valid duplicate). Defaults to `template` for back-compat.
  */
-export type LifecycleScenario = 'instantiate' | UpdateMode
+export type LifecycleScenario = 'instantiate' | 'copy' | UpdateMode
 
 /** The function an FSD carries: one of {@link FSD_PLACEABLE_ROOT_TAGS}. */
 export type FsdFunctionRef = Scl.Ref<(typeof FSD_PLACEABLE_ROOT_TAGS)[number]>
@@ -59,7 +63,8 @@ export type LifecycleTarget = LifecycleVerbTarget & LifecycleRevisionBase
  * default. Another scenario takes none.
  */
 export type LifecycleRevisionBase =
-	| { scenario?: Exclude<LifecycleScenario, 'fork'>; baseQuery?: never }
+	| { scenario?: Exclude<LifecycleScenario, 'fork' | 'copy'>; baseQuery?: never }
+	| { scenario: 'copy'; baseQuery?: never }
 	| { scenario: 'fork'; baseQuery?: Core.Query<Config> }
 
 /** The verb arm of a {@link LifecycleTarget}. */

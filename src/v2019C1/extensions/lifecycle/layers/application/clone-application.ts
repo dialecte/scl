@@ -12,6 +12,7 @@ import { scopeCarriedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { readHeldApplications } from '@/v2019C1/extensions/lifecycle/cross-cutting/held-applications'
 import { contribute } from '@/v2019C1/extensions/lifecycle/engine/contribute'
 import { leaveOutOfScope } from '@/v2019C1/extensions/lifecycle/engine/contribution-scope'
+import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance/composed-functions'
 import {
 	cloneFunction,
 	cloneFunctionCategories,
@@ -34,6 +35,7 @@ import type {
 } from './clone-application.types'
 import type { ResolvedRole } from './resolve-role-mappings.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { SharedFunctions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { SatelliteIndex } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
@@ -123,6 +125,12 @@ export async function cloneApplicationContent(
 		 * functions of several of its applications is placed once. Default: this application's own.
 		 */
 		placedCategories?: Map<string, Scl.Ref<'FunctionCategory'>>
+		/**
+		 * A copy inside one document: every function the application composes copied with it (none is missing there),
+		 * the application and its functions under `placeUnder`, what they carry kept as written, the shared elements
+		 * reused (the source is the project: a reference it holds is never one the placement wrote).
+		 */
+		copy?: { placeUnder: Scl.Ref<TopologyStructuralTag> }
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
@@ -158,13 +166,20 @@ export async function cloneApplicationContent(
 	// 1. Functions: resolve structural parent per function, clone tree + data model; one the operation already placed
 	// for another application is that clone
 	const alreadyCloned = new Set(params.alreadyPlaced?.keys())
-	const composedFunctions = await findMissingReferencedRecords(tx, {
-		sourceQuery,
-		scopeRef: applicationRef,
-		refTagName: 'FunctionRef',
-		targetTagName: 'Function',
-		alreadyCloned,
-	})
+	const { copy } = params
+	const sourceIsProject = copy !== undefined
+	// a copy composes copies of every function, never the originals: none is missing in the document it reads
+	const composedFunctions = copy
+		? (await findComposedFunctionRefs(sourceQuery, applicationRef)).filter(
+				(ref) => !alreadyCloned.has(ref.id),
+			)
+		: await findMissingReferencedRecords(tx, {
+				sourceQuery,
+				scopeRef: applicationRef,
+				refTagName: 'FunctionRef',
+				targetTagName: 'Function',
+				alreadyCloned,
+			})
 	const placedFunctions = composedFunctions.filter((ref) => !leftOut?.has(ref.id))
 	// a function another application placed there with an identical template reference is stood on, when merged
 	const shared =
@@ -197,11 +212,15 @@ export async function cloneApplicationContent(
 			matchKey,
 		}))
 	// what the functions carry is scoped as what the roles refer to is: references to what is not placed left out
+	// a copy keeps what they carry as written
 	const carried =
 		params.carried ??
-		(await scopeOwnCarried(sourceQuery, { missingFunctions, scope: params.scope, index, held }))
+		(copy
+			? nothingCarried()
+			: await scopeOwnCarried(sourceQuery, { missingFunctions, scope: params.scope, index, held }))
 	for (const ref of missingFunctions) {
-		const targetParentRef = await resolveStructureRef(sourceQuery, ref, structure)
+		const targetParentRef =
+			copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, ref, structure))
 		const cloneMappings = await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,
@@ -228,6 +247,7 @@ export async function cloneApplicationContent(
 			categoryMappings,
 			placedCategories,
 			matchKey: params.matchKey,
+			sourceIsProject,
 		})
 		allMappings.push(...categories.cloneMappings)
 		categoryRedirectMappings.push(...categories.redirectMappings)
@@ -261,7 +281,9 @@ export async function cloneApplicationContent(
 		carried,
 		held,
 	})
-	const leaveOut = await leaveOutOfRolesScope(sourceQuery, { applicationRef, scope, leftOut })
+	const leaveOut = copy
+		? new Set<string>()
+		: await leaveOutOfRolesScope(sourceQuery, { applicationRef, scope, leftOut })
 
 	// 3. All other referenced targets - derived from UUID_REFERENCE_PAIRS and DESCENDANTS.
 	// Each is placed by mirroring its source hierarchy (under its owning function when it
@@ -278,6 +300,7 @@ export async function cloneApplicationContent(
 		scope,
 		leftOut,
 		redirectMappings: takenRedirectMappings,
+		sourceIsProject,
 	})
 	for (const reuse of roleReuse) {
 		cloneIndex.set(reuse.sourceId, reuse.existingRef)
@@ -307,11 +330,15 @@ export async function cloneApplicationContent(
 	})
 	allMappings.push(...referencedMappings)
 
-	// what the roles refer to that the project holds by its uuid already is not placed again
-	const referencedRefs = await withoutHeldSatellites(tx, { roleSatellites })
+	// what the roles refer to that the project holds by its uuid already is not placed again — but a copy's source is
+	// the project: every one is held there, none brought from another file
+	const referencedRefs = copy
+		? roleSatellites.placed
+		: await withoutHeldSatellites(tx, { roleSatellites })
 
 	// 4. Clone Application tree, but the references to what is not placed
-	const targetParent = await resolveStructureRef(sourceQuery, applicationRef, structure)
+	const targetParent =
+		copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, applicationRef, structure))
 	const applicationClone = await cloneTree(tx, {
 		sourceQuery,
 		ref: applicationRef,
@@ -378,6 +405,8 @@ async function mapAllocationRoles(
 		leftOut: ReadonlySet<string> | undefined
 		/** The functions stood on: a role already allocating one is not given it twice. */
 		redirectMappings: readonly RedirectMapping[]
+		/** The source is the project (a copy): the role's allocation of a function copied is a new one. */
+		sourceIsProject: boolean
 	},
 ): Promise<AllocationRoleReuse[]> {
 	const { sourceQuery, roles, matchKey, scope, leftOut } = params
@@ -397,6 +426,7 @@ async function mapAllocationRoles(
 			matchKey,
 			leftOut,
 			redirectMappings: params.redirectMappings,
+			sourceIsProject: params.sourceIsProject,
 		})
 
 		reuse.push({
@@ -503,4 +533,9 @@ async function scopeOwnCarried(
 		index: params.index,
 		held: params.held,
 	})
+}
+
+/** Nothing left out of what the functions carry, nothing told of: a copy keeps what they carry as written. */
+function nothingCarried(): CarriedScoping {
+	return { leaveOut: new Set(), notPlaced: new Set(), copies: new Map(), referencesNotPlaced: [] }
 }

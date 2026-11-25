@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- S1/VL1/B1: A1, an instance of the ASD's application (asd-a, first placed from first-a), composing G1; F1, an instance of
+     the FSD's function (fsd-f) holding SF1 and its XCBR1; G1, the ASD's function (asd-g) holding CSWI1; T1, an instance of
+     another template's function (other-f). B2 holds nothing. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="VL1" dev:db-id="vl1">
+            <Bay name="B1" dev:db-id="b1">
+                <Private type="eIEC61850-6-100" dev:db-id="b1-private">
+                    <eIEC61850-6-100:Application name="A1" type="DCS" uuid="a1" templateUuid="asd-a" originUuid="first-a" dev:db-id="a1">
+                        <eIEC61850-6-100:FunctionRole name="ROOT" dev:db-id="a1-root">
+                            <eIEC61850-6-100:FunctionRoleContent dev:db-id="a1-root-content">
+                                <eIEC61850-6-100:FunctionRef function="S1/VL1/B1/G1" functionUuid="g1" dev:db-id="a1-g1"/>
+                            </eIEC61850-6-100:FunctionRoleContent>
+                        </eIEC61850-6-100:FunctionRole>
+                    </eIEC61850-6-100:Application>
+                </Private>
+                <Function name="F1" uuid="f1" templateUuid="fsd-f" dev:db-id="f1">
+                    <SubFunction name="SF1" uuid="sf1" templateUuid="fsd-sf" dev:db-id="sf1">
+                        <LNode iedName="None" lnClass="XCBR" lnInst="1" uuid="ln1" templateUuid="fsd-ln" dev:db-id="ln1"/>
+                    </SubFunction>
+                </Function>
+                <Function name="G1" uuid="g1" templateUuid="asd-g" dev:db-id="g1">
+                    <LNode iedName="None" lnClass="CSWI" lnInst="1" uuid="lng" templateUuid="asd-gln" dev:db-id="lng"/>
+                </Function>
+                <Function name="T1" uuid="t1" templateUuid="other-f" dev:db-id="t1"/>
+            </Bay>
+            <Bay name="B2" dev:db-id="b2"/>
+        </VoltageLevel>
+    </Substation>
+</SCL>
