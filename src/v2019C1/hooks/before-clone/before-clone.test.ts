@@ -2,6 +2,7 @@ import { beforeClone } from './before-clone'
 
 import { describe, expect } from 'vitest'
 
+import { SCL_NAMESPACES } from '@/v2019C1/config'
 import { runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -20,7 +21,7 @@ describe('beforeClone', () => {
 
 	// an element of the SCL namespace, as an imported record holds it
 	const treeRecordPart = {
-		namespace: { prefix: '', uri: 'http://www.iec.ch/61850/2003/SCL' },
+		namespace: { prefix: '', uri: SCL_NAMESPACES.default.uri },
 		parent: null,
 		children: [],
 		value: '',

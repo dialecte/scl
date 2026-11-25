@@ -16,6 +16,7 @@ export function indexTupleTargets(params: {
 	const byUuid = new Map<string, IndexedTarget>()
 	for (const record of params.targets) {
 		const ancestry = params.ancestries.get(record.id) ?? []
+		// by tag, deliberately: a target under any Private, the SCL one or a vendor's, is vendor payload
 		if (ancestry.some((ancestor) => ancestor.tagName === 'Private')) continue
 		const parts = targetTupleParts({ record, ancestry })
 		const address = parts ? tupleAddressOf({ parts }) : undefined

@@ -4,6 +4,7 @@ import { cloneTree } from './primitives/clone-tree'
 import { throwDialecteError } from '@dialecte/core'
 
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
+import { readAttribute } from '@/v2019C1/helpers'
 import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { ImportDeepParams, ImportDeepResult } from './deep.types'
@@ -139,7 +140,8 @@ async function resolveExistingPrivateMergeTarget(
 	const source = await sourceQuery.getRecord(ref)
 	if (!source || !isOwnTransparentElement({ record: source })) return undefined
 
-	const sourceType = (await sourceQuery.any.getAttributes(ref)).type
+	// the type read from the record already in hand: no second read of it
+	const sourceType = readAttribute({ record: source, name: 'type', defaults: 'none' })
 	if (!sourceType) return undefined
 
 	const parentRecord = await tx.getRecord(targetParent)

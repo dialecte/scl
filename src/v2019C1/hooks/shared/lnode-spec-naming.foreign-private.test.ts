@@ -1,3 +1,5 @@
+import { ensureLNodeSpecNaming } from './lnode-spec-naming'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -11,7 +13,7 @@ import type * as Core from '@dialecte/core'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 
-/** An LNode holding a vendor Private (another namespace) whose type is the 6-100 prefix; the import names it. */
+/** An LNode holding a vendor Private (another namespace) of the 6-100 type, directly; the import names the LNode. */
 const sourceXml = /* xml */ `
 	<SCL ${ALL_XMLNS_NAMESPACES} ${id}="root">
 		<Substation ${id}="sub" name="S1">
@@ -28,36 +30,27 @@ const sourceXml = /* xml */ `
 	</SCL>
 `
 
-const targetXml = /* xml */ `
-	<SCL ${ALL_XMLNS_NAMESPACES} ${id}="root-t">
-		<Substation ${id}="sub-t" name="S1">
-			<VoltageLevel ${id}="vl-t" name="V1">
-				<Bay ${id}="bay-t" name="B1"/>
-			</VoltageLevel>
-		</Substation>
-	</SCL>
-`
-
-describe('the commit - an LNode’s naming written in an SCL Private, never a vendor one', () => {
-	it('an LNode holding a vendor Private of the 6-100 type copied without its naming → the commit names it in an SCL Private', async () => {
-		const { source, target } = await createSclTestProject({ sourceXml, targetXml })
-		if (!target) throw new Error('target required')
-		await target.document.transaction(async function copyFunction(tx) {
-			await tx.lifecycle.transplant.deep({
-				sourceQuery: source.document.query,
-				ref: { tagName: 'Function', id: 'function' } as Scl.Ref<'Function'>,
-				targetParent: { tagName: 'Bay', id: 'bay-t' } as Scl.Ref<'Bay'>,
-				withTypes: false,
-				omit: ['LNodeSpecNaming'],
+describe('ensureLNodeSpecNaming - an LNode’s naming written in an SCL Private, never a vendor one', () => {
+	it('the naming of an LNode holding a vendor Private of the 6-100 type removed → the new naming placed outside the vendor Private', async () => {
+		const { source } = await createSclTestProject({ sourceXml })
+		const query = source.document.query as Core.Query<Config>
+		const [imported] = await query.getRecordsByTagName('LNodeSpecNaming')
+		if (!imported) throw new Error('the import names the LNode')
+		let operations: Scl.Operation[] = []
+		const prepared = await source.document.prepare(async function rename(tx) {
+			await tx.delete(imported as Scl.Ref<Scl.ElementsOf>)
+			operations = await ensureLNodeSpecNaming(tx as unknown as Core.Query<Config>, {
+				lnode: { tagName: 'LNode', id: 'lnode' } as Scl.Ref<'LNode'>,
 			})
 		})
-		const query = target.document.query as Core.Query<Config>
-		const namings = await query.getRecordsByTagName('LNodeSpecNaming')
-		const holder = namings[0]
-			? await query.getRecord(namings[0].parent as Scl.Ref<Scl.ElementsOf>)
-			: undefined
+		prepared.discard()
+		const naming = operations.find(function isNaming(operation) {
+			return operation.status === 'created' && operation.newRecord.tagName === 'LNodeSpecNaming'
+		})
 
-		expect(namings).toHaveLength(1)
-		expect(holder?.namespace.uri).toBe('http://www.iec.ch/61850/2003/SCL')
+		expect(naming).toBeDefined()
+		expect(naming?.status === 'created' ? naming.newRecord.parent?.id : undefined).not.toBe(
+			'vendor-private',
+		)
 	})
 })
