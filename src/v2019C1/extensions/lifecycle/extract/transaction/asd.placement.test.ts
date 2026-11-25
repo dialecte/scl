@@ -10,26 +10,26 @@ import type { SclTest } from '@/v2019C1/test'
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES
 
-const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root" version="2007" revision="C" release="5"/>`
+const emptyTargetXml = /* xml */ `<SCL ${ns} ${id}="root"/>`
 
 /**
- * Regression for #1796: satellites referenced from the Application (here the
+ * Regression: satellites referenced from the Application (here the
  * SourceRefs behind the SignalRole's LNodeInputRefs) live under a Function that
  * step 1 already clones. Their clones get remapped uuids, so the source-uuid dedup
  * could not see them and step 3 re-cloned them as misplaced duplicates. They must
  * now be cloned exactly once, under their owning function — never flattened.
  */
-describe('asd — referenced satellites are not duplicated/misplaced (#1796)', () => {
+describe('asd — referenced satellites are not duplicated/misplaced', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		targetXml: string
 		applicationId: string
 	}
 
-	const act = async ({
+	async function act({
 		source,
 		target,
 		testCase,
-	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> => {
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		await target.transaction(async (tx) => {
 			await asd(tx, {
@@ -48,7 +48,7 @@ describe('asd — referenced satellites are not duplicated/misplaced (#1796)', (
 	const testCases: SclTest.TestCases<TestCase> = {
 		'SourceRefs behind SignalRole refs are cloned once, under their function': {
 			sourceXml: /* xml */ `
-				<SCL ${ns} ${id}="root" version="2007" revision="C" release="5">
+				<SCL ${ns} ${id}="root">
 					<Substation ${id}="sub1" name="TEMPLATE" uuid="sub1-uuid">
 						<VoltageLevel ${id}="vl1" name="TEMPLATE" uuid="vl1-uuid">
 							<Bay ${id}="bay1" name="TEMPLATE" uuid="bay1-uuid"/>

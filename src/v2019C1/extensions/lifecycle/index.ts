@@ -2,7 +2,7 @@ import { apply } from './apply'
 import { makeUnique } from './constraints'
 import * as extractTransaction from './extract'
 import { exportOptions } from './extract/query'
-import { classifyIeds } from './ied'
+import { boundIeds, classifyIeds } from './ied'
 import * as instantiateTransaction from './instantiate'
 import { applyMove, reportMove } from './move'
 import { report } from './report'
@@ -35,6 +35,8 @@ import { checkTemplateUuids } from './validate'
  *                   (`query.lifecycle.classifyIeds()`).
  * - `exportOptions` — read-only: the file types an IED can be exported as, or why not
  *                   (`query.lifecycle.exportOptions({ iedRef })`).
+ * - `boundIeds`   — read-only: the IEDs tied to the LNodes an SSD extract of a scope writes, each
+ *                   fully assigned or shared (`query.lifecycle.boundIeds({ scopeRef })`).
  * - `report`      — read-only classify: `query.lifecycle.report({ verb,
  *                   sourceQuery, ref, anchor })` returns a `DiffReport`
  *                   (fast/full classification) — nothing is written. `verb: 'ied'`
@@ -56,6 +58,7 @@ export const lifecycle = {
 		checkTemplateUuids,
 		classifyIeds,
 		exportOptions,
+		boundIeds,
 		sourceRoot,
 		scenarioOf,
 	},

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="scl">
+    <Substation name="S1">
+        <VoltageLevel name="E1">
+            <Bay name="Q01" dev:db-id="q01">
+                <Function name="PROT" uuid="a0000000-0000-4000-8000-000000000001">
+                    <LNode iedName="S" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="d0000000-0000-4000-8000-000000000001" dev:db-id="ln-1"/>
+                    <LNode iedName="R" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="c0000000-0000-4000-8000-000000000001" dev:db-id="ln-2"/>
+                </Function>
+            </Bay>
+            <Bay name="Q02" dev:db-id="q02"/>
+        </VoltageLevel>
+    </Substation>
+    <IED name="S" dev:db-id="ied-s">
+        <AccessPoint name="AP1">
+            <Server>
+                <Authentication/>
+                <LDevice inst="LD1">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T" uuid="d0000000-0000-4000-8000-000000000001"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+    <IED name="R" dev:db-id="ied-r">
+        <IEDSourceFiles>
+            <SclFileReference fileType="ICD" fileName="r.icd"/>
+        </IEDSourceFiles>
+        <AccessPoint name="AP1">
+            <Server>
+                <Authentication/>
+                <LDevice inst="LD1">
+                    <LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+                    <LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T" uuid="c0000000-0000-4000-8000-000000000001"/>
+                </LDevice>
+            </Server>
+        </AccessPoint>
+    </IED>
+</SCL>
+

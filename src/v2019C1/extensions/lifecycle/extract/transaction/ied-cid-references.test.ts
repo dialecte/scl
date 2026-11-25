@@ -28,7 +28,7 @@ const CID = {
 	who: 'test',
 } as const satisfies Omit<CidExtractParams, 'sourceQuery'>
 
-const emptyTarget = /* xml */ `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="empty-target"/>`
+const emptyTarget = /* xml */ `<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="empty-target" version="2007" revision="C" release="5"/>`
 
 const selected = '/default:SCL/default:IED[@name="Selected"]'
 const ptoc = `${selected}//default:LN[@lnClass="PTOC"]`

@@ -1,4 +1,4 @@
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root" version="2007" revision="C" release="5">
 	<!-- A and B share the names LD1 / GooseA. A: GooseA and SvA send SetA (one member names LD9, which A does not hold), RptLn sits in LN PTRC1 with SetR, AP3 serves AP1's server (ServerAt) on Bus2, AP2 holds no server; B: GooseA and GooseB on its own SetA -->
 	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
 	<Communication>

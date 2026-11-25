@@ -1,0 +1,39 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5" dev:db-id="root">
+	<Substation dev:db-id="sub" name="S1">
+		<VoltageLevel dev:db-id="vl" name="V1">
+			<Bay dev:db-id="b1" name="B1" uuid="b1-uuid" templateUuid="bay-template">
+				<Function dev:db-id="source-function" name="Source" uuid="source-function-uuid" templateUuid="function-template">
+					<Private dev:db-id="source-variable-private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Variable dev:db-id="source-variable" name="Prefix" value="DV" uuid="source-variable-uuid" templateUuid="variable-template" originUuid="variable-origin"/>
+					</Private>
+					<LNode dev:db-id="source-lnode" iedName="None" lnClass="CSWI" lnInst="1" uuid="source-lnode-uuid" templateUuid="lnode-template"/>
+					<SubFunction dev:db-id="source-subfunction" name="Sub" uuid="source-subfunction-uuid" templateUuid="sub-template">
+						<LNode dev:db-id="source-sub-lnode" iedName="None" lnClass="CSWI" lnInst="2" uuid="source-sub-lnode-uuid" templateUuid="sub-lnode-template"/>
+					</SubFunction>
+				</Function>
+				<Function dev:db-id="handmade-function" name="Handmade" uuid="handmade-function-uuid">
+					<LNode dev:db-id="handmade-lnode" iedName="None" lnClass="CSWI" lnInst="1" uuid="handmade-lnode-uuid" templateUuid="handmade-lnode-template"/>
+				</Function>
+			</Bay>
+			<Bay dev:db-id="b2" name="B2" uuid="b2-uuid">
+				<Function dev:db-id="same-function" name="Same" uuid="same-function-uuid" templateUuid="function-template">
+					<LNode dev:db-id="into-same-template" iedName="None" lnClass="CSWI" lnInst="1" uuid="copy-1" templateUuid="lnode-template"/>
+					<LNode dev:db-id="handmade-copy" iedName="None" lnClass="CSWI" lnInst="3" uuid="copy-9" templateUuid="handmade-lnode-template"/>
+					<SubFunction dev:db-id="same-subfunction" name="Sub" uuid="copy-2" templateUuid="sub-template">
+						<LNode dev:db-id="same-sub-lnode" iedName="None" lnClass="CSWI" lnInst="2" uuid="copy-3" templateUuid="sub-lnode-template"/>
+					</SubFunction>
+				</Function>
+				<Function dev:db-id="other-function" name="Other" uuid="other-function-uuid" templateUuid="other-template">
+					<Private dev:db-id="copied-variable-private" type="eIEC61850-6-100">
+						<eIEC61850-6-100:Variable dev:db-id="copied-variable" name="Prefix" value="DV" uuid="copy-4" templateUuid="variable-template" originUuid="variable-origin"/>
+					</Private>
+					<LNode dev:db-id="into-other-template" iedName="None" lnClass="CSWI" lnInst="1" uuid="copy-5" templateUuid="lnode-template"/>
+					<SubFunction dev:db-id="copied-subfunction" name="Sub" uuid="copy-6" templateUuid="sub-template">
+						<LNode dev:db-id="copied-sub-lnode" iedName="None" lnClass="CSWI" lnInst="2" uuid="copy-7" templateUuid="sub-lnode-template"/>
+					</SubFunction>
+				</Function>
+				<Function dev:db-id="copied-function" name="Copied" uuid="copy-8" templateUuid="function-template"/>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+</SCL>

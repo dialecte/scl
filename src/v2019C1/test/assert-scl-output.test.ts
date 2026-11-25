@@ -36,7 +36,7 @@ function sclFile(params: {
 }) {
 	const { bayContent = '', functionContent = '', substationContent = '' } = params
 	return /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="output-check"/>
 			<Substation name="S1">
 				${substationContent}
@@ -152,7 +152,7 @@ describe('collectSclOutputViolations', () => {
 		},
 		'a file without a Header → the validator stops at the missing Header': {
 			sourceXml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Substation name="S1">
 						<VoltageLevel name="V1">
 							<Bay name="B1">
@@ -169,7 +169,7 @@ describe('collectSclOutputViolations', () => {
 		},
 		'the same file read as a test document → given a Header, the validator reads its content': {
 			sourceXml: /* xml */ `
-				<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+				<SCL ${ALL_XMLNS_NAMESPACES}>
 					<Substation name="S1">
 						<VoltageLevel name="V1">
 							<Bay name="B1">

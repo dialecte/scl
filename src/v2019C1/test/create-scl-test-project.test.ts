@@ -70,7 +70,7 @@ describe('createSclTestProject', () => {
 
 describe('createSclTestProject — the given documents', () => {
 	const VALID_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1">
@@ -80,7 +80,7 @@ describe('createSclTestProject — the given documents', () => {
 		</SCL>
 	`
 	const DUPLICATE_BAY_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1">
@@ -92,7 +92,7 @@ describe('createSclTestProject — the given documents', () => {
 	`
 
 	const PARTIAL_XML = /* xml */ `
-		<SCL ${ALL_XMLNS_NAMESPACES} version="2007" revision="C" release="5">
+		<SCL ${ALL_XMLNS_NAMESPACES}>
 			<Header id="given-documents"/>
 			<Substation name="S1">
 				<VoltageLevel name="V1">
