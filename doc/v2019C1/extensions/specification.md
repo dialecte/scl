@@ -132,6 +132,7 @@ type BuildIedParams = {
   openValues?: { ldInst?: OpenValueRule<LdInstContext>; lnType?: OpenValueRule<LnTypeContext> }
   contextQuery?: Core.Query<Config>   // the document deciding name clashes and offering types; default the one built in
   ldNameAlsoFits?: readonly string[] // other IED names each logical device name must fit too (an IED renamed later)
+  shellTypes?: readonly string[]      // the shell's LN0 and LPHD types, counted as the IED's own (copyIedShell)
   excludeFunctionalConstraints?: readonly string[] // values of these functional constraints left out (see Values)
   rederiveLDevices?: boolean          // a rebuild moves built logical nodes to the logical device their function now gives
 }
@@ -242,6 +243,7 @@ type StageIsdResult = {
   ied: Scl.Ref<'IED'>        // the built IED in the staging document
   build: IedBuildResult      // what the build planned and wrote
   released: Scl.Ref<'LNode'>[] // the staged LNodes a project binding was released from
+  shellLeftOut: Scl.Ref<'LDevice' | 'LN' | 'LN0' | 'Association'>[] // what the shell IED held: not copied
 }
 ```
 
@@ -263,8 +265,10 @@ Steps, in the staging document:
    to an LNode left out stays as written, and the export cuts it.
 4. Release every staged LNode to its specification, before any IED is in the document: its naming back from its
    `LNodeSpecNaming`, `lnUuid` removed, `iedName` `None` (see `dataModel` `releaseLNodeBindings`).
-5. Copy the shell IED with its data types, without its source files and with no lineage, named `iedName`, with
-   `iedUuid` when given.
+5. Copy the shell IED's shell only (`tx.specification.copyIedShell`, see [`copyIedShell`](#copyiedshell)): its attributes without `desc`, `Services`, each
+   `AccessPoint` with its `Server`, no logical device and no logical node of its own, no source files, no lineage, the
+   types of its LN0 and LPHD; named `iedName`, with `iedUuid` when given. What it held below its servers is listed in
+   `shellLeftOut`.
 6. Build the IED from the LNodes given ([`buildIed`](#buildied)), with the project as `contextQuery` (name clashes
    judged on the project, its types offered to the `lnType` rule) and each logical device name fitting both `iedName`
    and `SPECIFICATION`, the name a template export gives the IED. The build's refusals pass through
@@ -338,6 +342,41 @@ the IED (see Implemented elsewhere below).
 - **Values** — `rebuild.values` counts the values planned on logical nodes built before: new DAIs and changed ones.
 - No revision number is raised.
 
+### `copyIedShell`
+
+`tx.specification.copyIedShell` copies a template IED as the shell of an IED built from a specification. An ISD's IED is generated from the
+specification (one logical node per LNode, LN0 and LPHD added, logical devices from the LNodes' `ldInst` or their
+functions), so a template gives its shell only.
+
+```ts
+tx.specification.copyIedShell(params: CopyIedShellParams): Promise<CopyIedShellResult>
+
+type CopyIedShellParams = {
+  shell: { query: Core.Query<Config>; ied: Scl.Ref<'IED'> } // the template IED; only read
+  iedName: string
+  iedUuid?: string
+}
+type CopyIedShellResult = {
+  ied: Scl.Ref<'IED'>       // the copied IED
+  leftOut: ShellLeftOut[]   // logical devices, then access point logical nodes, then associations, not copied
+  shellTypes: string[]      // the template's LN0 and LPHD types as imported: pass them to buildIed
+}
+```
+
+What is copied: the IED's attributes but its `desc`, its `Services` (the minimum requirements of the IED), each
+`AccessPoint` with its `Server` and `Authentication`, and the LNodeTypes of the template's LN0 and LPHD (with their
+closure), so the LN0 and LPHD the build adds can take the template's types. A type the template does not hold is not
+imported. What is not copied: every logical device of the template, its own LD0 included, with its logical nodes, data
+sets, control blocks and inputs; a logical node of an access point; an association; the files the IED came from
+(`IEDSourceFiles`, `MinRequestedSCDFiles`) and its `CheckoutID`; any lineage.
+
+**The copied servers hold no logical device** until [`buildIed`](#buildied) writes them, in the same transaction. A
+server is valid with at least one logical device: when the IED has several servers, the build fills the one it is
+given, and the others are the caller's to remove before the commit. Pass `shellTypes` to `buildIed` (its `shellTypes`
+option): the template's LN0 and LPHD types then count as types the IED uses, so `sameClassInTargetIed` picks them for
+the LN0 and LPHD the build adds. A build adds an LN0 and an LPHD to every logical device it writes; the template's LD0
+is not regenerated.
+
 ## Open values
 
 A value the standard leaves open is never invented by the engine: the caller passes a rule, a pure synchronous
@@ -391,6 +430,9 @@ import type {
 	LnTypeContext,
 	OpenValueRule,
 	OpenValues,
+	CopyIedShellParams,
+	CopyIedShellResult,
+	ShellLeftOut,
 	StageIsdParams,
 	StageIsdResult,
 	StageRefusalReason,

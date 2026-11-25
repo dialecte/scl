@@ -148,9 +148,12 @@ export async function readBuildInput(
 		},
 		servers: (subtree.Server ?? []).map((server) => ({ tagName: 'Server', id: server.id })),
 		lDevices,
-		targetIedTypes: new Set(
-			lDevices.flatMap((lDevice) => lDevice.logicalNodes.map((logicalNode) => logicalNode.lnType)),
-		),
+		targetIedTypes: new Set([
+			...lDevices.flatMap((lDevice) =>
+				lDevice.logicalNodes.map((logicalNode) => logicalNode.lnType),
+			),
+			...(params.shellTypes ?? []),
+		]),
 		lnodes: asked.map(function requestedOf(ref, position) {
 			const record = lnodeRecords[position] as AnyRawRecord
 			const section_ = section.lnodes.get(ref.id)
