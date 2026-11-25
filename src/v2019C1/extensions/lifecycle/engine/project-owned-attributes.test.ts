@@ -91,6 +91,13 @@ describe('projectOwnedAttributes', () => {
 			owned: [],
 			listedAsKept: [],
 		},
+		'an input of a template naming no source, only the service it expects → nothing owned': {
+			tagName: 'ExtRef',
+			instanceAttributes: { intAddr: 'in1', serviceType: 'GOOSE', pServT: 'GOOSE' },
+			namesFollow: 'project',
+			owned: [],
+			listedAsKept: [],
+		},
 		'an LNode assigned to no IED → nothing owned': {
 			tagName: 'LNode',
 			instanceAttributes: { iedName: 'None', lnClass: 'CSWI', lnType: 'T1' },
