@@ -1,0 +1,119 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
+	<!-- Selected: a real IED whose report Rpt names report clients in Other and in itself, whose GOOSE GooseOut names receivers Other and itself, with an Association and a KDC naming Other, an LGOS supervising Other's OtherGoose, an LGOS supervising its own GooseOut and an LSVS naming a control block of no IED; the entries naming Other carry their uuid companions -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" dev:db-id="source-header"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS">
+			<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001">
+				<Address>
+					<P type="IP">10.0.0.1</P>
+				</Address>
+				<GSE ldInst="LD1" cbName="GooseOut" cbUuid="60000000-0000-4000-8000-000000000001">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-01</P>
+						<P type="APPID">0001</P>
+					</Address>
+				</GSE>
+			</ConnectedAP>
+			<ConnectedAP iedName="Other" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003">
+				<Address>
+					<P type="IP">10.0.0.2</P>
+				</Address>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Other" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="other-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003">
+			<Server>
+				<Authentication/>
+				<LDevice inst="OLD" uuid="40000000-0000-4000-8000-000000000003">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000003">
+						<DataSet name="OtherSet">
+							<FCDA ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/>
+						</DataSet>
+						<GSEControl name="OtherGoose" datSet="OtherSet" appID="OtherApp" confRev="1" uuid="60000000-0000-4000-8000-000000000003"/>
+					</LN0>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000004"/>
+					<LN lnClass="IHMI" inst="1" lnType="IHMI_Type" uuid="50000000-0000-4000-8000-000000000006"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
+						<DataSet name="OutSet">
+							<FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/>
+						</DataSet>
+						<ReportControl name="Rpt" datSet="OutSet" confRev="1" uuid="60000000-0000-4000-8000-000000000002">
+							<RptEnabled max="2">
+								<ClientLN iedName="Other" apRef="AP1" ldInst="OLD" prefix="" lnClass="IHMI" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000006" desc="client other" dev:db-id="clientln-other"/>
+								<ClientLN iedName="Selected" apRef="AP1" ldInst="LD1" prefix="" lnClass="LLN0" lnInst="" desc="client self" dev:db-id="clientln-self"/>
+							</RptEnabled>
+						</ReportControl>
+						<GSEControl name="GooseOut" datSet="OutSet" appID="OutApp" confRev="1" uuid="60000000-0000-4000-8000-000000000001">
+							<IEDName apRef="AP1" apUuid="30000000-0000-4000-8000-000000000003" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000004" dev:db-id="iedname-other">Other</IEDName>
+							<IEDName apRef="AP1" dev:db-id="iedname-self">Selected</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+					<LN lnClass="LGOS" inst="1" lnType="LGOS_Type" uuid="50000000-0000-4000-8000-000000000005" dev:db-id="lgos-other">
+						<DOI name="GoCBRef">
+							<DAI name="setSrcRef">
+								<Val>OtherOLD/LLN0.OtherGoose</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LGOS" inst="2" lnType="LGOS_Type" uuid="50000000-0000-4000-8000-000000000007" dev:db-id="lgos-self">
+						<DOI name="GoCBRef">
+							<DAI name="setSrcRef">
+								<Val>SelectedLD1/LLN0.GooseOut</Val>
+							</DAI>
+						</DOI>
+					</LN>
+					<LN lnClass="LSVS" inst="1" lnType="LSVS_Type" uuid="50000000-0000-4000-8000-000000000008" dev:db-id="lsvs-ghost">
+						<DOI name="SvCBRef">
+							<DAI name="setSrcRef">
+								<Val>GhostLD/LLN0.Samples</Val>
+							</DAI>
+						</DOI>
+					</LN>
+				</LDevice>
+				<Association kind="predefined" iedName="Other" apRef="AP1" ldInst="OLD" prefix="" lnClass="IHMI" lnInst="1" associationID="A1" dev:db-id="association-other"/>
+			</Server>
+		</AccessPoint>
+		<KDC iedName="Other" apName="AP1" dev:db-id="kdc-other"/>
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
+		</IEDSourceFiles>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Op" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO">
+			<DO name="Ind" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="IHMI_Type" lnClass="IHMI">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="LGOS_Type" lnClass="LGOS">
+			<DO name="GoCBRef" type="Org_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+			<DA name="q" bType="Quality" fc="ST"/>
+		</DOType>
+		<LNodeType id="LSVS_Type" lnClass="LSVS">
+			<DO name="SvCBRef" type="Org_Type"/>
+		</LNodeType>
+		<DOType id="Org_Type" cdc="ORG">
+			<DA name="setSrcRef" bType="ObjRef" fc="SP"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -76,7 +76,7 @@ describe('extract IED with inputs none', () => {
 				who: 'test',
 			})
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_Selected.isd' })
 		return { assertOn: 'target' }
 	}
 

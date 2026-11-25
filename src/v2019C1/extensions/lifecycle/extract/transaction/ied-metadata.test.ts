@@ -9,7 +9,7 @@ import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
 
-import type { IedExtractParams } from './ied.types'
+import type { IsdExtractParams } from './ied.types'
 import type { SclTest } from '@/v2019C1/test'
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
@@ -57,7 +57,7 @@ describe('extract IED metadata', () => {
 		const result = await target.transaction(async function extract(tx) {
 			return tx.lifecycle.extract.ied({ ...EXPORT, sourceQuery: source.query })
 		})
-		expect(result).toEqual({ warnings: [] })
+		expect(result).toEqual({ warnings: [], fileName: 'ISD_Selected.isd' })
 		return { assertOn: 'target' }
 	}
 
@@ -116,7 +116,7 @@ describe('extract IED refusals', () => {
 				.ied({
 					...EXPORT,
 					sourceQuery: source.query,
-					...(testCase.options as Partial<IedExtractParams>),
+					...(testCase.options as Partial<IsdExtractParams>),
 				})
 				.then(
 					() => undefined,

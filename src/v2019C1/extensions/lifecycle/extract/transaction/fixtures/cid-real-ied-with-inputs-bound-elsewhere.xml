@@ -1,0 +1,89 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:vendor="urn:cid:test" dev:db-id="source-root">
+	<!-- Selected: a real IED whose LN0 holds one system input bound to Other, and whose PTOC holds device inputs bound to Other (one per data attribute), relative to itself, bound to itself, unbound, bound to Ghost (no IED of the file), one without desc, and two outputs to Other (with and without an internal address) -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A" dev:db-id="source-header"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS">
+			<ConnectedAP iedName="Selected" apName="AP1" apUuid="30000000-0000-4000-8000-000000000001">
+				<Address>
+					<P type="IP">10.0.0.1</P>
+				</Address>
+			</ConnectedAP>
+			<ConnectedAP iedName="Other" apName="AP1" apUuid="30000000-0000-4000-8000-000000000003">
+				<Address>
+					<P type="IP">10.0.0.2</P>
+				</Address>
+				<GSE ldInst="OLD" cbName="OtherGoose" cbUuid="60000000-0000-4000-8000-000000000003">
+					<Address>
+						<P type="MAC-Address">01-0C-CD-01-00-03</P>
+						<P type="APPID">0003</P>
+					</Address>
+				</GSE>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="Other" uuid="20000000-0000-4000-8000-000000000002" dev:db-id="other-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000003">
+			<Server>
+				<Authentication/>
+				<LDevice inst="OLD" uuid="40000000-0000-4000-8000-000000000003">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000003">
+						<DataSet name="OtherSet">
+							<FCDA ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/>
+						</DataSet>
+						<GSEControl name="OtherGoose" datSet="OtherSet" appID="OtherApp" confRev="1" uuid="60000000-0000-4000-8000-000000000003"/>
+					</LN0>
+					<LN lnClass="GGIO" inst="1" lnType="GGIO_Type" uuid="50000000-0000-4000-8000-000000000004"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1" uuid="40000000-0000-4000-8000-000000000001">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="50000000-0000-4000-8000-000000000001">
+						<Inputs>
+							<ExtRef desc="system input from other" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="stVal" serviceType="GOOSE" srcLDInst="OLD" srcPrefix="" srcLNClass="LLN0" srcCBName="OtherGoose" dev:db-id="extref-SystemInput"/>
+						</Inputs>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002">
+						<Inputs>
+							<ExtRef desc="device input bound to other" intAddr="BlockIn" pLN="GGIO" pDO="Ind" pDA="stVal" pServT="GOOSE" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="stVal" serviceType="GOOSE" srcLDInst="OLD" srcPrefix="" srcLNClass="LLN0" srcCBName="OtherGoose" uuid="70000000-0000-4000-8000-000000000001" dev:db-id="extref-BlockIn"/>
+							<ExtRef desc="system poll of other" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="q" serviceType="Poll" dev:db-id="extref-SystemPoll"/>
+							<ExtRef desc="device input on stVal" intAddr="SiblingA" pDO="Ind" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="stVal" serviceType="GOOSE" srcLDInst="OLD" srcPrefix="" srcLNClass="LLN0" srcCBName="OtherGoose" dev:db-id="extref-SiblingA"/>
+							<ExtRef desc="device input on q" intAddr="SiblingB" pDO="Ind" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="q" serviceType="GOOSE" srcLDInst="OLD" srcPrefix="" srcLNClass="LLN0" srcCBName="OtherGoose" dev:db-id="extref-SiblingB"/>
+							<ExtRef desc="device input relative to the IED" intAddr="RelativeIn" pDO="Op" iedName="@" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" dev:db-id="extref-RelativeIn"/>
+							<ExtRef desc="device input bound to itself" intAddr="SelfIn" pDO="Op" iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" dev:db-id="extref-SelfIn"/>
+							<ExtRef desc="device input not bound" intAddr="TemplateIn" pDO="Ind" dev:db-id="extref-TemplateIn"/>
+							<ExtRef desc="device input bound to an absent IED" intAddr="GhostIn" pDO="Ind" iedName="Ghost" ldInst="GLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extref-GhostIn"/>
+							<ExtRef intAddr="NoDescIn" pDO="Ind" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extref-NoDescIn"/>
+						</Inputs>
+						<Outputs>
+							<ExtCtrl desc="device output to other" intAddr="TripOut" pDO="Ind" apRef="AP1" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extctrl-TripOut"/>
+							<ExtCtrl desc="output to other without address" apRef="AP1" iedName="Other" ldInst="OLD" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" dev:db-id="extctrl-OutputWithoutAddress"/>
+						</Outputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
+		</IEDSourceFiles>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0">
+			<DO name="Status" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC">
+			<DO name="Op" type="Status_Type"/>
+		</LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO">
+			<DO name="Ind" type="Status_Type"/>
+		</LNodeType>
+		<DOType id="Status_Type" cdc="SPS">
+			<DA name="stVal" bType="BOOLEAN" fc="ST"/>
+			<DA name="q" bType="Quality" fc="ST"/>
+		</DOType>
+	</DataTypeTemplates>
+</SCL>

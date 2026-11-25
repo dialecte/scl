@@ -8,11 +8,11 @@ import {
 	runSclTestCases,
 } from '@/v2019C1/test'
 
-import type { IedExtractParams } from './ied.types'
+import type { IsdExtractParams } from './ied.types'
 import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
-type TestCase = SclTest.BaseXmlTestCase & { options?: Partial<IedExtractParams> }
+type TestCase = SclTest.BaseXmlTestCase & { options?: Partial<IsdExtractParams> }
 
 const id = CUSTOM_RECORD_ID_ATTRIBUTE
 const ns = ALL_XMLNS_NAMESPACES

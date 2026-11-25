@@ -101,4 +101,17 @@ export type {
 } from './validate'
 
 export type { IedClassification, IedClassificationBasis, IedKind } from './ied/public'
-export type { IedExtractParams } from './extract/transaction/ied.types'
+export type {
+	CidExtractParams,
+	ClientRefs,
+	IedExtractBase,
+	IedExtractParams,
+	IedExtractResult,
+	InteractingIeds,
+	IsdExtractParams,
+} from './extract/transaction/ied.types'
+export type {
+	IedExportFileType,
+	IedExportOption,
+	IedExportRefusal,
+} from './extract/query/export-options.types'
