@@ -1,3 +1,4 @@
+import { SCL_PRIVATE_NAMESPACES } from './deep.constants'
 import { addChildrenTo } from './primitives/add-children-to'
 import { cloneTree } from './primitives/clone-tree'
 
@@ -134,18 +135,29 @@ async function resolveExistingPrivateMergeTarget(
 ): Promise<Scl.Ref<'Private'> | undefined> {
 	const { sourceQuery, ref, targetParent } = params
 	if (ref.tagName !== 'Private') return undefined
+	// only the SCL Private merges: a vendor's Private of another namespace is an element of its own
+	const source = await sourceQuery.getRecord(ref)
+	if (!source || !isSclPrivate({ record: source })) return undefined
 
 	const sourceType = (await sourceQuery.any.getAttributes(ref)).type
 	if (!sourceType) return undefined
 
 	const parentRecord = await tx.getRecord(targetParent)
-	const privateChildren =
-		parentRecord?.children.filter((child) => child.tagName === 'Private') ?? []
+	const privateRefs = parentRecord?.children.filter((child) => child.tagName === 'Private') ?? []
+	const privateChildren = await tx.getRecords(privateRefs as Scl.Ref<'Private'>[])
 	for (const privateChild of privateChildren) {
+		if (!privateChild || !isSclPrivate({ record: privateChild })) continue
 		const type = (await tx.any.getAttributes(privateChild)).type
 		if (type === sourceType) return { tagName: 'Private', id: privateChild.id }
 	}
 	return undefined
+}
+
+/** Whether a Private is the SCL one: in a namespace the definition declares for it. */
+function isSclPrivate(params: { record: { namespace: { uri: string } } }): boolean {
+	return SCL_PRIVATE_NAMESPACES.some(function isItsNamespace(namespace) {
+		return namespace.uri === params.record.namespace.uri
+	})
 }
 
 /** All `LNode`/`LN`/`LN0` records under (and including) the source subtree: the ones the clone left out are among them. */

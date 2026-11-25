@@ -757,9 +757,9 @@ function targetOnlyNode(node: AnyTreeRecord): DiffNode {
 /**
  * Classify an unmatched instance child the template does not know as the project's own. What the engine itself
  * creates (its naming and provenance) is ignored (preserved silently), and so is an element of a tag the consumer
- * maintains itself (`consumerManagedTags`) when it is known not to be the template's; the transparent `Private`
- * wrapper is unwrapped so genuine author children inside it are still surfaced; anything else is an author-added
- * `target-only` element. An element that may be the template's own, dropped by the newer revision (`mayBeTemplates`:
+ * maintains itself (`consumerManagedTags`) when it is known not to be the template's; anything else is an
+ * author-added `target-only` element. The tree comes unwrapped (`getTree`): an SCL `Private` is already walked through,
+ * its children surfaced where it stood; a vendor's `Private` of another namespace is an element of the project's own. An element that may be the template's own, dropped by the newer revision (`mayBeTemplates`:
  * it carries a lineage the engine cannot tell from the project's own — a level of the unit, a fork given no previous
  * revision), is listed whatever the consumer's tags.
  */
@@ -772,10 +772,6 @@ function pushInstanceOnly(params: {
 	const { node, out, policy, mayBeTemplates } = params
 	if (ENGINE_MANAGED_TAGS.has(node.tagName)) return
 	if (!mayBeTemplates && policy.consumerManagedTags.has(node.tagName)) return
-	if (node.tagName === 'Private') {
-		for (const child of node.tree) pushInstanceOnly({ node: child, out, policy, mayBeTemplates })
-		return
-	}
 	out.push(targetOnlyNode(node))
 }
 

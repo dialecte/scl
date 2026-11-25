@@ -4,8 +4,6 @@ import { findUniqueValueInScope } from './resolve-unique-value'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
-
 import type {
 	PlacementCollisionParams,
 	PlacementResolution,
@@ -78,17 +76,13 @@ export async function resolvePlacementCollision(
 }
 
 /**
- * The element whose uniqueness rules cover `ref`: its parent, or — when the parent is a wrapper
- * the dialecte looks through (a Private) — that wrapper's own parent, and so on.
+ * The element whose uniqueness rules cover `ref`: its first ancestor as core reads the chain, the dialecte's own
+ * wrappers (an SCL Private) walked through; a same-name element of another namespace is an ordinary parent.
  */
 export async function findConstraintParent(
 	query: Core.Query<Config>,
 	params: { ref: Scl.Ref<Scl.ElementsOf> },
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const transparentElements: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
-	let parent = (await query.getRecord(params.ref))?.parent
-	while (parent && transparentElements.includes(parent.tagName)) {
-		parent = (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent
-	}
+	const [parent] = await query.findAncestors(params.ref, { depth: 1 })
 	return parent ? (toRef(parent) as Scl.Ref<Scl.ElementsOf>) : undefined
 }

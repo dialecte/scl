@@ -90,9 +90,8 @@ export async function cloneAppliedSatellites(
 	for (const satelliteRef of satellites) {
 		// one read: the element holding it (the parent of its Private) and its structural level
 		const ancestors = await sourceQuery.findAncestors(satelliteRef, { stopAtTagName: 'Substation' })
-		const holder = ancestors.find(function isHolder(ancestor) {
-			return ancestor.tagName !== 'Private'
-		})
+		// the SCL Private holding it is walked through: the first ancestor is its holder
+		const [holder] = ancestors
 		const holderLanding = landings && holder ? findHolderLanding({ holder, landings }) : undefined
 		const targetParent = holderLanding ?? readStructureLevel({ ancestors, structure })
 		placements.push({
