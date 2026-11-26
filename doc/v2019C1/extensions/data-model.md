@@ -117,15 +117,22 @@ In one transaction, in this order:
 
    The `DAI` goes with it only when nothing else is left on it (no attribute but `name` / `ix`, no child), and each `SDI` / `DOI` above it the same, walking up. An `sAddr`, a `desc`, a `valImport` written on the `DAI`, another `DAI` keep what holds them.
 
-2. Its `SourceRef` / `ControlRef` are no longer implemented: `extRefAddr` / `extRefUuid`, `extCtrlAddr` / `extCtrlUuid` are dropped. Their source and the `ExtRef` / `ExtCtrl` in the IED stay.
+2. Its input subscriptions are ended with `dataflow.unsubscribe`, including the other `ExtRef`s that
+   implement the same data-object-level signal. An `ExtRef` holding an internal address stays and
+   loses its subscription binding; one without an internal address is removed. Registration and
+   supervision bookkeeping follows the unsubscribe result. `unsubscribeOthers` defaults to `false`;
+   when `true`, `ExtRef`s of other LNodes subscribing to the unlocked LNode's data end too. Its
+   `ControlRef` and any dangling input link are unlinked, with the same `ExtCtrl` / input behavior as
+   an ordinary unlock.
 3. It goes back to its specification, kept by its `LNodeSpecNaming`, which is left as it is. Specified on a specification IED (an IED with no ICD or IID among its source files) holding the logical node its specified naming names, no other LNode bound to that logical node, and not unlocked from that IED itself: bound to that logical node, `iedName`, `ldInst`, `prefix`, `lnClass`, `lnInst` from its specified naming and `lnUuid` that logical node's uuid. Otherwise assigned to no IED: `iedName="None"`, `lnUuid` cleared; `ldInst`, `prefix`, `lnClass`, `lnInst` are those of its `LNodeSpecNaming` (`ldInst` removed when it names no logical device). `lnType` stays.
 
-An `LNode` assigned to no IED is left as it is (`{ removed: [], kept: [] }`).
+An `LNode` assigned to no IED is left as it is; its `unsubscribe` result is empty.
 
-It answers what it did to the LN's data, for a consumer to show:
+It answers what it did to the LN's data and subscriptions, for a consumer to show:
 
 - `removed`: each element removed, a `Val` then the `DAI` / `SDI` / `DOI` it left empty, walking up (values in no set order).
 - `kept`: per `DAI` a `DAS` names whose value stays, `{ dai, specification, reason }`, `reason` one of `not-imported`, `not-one-value`, `setting-group`, `no-specified-value` (no single plain value specified: the `DAS` holds several, blank or setting-group `Val`, or none and its type default is not one plain `Val`), `value-changed` (checked in that order). A `DAS` naming no `DAI` is in neither list.
+- `unsubscribe`: the result of `dataflow.unsubscribe` (`unbound`, `removed`, `unlinked`, `registrations`, `supervisions`, `kept`).
 
 ```ts
 const { removed, kept } = await doc.transaction((tx) =>
@@ -169,7 +176,7 @@ import type {
 | `LogicalNodeRecord` | A logical node whose closure is imported: an `LNode`, `LN` or `LN0` record.                                                                   |
 | `TypeFollower`      | A logical node of the target taking the type its source names: `{ source, target }`.                                                          |
 | `KeepNameTypesFrom` | On a dedup, which side keeps the type name — `'source' \| 'target'`.                                                                          |
-| `UnlockLNodeParams` | Parameters of `unlockLNode` (`lnode`).                                                                                                        |
-| `UnlockLNodeResult` | Result of `unlockLNode` (`removed`, `kept`).                                                                                                  |
+| `UnlockLNodeParams` | Parameters of `unlockLNode` (`lnode`, `unsubscribeOthers?`).                                                                                  |
+| `UnlockLNodeResult` | Result of `unlockLNode` (`removed`, `kept`, `unsubscribe`).                                                                                   |
 | `KeptValue`         | A `DAI` whose value an unlock keeps: `{ dai, specification, reason }`.                                                                        |
 | `KeptValueReason`   | Why: `'not-imported' \| 'not-one-value' \| 'setting-group' \| 'no-specified-value' \| 'value-changed'`.                                       |
