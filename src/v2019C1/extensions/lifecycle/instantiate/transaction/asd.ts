@@ -6,6 +6,8 @@ import {
 	planCopyUnbinds,
 	resolveCopyLanding,
 	readCopyTrees,
+	planCopyReferences,
+	writeCopyReferences,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
 import { NO_LEVEL_LANDED } from '@/v2019C1/extensions/lifecycle/copy/copy.constants'
@@ -169,9 +171,8 @@ export async function placeApplication(
 		referenced: content.referenced,
 		index,
 		held: content.held,
-		sourceIsProject: copy !== undefined,
+		sourceIsProject: params.sourceIsProject === true,
 		landingOf: copy?.landingOf,
-		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
 	const allMappings = [
@@ -199,6 +200,17 @@ export async function placeApplication(
 			unbinds: planCopyUnbinds({ trees }),
 			cloneMappings: allMappings,
 		})
+	}
+	// a copy drops the references leaving it the consumer skipped, each in its family's shape: classified as the report
+	// classified them (over every root it listed, so a reference to a function left out stays as written), written on what
+	// it placed only (a function left out asks nothing)
+	if (copy && params.droppedReferences?.size) {
+		const plan = await planCopyReferences({
+			roots: [applicationRef, ...composedFunctionRefs],
+			query: sourceQuery,
+			dropped: params.droppedReferences,
+		})
+		await writeCopyReferences(tx, { plan, cloneMappings: allMappings })
 	}
 
 	// resolve a name collision for each placed composed Function at its own structural

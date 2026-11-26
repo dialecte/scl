@@ -9,6 +9,7 @@ import {
 	SPECIFIED_NAMING_ATTRIBUTES,
 	UUID_REFERENCE_PAIRS,
 } from '@/v2019C1/constants'
+import { cutPairLink } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/process-link-cut'
 import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type {
@@ -103,12 +104,9 @@ function cutLinks(params: {
 	for (const pair of pairs) {
 		const target = cutTarget({ record, pair, index, kept, written })
 		if (target === 'written') continue
-		Object.assign(attributes, expectedData({ record, pair, target }))
-		for (const name of linkAttributes(pair)) {
-			if (!readAttribute({ record, name, defaults: 'none', fullObject: true })) continue
-			attributes[name] = undefined
-			removed.push(name)
-		}
+		const cut = cutPairLink({ record, pair, target: target?.record })
+		Object.assign(attributes, cut.attributes)
+		removed.push(...cut.removed)
 	}
 	return removed.length > 0 ? { attributes, removed: removed.toSorted() } : undefined
 }
@@ -127,45 +125,6 @@ function cutTarget(params: {
 	const { named, node } = linkTarget({ record, pair, index })
 	if (!named) return 'written'
 	return node && kept.has(node.record.id) ? 'written' : node
-}
-
-/** The expected data an input or output specification lacks, from the LNode its cut link named. */
-function expectedData(params: {
-	record: AnyRawRecord
-	pair: ReferencePair
-	target: SectionNode | undefined
-}): Record<string, string> {
-	const { record, pair, target } = params
-	if (
-		!SPECIFICATION_LINK_TAGS.has(record.tagName) ||
-		!(pair.target as readonly string[]).includes('LNode')
-	)
-		return {}
-	const attributes = readAttributes({ record, defaults: 'none' }) as Record<
-		string,
-		string | undefined
-	>
-	const [objectName, attributeName] = pair.companions.map(function valueOf(companion) {
-		return attributes[companion.name]
-	})
-	const lnClass =
-		target && readAttribute({ record: target.record, name: 'lnClass', defaults: 'none' })
-	const filled: Record<string, string> = {}
-	if (!attributes.pLN && lnClass) filled.pLN = lnClass
-	if (!attributes.pDO && objectName) filled.pDO = objectName
-	if (record.tagName === 'SourceRef' && !attributes.pDA && attributeName) filled.pDA = attributeName
-	return filled
-}
-
-/** The attributes of a link: its uuid, its path, and what names the data at its target. */
-function linkAttributes(pair: ReferencePair): string[] {
-	return [
-		pair.attribute.uuid,
-		pair.attribute.path,
-		...pair.companions.map(function nameOf(companion) {
-			return companion.name
-		}),
-	]
 }
 
 function isMappingDocumentation(tagName: string): boolean {

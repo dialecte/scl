@@ -29,7 +29,6 @@ export const SCENARIO_POLICIES = {
 		subNetworkSettings: 'source',
 		placement: 'template-levels',
 		composedFunctions: 'missing',
-		outsideReferences: 'leave-out',
 	},
 	template: {
 		matchKey: 'templateUuid',
@@ -44,7 +43,6 @@ export const SCENARIO_POLICIES = {
 		subNetworkSettings: 'project',
 		placement: 'template-levels',
 		composedFunctions: 'missing',
-		outsideReferences: 'leave-out',
 	},
 	fork: {
 		matchKey: 'uuid',
@@ -59,7 +57,6 @@ export const SCENARIO_POLICIES = {
 		subNetworkSettings: 'source',
 		placement: 'template-levels',
 		composedFunctions: 'missing',
-		outsideReferences: 'leave-out',
 	},
 	copy: {
 		matchKey: 'uuid',
@@ -74,6 +71,5 @@ export const SCENARIO_POLICIES = {
 		subNetworkSettings: 'source',
 		placement: 'source-levels',
 		composedFunctions: 'all',
-		outsideReferences: 'keep',
 	},
 } as const satisfies Record<LifecycleScenario, ScenarioPolicy>

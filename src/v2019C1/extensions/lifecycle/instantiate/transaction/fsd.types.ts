@@ -5,6 +5,7 @@ import type {
 	SourceFunctionRef,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ProcessReferenceFamily } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -32,6 +33,13 @@ export type FsdParams = {
 	 * template says. Left out when the caller already resolved where it lands.
 	 */
 	resolvePlacement?: boolean
+	/** The source is the document placed into (a copy), read from both documents' ids at the verb's entry. */
+	sourceIsProject?: boolean
+	/**
+	 * A copy: the families of the references leaving it whose group the consumer skipped, dropped in their family's shape
+	 * (see `planCopyReferences`). None dropped by default.
+	 */
+	droppedReferences?: ReadonlySet<ProcessReferenceFamily>
 	/**
 	 * The function is placed as part of a larger template (an application's, a substation's): the provenance is that
 	 * template's, the function carries none of its own.

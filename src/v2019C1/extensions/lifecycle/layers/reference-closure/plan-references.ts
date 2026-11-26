@@ -1,3 +1,4 @@
+import { planProcessReferences } from './process-references'
 import {
 	INPUT_LATER_BINDING_NEEDS,
 	INPUT_SOURCE_ATTRIBUTES,
@@ -9,6 +10,7 @@ import {
 	IED_RELATIVE_PREFIX,
 	SUPERVISIONS,
 	UUID_TARGET_TAGS,
+	EMPTY_PLAN,
 } from './reference-closure.constants'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -49,6 +51,33 @@ import type * as Core from '@dialecte/core'
  * @intent which references of an IED leave the file, reduce the inputs bound to IEDs outside a file, classify references inside or outside a closure, cut the references of an exported or copied IED
  */
 export async function planReferences(params: PlanReferencesParams): Promise<ReferencePlan> {
+	const { roots, sourceQuery, destinationQuery, processPolicy } = params
+	// the IED section is read only for IED roots; the process references only of the other roots, when asked
+	const iedRoots = roots.filter((root) => root.depth === 'interface' || root.ref.tagName === 'IED')
+	const processRoots = roots.flatMap((root) =>
+		root.depth === 'whole' && root.ref.tagName !== 'IED' ? [root.ref] : [],
+	)
+	const plans = await Promise.all([
+		iedRoots.length > 0 ? planIedReferences({ ...params, roots: iedRoots }) : EMPTY_PLAN,
+		processPolicy && processRoots.length > 0
+			? planProcessReferences({
+					roots: processRoots,
+					sourceQuery,
+					destinationQuery,
+					policy: processPolicy,
+				})
+			: EMPTY_PLAN,
+	])
+	return {
+		references: plans.flatMap((plan) => plan.references),
+		leaveOut: new Set(plans.flatMap((plan) => [...plan.leaveOut])),
+		edits: plans.flatMap((plan) => plan.edits),
+		warnings: plans.flatMap((plan) => plan.warnings),
+	}
+}
+
+/** The IED half of `planReferences`: the references the IED roots make. */
+async function planIedReferences(params: PlanReferencesParams): Promise<ReferencePlan> {
 	const { roots, sourceQuery, destinationQuery, policy } = params
 	const ieds = await sourceQuery.getRecordsByTagName('IED')
 	const iedById = new Map(ieds.map((ied) => [ied.id, ied] as const))
@@ -63,13 +92,14 @@ export async function planReferences(params: PlanReferencesParams): Promise<Refe
 	}
 	const rootRecords = await Promise.all(
 		wholeRoots.map(async function readRoot(root) {
-			const ied = iedById.get(root.ref.id)
+			const ied = iedById.get(root.ref.id ?? '')
 			invariant(ied, {
 				key: 'ELEMENT_NOT_FOUND',
 				ref: root.ref,
 				detail: 'planReferences: root not found',
 			})
-			return { ied, records: await readHolderRecords(sourceQuery, { iedRef: root.ref }) }
+			const iedRef = root.ref as Scl.Ref<'IED'>
+			return { ied, records: await readHolderRecords(sourceQuery, { iedRef }) }
 		}),
 	)
 	const landing = await readLanding({
@@ -295,7 +325,9 @@ async function decideSupervisions(params: {
 	policy: ReferencePolicy
 }): Promise<Decision[]> {
 	const { sourceQuery, roots, policy } = params
-	const rootIds = new Set(roots.flatMap((root) => (root.depth === 'whole' ? [root.ref.id] : [])))
+	const rootIds = new Set(
+		roots.flatMap((root) => (root.depth === 'whole' ? [root.ref.id ?? ''] : [])),
+	)
 	const interfaceControlBlocks = new Set(
 		roots.flatMap((root) => (root.depth === 'interface' ? [...root.controlBlocks] : [])),
 	)
@@ -370,7 +402,10 @@ async function insideSupervisionValues(params: {
 			.flatMap((controlBlock) =>
 				roots.flatMap((root) => {
 					if (root.depth !== 'whole') return []
-					const supervision = index.supervisionOf({ controlBlock, subscriber: root.ref })
+					const supervision = index.supervisionOf({
+						controlBlock,
+						subscriber: root.ref as Scl.Ref<'IED'>,
+					})
 					return supervision ? [supervision.val.id] : []
 				}),
 			),

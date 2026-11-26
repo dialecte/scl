@@ -2,7 +2,15 @@ import type { Config, Scl } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'
 import type { LifecycleTarget, Resolution } from '@/v2019C1/extensions/lifecycle/contract.types'
-import type { DiffReport, ReportedElement } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	DecisionGroup,
+	DiffReport,
+	ReportedElement,
+} from '@/v2019C1/extensions/lifecycle/engine/diff.types'
+import type {
+	ProcessReferenceFamily,
+	ReferencePlan,
+} from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type { LandingOf } from '@/v2019C1/extensions/lifecycle/layers/topology'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type { CommitRefusal } from '@/v2019C1/hooks/before-commit/commit-plan.types'
@@ -80,6 +88,8 @@ export type CopyDescription = {
 	refusals: CommitRefusal[]
 	/** The key taken where each root lands, by the id of the group placing it. */
 	keysTaken: ReadonlyMap<string, KeyTaken>
+	/** One group per family of the references the copy carries out of what it copies: see `describeReferenceGroups`. */
+	referenceGroups: DecisionGroup[]
 }
 
 export type ResolveCopyLandingParams = {
@@ -106,4 +116,18 @@ export type CopyLanding = {
 	placeUnder: Scl.Ref<TopologyStructuralTag>
 	landingOf: LandingOf
 	functionLandings: ReadonlyMap<string, Scl.Ref<TopologyStructuralTag>>
+}
+
+export type PlanCopyReferencesParams = {
+	/** The roots the copy places, read in the document it is pasted into (one document: the source and the destination). */
+	roots: readonly Scl.Ref<Scl.ElementsOf>[]
+	query: Core.Query<Config>
+	/** The families whose references naming what the document holds outside the copy are dropped. */
+	dropped: ReadonlySet<ProcessReferenceFamily>
+}
+
+export type WriteCopyReferencesParams = {
+	plan: ReferencePlan
+	/** The clone mappings of the copy: each source element named by the plan to the copy written of it. */
+	cloneMappings: readonly Scl.CloneMapping[]
 }

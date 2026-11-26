@@ -54,6 +54,8 @@ export type UpdateAsdParams = {
 	decisionMappings?: DecisionMappings
 	/** The application is placed by this operation alone (an ASD): see `instantiate.asd`. */
 	resolvePlacement?: boolean
+	/** The source is the document placed into (a copy), read from both documents' ids at the verb's entry. */
+	sourceIsProject?: boolean
 	/** Placed as part of a larger template: see `instantiate.asd`. */
 	partOfTemplate?: boolean
 	/**

@@ -7,6 +7,8 @@ import { placeUniquely } from '@/v2019C1/extensions/lifecycle/constraints'
 import {
 	planCopyUnbinds,
 	readCopyTrees,
+	planCopyReferences,
+	writeCopyReferences,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
 import { NO_LEVEL_LANDED } from '@/v2019C1/extensions/lifecycle/copy/copy.constants'
@@ -65,8 +67,8 @@ import type * as Core from '@dialecte/core'
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
 	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
-	// a copy reads the document it is pasted into: the shared elements it is classified by are the project's own
-	const sourceIsProject = policy.placementIdentity === 'copy'
+	// the source is the document it is pasted into (a copy): the shared elements it is classified by are the project's own
+	const sourceIsProject = params.sourceIsProject === true
 
 	// where the function lands: where the consumer started, or — started above the level the
 	// function was made for — on the level its template says, the missing levels created
@@ -101,11 +103,11 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		policy.placement === 'template-levels'
 			? await landOnStructure(sourceQuery, { primaryRef: functionRef, structure })
 			: NO_LEVEL_LANDED
-	// a copy keeps what it carries as written: inside one document the element a reference names is there
-	const carried =
-		policy.outsideReferences === 'leave-out'
-			? await scopeFunctionCarried(sourceQuery, { functionRef, landedLevels: landed.levels, index })
-			: undefined
+	// a copy writes what it carries (inside one document the element a reference names is there; the references leaving it
+	// are kept or dropped per family, see `planCopyReferences`); a placement from a file scopes them out
+	const carried = sourceIsProject
+		? undefined
+		: await scopeFunctionCarried(sourceQuery, { functionRef, landedLevels: landed.levels, index })
 	const { cloneMappings: functionMappings } = await deep(tx, {
 		sourceQuery,
 		ref: functionRef,
@@ -142,7 +144,6 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 		scope,
 		index,
 		sourceIsProject,
-		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
 	const allMappings = [
@@ -166,6 +167,16 @@ export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Prom
 			unbinds: planCopyUnbinds({ trees }),
 			cloneMappings: allMappings,
 		})
+	}
+	// a copy drops the references leaving it the consumer skipped, each in its family's shape, before anything reads the
+	// mappings of what it wrote
+	if (sourceIsProject && params.droppedReferences?.size) {
+		const plan = await planCopyReferences({
+			roots: [functionRef],
+			query: sourceQuery,
+			dropped: params.droppedReferences,
+		})
+		await writeCopyReferences(tx, { plan, cloneMappings: allMappings })
 	}
 
 	// a shared element created here (no project element to map onto) is named at its structural level

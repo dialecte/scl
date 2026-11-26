@@ -12,6 +12,7 @@ export type {
 	GroupDecision,
 	KeptAttributeChange,
 	KeptAttributeReason,
+	OutsideReference,
 	RemovalSideEffect,
 	TextChange,
 	OrderChange,

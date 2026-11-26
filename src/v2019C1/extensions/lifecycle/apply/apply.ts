@@ -243,6 +243,13 @@ async function runVerb(
 	},
 ): Promise<AppliedInstances> {
 	const { target, report, decisions, removalBase, placeholderLineages } = params
+	// the source is the project: a copy, reading the document it writes (a template placed from the same document is a
+	// placement from a file all the same)
+	const [{ id: document }, { id: source }] = await Promise.all([
+		tx.getDocumentInfo(),
+		target.sourceQuery.getDocumentInfo(),
+	])
+	const sourceIsProject = target.scenario === 'copy' && document === source
 	// as the report places it: on the levels its template says, or under the anchor itself (a copy)
 	const resolvePlacement =
 		scenarioPolicy({ scenario: target.scenario }).placement === 'template-levels'
@@ -261,6 +268,7 @@ async function runVerb(
 				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 				decisionMappings: target.resolution?.mappings,
 				resolvePlacement,
+				sourceIsProject,
 			})
 			return { verb: 'fsd', functions }
 		}
@@ -294,6 +302,7 @@ async function runVerb(
 				keepNameTypesFrom: target.resolution?.keepNameTypesFrom,
 				decisionMappings: target.resolution?.mappings,
 				resolvePlacement,
+				sourceIsProject,
 				sharedFunctions: target.resolution?.sharedFunctions,
 			})
 			return { verb: 'asd', applications, functions }

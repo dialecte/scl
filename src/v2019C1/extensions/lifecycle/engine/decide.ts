@@ -284,7 +284,9 @@ export function acceptedRefIds(params: {
 	groups: DecisionGroup[]
 	decisions: DecisionMap
 }): AcceptedIds {
-	const { groups, decisions } = params
+	// a group keeping a copy's references decides them, never whether their holders are written
+	const groups = params.groups.filter(isPlacementGroup)
+	const { decisions } = params
 	return collectGroupIds({
 		groups: groups.filter((group) => isAccepted({ group, decisions })),
 		primaries: new Set(groups.map((group) => nodeKey(group.primary))),
@@ -300,11 +302,18 @@ export function leftOutRefIds(params: {
 	groups: DecisionGroup[]
 	decisions: DecisionMap
 }): AcceptedIds {
-	const { groups, decisions } = params
+	// a group keeping a copy's references decides them, never whether their holders are written
+	const groups = params.groups.filter(isPlacementGroup)
+	const { decisions } = params
 	return collectGroupIds({
 		groups: groups.filter((group) => !isAccepted({ group, decisions })),
 		primaries: new Set(groups.map((group) => nodeKey(group.primary))),
 	})
+}
+
+/** Whether a group decides what is written (every group but one keeping a copy's references, see `DecisionGroup.kind`). */
+function isPlacementGroup(group: DecisionGroup): boolean {
+	return group.kind !== 'references'
 }
 
 /**

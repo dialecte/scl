@@ -7,6 +7,7 @@ import { writesToInstance } from './writes-to-instance'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { droppedFamilies } from '@/v2019C1/extensions/lifecycle/copy'
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -20,6 +21,7 @@ import {
 	groupsForInstance,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base'
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
@@ -144,6 +146,9 @@ export async function fsd(
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
+			sourceIsProject: params.sourceIsProject,
+			// a copy: the references leaving it whose group the consumer skipped
+			droppedReferences: droppedFamilies({ groups: report ? allGroups(report) : [], decisions }),
 		})
 		// what the function names outside it lands on what the project holds for it (an IED's logical node)
 		if (params.redirectMappings?.length) {
