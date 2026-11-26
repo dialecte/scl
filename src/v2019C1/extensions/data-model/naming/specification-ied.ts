@@ -2,6 +2,7 @@ import { isAssignedToIed } from './lnode-naming'
 
 import { isNativeNode } from '@/v2019C1/extensions/reference/query/find/is-native-node'
 import { readAttributes } from '@/v2019C1/helpers'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { SpecificationIed } from './lnode-naming.types'
 import type {
@@ -97,10 +98,13 @@ export function boundLogicalNodeOf(params: {
 		names: { prefix, lnClass, lnInst: inst },
 		iedId: ied?.id,
 		ldInst: lDevice && readAttributes({ record: lDevice, defaults: 'none' }).inst,
-		// a read lifts a Private's children into the element holding it: the check reads the ancestry that way
+		// a read lifts an SCL Private's children into the element holding it: the check reads the ancestry that way; a
+		// vendor's Private of another namespace stays in it, as core reads the chain
 		native: isNativeNode({
 			record,
-			ancestry: fromIed.filter((ancestor) => ancestor.tagName !== 'Private'),
+			ancestry: fromIed.filter(function isNotWrapper(ancestor) {
+				return !isOwnTransparentElement({ record: ancestor })
+			}),
 		}),
 	}
 }

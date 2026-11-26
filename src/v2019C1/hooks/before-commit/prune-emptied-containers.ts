@@ -5,7 +5,7 @@ import { throwDialecteError } from '@dialecte/core'
 import { readAttribute } from '@/v2019C1/helpers'
 import { emptiedRule } from '@/v2019C1/helpers/pruned-when-empty'
 import { PRUNED_WHEN_EMPTY_TAGS } from '@/v2019C1/helpers/pruned-when-empty.constants'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import {
 	buildCascadeOperations,
 	collectDeleteCascade,
@@ -243,7 +243,7 @@ function emptiedBy(operation: Scl.Operation): PruneCandidate | undefined {
 		}
 		case 'created': {
 			const { tagName, id } = operation.newRecord
-			if (!isTransparentElement(tagName)) return undefined
+			if (!isOwnTransparentElement({ record: operation.newRecord })) return undefined
 			return { tagName, id } as PruneCandidate
 		}
 		case 'updated':

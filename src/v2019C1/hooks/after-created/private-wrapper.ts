@@ -3,7 +3,10 @@ import { invariant } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config/dialecte.config'
 import { readAttribute } from '@/v2019C1/helpers'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import {
+	isOwnTransparentElement,
+	isTransparentElement,
+} from '@/v2019C1/helpers/transparent-elements'
 
 import type { Scl, Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -32,7 +35,7 @@ export async function wrapWithPrivateElementIfNeeded<
 		return []
 	}
 
-	if (isTransparentElement(parentRecord.tagName)) {
+	if (isOwnTransparentElement({ record: parentRecord })) {
 		return handleParentAsPrivateRecordCase({ parentRecord, childRecord, query })
 	}
 	// an element of the parent's own namespace sits in it directly
@@ -64,7 +67,7 @@ export async function wrapWithPrivateElementIfNeeded<
 	const ancestors = await query.findAncestors(parentRecord, { unwrap: [] })
 	const hasMatchingAncestor = ancestors.some(
 		(ancestor) =>
-			ancestor.tagName === 'Private' &&
+			isOwnTransparentElement({ record: ancestor }) &&
 			readAttribute({ record: ancestor, name: 'type', defaults: 'none' }) ===
 				childRecord.namespace.prefix,
 	)
@@ -87,6 +90,7 @@ async function findPrivateOfType<GenericParentElement extends Scl.ElementsOf>(pa
 	const index = privates.findIndex(
 		(privateRecord) =>
 			privateRecord !== undefined &&
+			isOwnTransparentElement({ record: privateRecord }) &&
 			readAttribute({ record: privateRecord, name: 'type', defaults: 'none' }) === type,
 	)
 	return index === -1 ? undefined : privateRefs[index]

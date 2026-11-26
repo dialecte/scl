@@ -1,4 +1,5 @@
 import { instanceTagOf } from './instance-tag'
+import { VENDOR_PRIVATE_KEY_FIELDS } from './match-child.constants'
 import { createPairingMemo } from './pairing-memo'
 import {
 	placeholderLineageOf,
@@ -14,6 +15,7 @@ import {
 	DISPOSABLE_REFERENCE_TAGS,
 	UUIDLESS_TUPLE_REFERRER_TAGS,
 } from '@/v2019C1/extensions/reference/constants/reference-uuids.constants'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { ChildMatch, PinnedMatches, ReferenceIdentityOf } from './match-child.types'
 import type { PairingMemo } from './pairing-memo.types'
@@ -170,7 +172,8 @@ export async function matchChild(
 	}
 
 	// an element with no key of its own is the one there is, else the next in order
-	if (keyFieldsOf(instanceTag).length === 0) return { record: candidates[0] }
+	if (pairingKeyFieldsOf({ record: sourceChild, tagName: instanceTag }).length === 0)
+		return { record: candidates[0] }
 	return matchByKey(sourceQuery, { targetQuery, sourceChild, siblings, candidates, memo })
 }
 
@@ -211,7 +214,10 @@ async function matchByKey(
 /** An element's key as one string: each of its key fields `name=value`, an absent one empty. */
 async function keyOf(reader: Reader, params: { record: AnyTreeRecord }): Promise<string> {
 	const attributes = await reader.any.getAttributes(params.record)
-	const fields = keyFieldsOf(instanceTagOf(params.record.tagName))
+	const fields = pairingKeyFieldsOf({
+		record: params.record,
+		tagName: instanceTagOf(params.record.tagName),
+	})
 	return fields.map((field) => `${field}=${attributes[field] ?? ''}`).join('|')
 }
 
@@ -599,4 +605,15 @@ async function findSameNameChild(
 			})
 		},
 	})
+}
+
+/** The fields an element is paired by: its key (`keyFieldsOf`), a vendor's `Private` its `type`. */
+function pairingKeyFieldsOf(params: {
+	record: { tagName: string; namespace: { uri: string } }
+	tagName: string
+}): readonly string[] {
+	const { record, tagName } = params
+	if (record.tagName === 'Private' && !isOwnTransparentElement({ record }))
+		return VENDOR_PRIVATE_KEY_FIELDS
+	return keyFieldsOf(tagName)
 }

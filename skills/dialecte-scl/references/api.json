@@ -57,7 +57,7 @@
 			"root": "export",
 			"entry": "@dialecte/scl/v2019C1",
 			"otherRoutes": [],
-			"signature": "(params: { record: ReadAttributeParams['record']; }) => boolean",
+			"signature": "(params: { record: ReadAttributeParams['record'] & { tagName: string; namespace: { uri: string; }; }; }) => boolean",
 			"summary": "Whether an element is a transparent wrapper of the dialecte's own elements: a `Private` whose `type` is a namespace the dialecte declares (`NAMESPACE_WRAPPER_TYPES`), as opposed to a tool's private data.",
 			"intents": [
 				"tell a namespace Private from a tool's private data",
@@ -1378,7 +1378,7 @@
 				"import an IED from an ICD",
 				"clone an element across documents"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/transplant/transaction/deep.ts:40"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/transplant/transaction/deep.ts:42"
 		},
 		{
 			"path": "tx.lifecycle.update.asd",

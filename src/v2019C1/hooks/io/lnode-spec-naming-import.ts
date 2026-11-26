@@ -3,6 +3,7 @@ import { createSpecificationIedImport } from './specification-ied-import'
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { newSpecifiedNaming } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
 import { readAttribute } from '@/v2019C1/helpers'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import { derivedSpecificationNamingDiagnostic } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 
 import type { SpecNamingImport } from './lnode-spec-naming-import.types'
@@ -35,7 +36,7 @@ export function createSpecNamingImport(): SpecNamingImport {
 			return
 		}
 		if (
-			record.tagName === 'Private' &&
+			isOwnTransparentElement({ record }) &&
 			record.parent?.id === lnode.id &&
 			readAttribute({ record, name: 'type', defaults: 'none' }) ===
 				SCL_DIALECTE_CONFIG.namespaces.v2019C1.prefix

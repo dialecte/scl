@@ -8,7 +8,7 @@ import { TEMPLATE_NAME, TOPOLOGY_STRUCTURAL_TAGS } from '@/v2019C1/constants'
 import { ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { isTopologyLevel, readAttribute } from '@/v2019C1/helpers'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 import { collectSubtreeIds } from '@/v2019C1/hooks/before-delete'
 
 import type {
@@ -159,10 +159,11 @@ async function scaffoldingContent(
 	const { scaffolding } = params
 	const content: Scl.RawRecord<Scl.ElementsOf>[] = []
 	const record = await query.getRecord(scaffolding)
-	for (const childRef of record?.children ?? []) {
-		if (isTransparentElement(childRef.tagName)) continue
-		const child = await query.getRecord(childRef)
-		if (child) content.push(widen(child))
+	// its children read at once; an SCL Private is a wrapper and stays, a vendor's Private of another namespace is an
+	// element the scaffolding holds of its own
+	const children = await query.getRecords(record?.children ?? [])
+	for (const child of children) {
+		if (child && !isOwnTransparentElement({ record: child })) content.push(widen(child))
 	}
 	const { applications, functions } = await primariesUnderScope(query, { scopeRef: scaffolding })
 	const primaries = [...applications, ...functions]

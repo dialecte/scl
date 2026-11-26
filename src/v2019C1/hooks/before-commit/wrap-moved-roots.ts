@@ -5,7 +5,10 @@ import { toRawRecord } from '@dialecte/core/helpers'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { readAttribute } from '@/v2019C1/helpers'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import {
+	isOwnTransparentElement,
+	isTransparentElement,
+} from '@/v2019C1/helpers/transparent-elements'
 
 import type { MovePlaces, MovedRef } from './moved-roots.types'
 import type { MoveWrite } from './moves.types'
@@ -60,7 +63,8 @@ async function readPrivates(
 	const privates = new Map<string, AnyRawRecord>()
 	if (refs.size === 0) return privates
 	for (const record of await query.any.getRecords([...refs.values()])) {
-		if (record)
+		// only an SCL Private takes the moved roots: a vendor's Private of another namespace is its own element
+		if (record && isOwnTransparentElement({ record }))
 			privates.set(
 				record.id,
 				params.pending.get(record.id) ?? (toRawRecord(record) as AnyRawRecord),
@@ -83,7 +87,7 @@ function wrapGroupsOf(params: {
 		const parent = parentId
 			? (pending.get(parentId) ?? places.read.get(parentId) ?? places.written.get(parentId))
 			: undefined
-		if (!child || !parent || isTransparentElement(parent.tagName)) continue
+		if (!child || !parent || isOwnTransparentElement({ record: parent })) continue
 		if (child.namespace.uri === parent.namespace.uri) continue
 		// an element of that namespace above the parent sits in a wrapper of it already
 		const wrapped = chainOf({ places, id: parent.id }).some(

@@ -1,4 +1,3 @@
-import { TRANSPARENT_TAGS } from '../find/collect-with-ancestry.constants'
 import { toAnyRawRecord } from '../find/collect-with-ancestry.helpers'
 import { compareDocumentOrder } from '../find/compare-document-order'
 import { isNativeNode } from '../find/is-native-node'
@@ -25,10 +24,8 @@ export async function findNativeLnByUuid(
 	const ancestries = await query.findAncestorsOfEach(matches)
 	const candidates: { found: NativeLogicalNode; chain: readonly AnyRawRecord[] }[] = []
 	for (const [index, match] of matches.entries()) {
-		const ancestry = [...(ancestries[index] ?? [])]
-			.reverse()
-			.filter((ancestor) => !TRANSPARENT_TAGS.has(ancestor.tagName))
-			.map(toAnyRawRecord)
+		// the SCL Private is already walked through by the default unwrap
+		const ancestry = [...(ancestries[index] ?? [])].reverse().map(toAnyRawRecord)
 		const record = toAnyRawRecord(match)
 		const ied = ancestry.find((ancestor) => ancestor.tagName === 'IED')
 		if (!ied || !isNativeNode({ record, ancestry })) continue

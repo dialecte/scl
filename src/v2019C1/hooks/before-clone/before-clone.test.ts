@@ -2,6 +2,7 @@ import { beforeClone } from './before-clone'
 
 import { describe, expect } from 'vitest'
 
+import { SCL_NAMESPACES } from '@/v2019C1/config'
 import { runSclTestCases } from '@/v2019C1/test'
 
 import type { Scl } from '@/v2019C1/config'
@@ -18,8 +19,9 @@ describe('beforeClone', () => {
 		}
 	}
 
+	// an element of the SCL namespace, as an imported record holds it
 	const treeRecordPart = {
-		namespace: { prefix: '', uri: '' },
+		namespace: { prefix: '', uri: SCL_NAMESPACES.default.uri },
 		parent: null,
 		children: [],
 		value: '',
@@ -27,17 +29,19 @@ describe('beforeClone', () => {
 	}
 
 	const V2019C1_URI = 'http://www.iec.ch/61850/2019/SCL/6-100'
-	const supportedChild = (tagName: string) => ({
-		id: `child-${tagName}`,
-		tagName,
-		attributes: [],
-		namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
-		parent: null,
-		children: [],
-		value: '',
-		status: 'unchanged' as const,
-		tree: [],
-	})
+	function supportedChild(tagName: string) {
+		return {
+			id: `child-${tagName}`,
+			tagName,
+			attributes: [],
+			namespace: { prefix: 'eIEC61850-6-100', uri: V2019C1_URI },
+			parent: null,
+			children: [],
+			value: '',
+			status: 'unchanged' as const,
+			tree: [],
+		}
+	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		'uuid attribute present → uuid removed': {

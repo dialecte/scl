@@ -1,34 +1,16 @@
+import {
+	SUPPORTED_ELEMENT_NAMESPACE_URIS,
+	SUPPORTED_NAMESPACE_PREFIXES,
+} from './before-clone.constants'
+
 import { isElementOf } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG, SCL_NAMESPACES } from '@/v2019C1/config'
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { readAttribute } from '@/v2019C1/helpers'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { Scl } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
-
-/**
- * URIs of every namespace our schema registers. For these we own the complete
- * element set, so an element in one of them that is not in the definition is a
- * deprecated/unknown one (e.g. `SsdReference`, superseded by `SclFileReference` in
- * 2019C1) and must not be carried into a clone. Derived from `SCL_NAMESPACES` so a
- * newly registered namespace is covered automatically. Foreign/vendor namespaces
- * are not registered here and pass through verbatim.
- */
-const SUPPORTED_ELEMENT_NAMESPACE_URIS: ReadonlySet<string> = new Set(
-	Object.values(SCL_NAMESPACES).map((namespace) => namespace.uri),
-)
-
-/**
- * Prefixes of every namespace our schema registers. A `Private` whose `type` names
- * one of these is a wrapper we own (not a vendor flag), so an empty one carries no
- * information and is dropped. Derived from `SCL_NAMESPACES`; empty prefixes (the
- * default namespace) are excluded so an anonymous `type=""` is not matched here.
- */
-const SUPPORTED_NAMESPACE_PREFIXES: ReadonlySet<string> = new Set(
-	Object.values(SCL_NAMESPACES)
-		.map((namespace) => namespace.prefix)
-		.filter(Boolean),
-)
 
 /** True when `record` is in a supported namespace but our schema no longer defines it. */
 function isUnknownSupportedNamespaceElement(record: Scl.TreeRecord<Scl.ElementsOf>): boolean {
@@ -60,7 +42,7 @@ export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
 		fullObject: true,
 	})?.value
 	const hasType = typeValue !== undefined
-	if (record.tagName === 'Private' && !record.tree.length && !hasValue && !hasType) {
+	if (isOwnTransparentElement({ record }) && !record.tree.length && !hasValue && !hasType) {
 		shouldBeCloned = false
 	}
 
@@ -68,7 +50,7 @@ export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
 	// registered prefixes): unlike a vendor flag, such a wrapper is meaningless with
 	// no content. Vendor-typed empty privates are preserved.
 	if (
-		record.tagName === 'Private' &&
+		isOwnTransparentElement({ record }) &&
 		!record.tree.length &&
 		!hasValue &&
 		typeValue !== undefined &&
@@ -85,7 +67,7 @@ export function beforeClone<GenericElement extends Scl.ElementsOf>(params: {
 		shouldBeCloned = false
 	}
 	if (
-		record.tagName === 'Private' &&
+		isOwnTransparentElement({ record }) &&
 		genericRecord.tree.length > 0 &&
 		genericRecord.tree.every(isUnknownSupportedNamespaceElement)
 	) {

@@ -4,7 +4,10 @@ import { findUniqueValueInScope } from './resolve-unique-value'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import {
+	isOwnTransparentElement,
+	isTransparentElement,
+} from '@/v2019C1/helpers/transparent-elements'
 
 import type {
 	PlacementCollisionParams,
@@ -78,17 +81,21 @@ export async function resolvePlacementCollision(
 }
 
 /**
- * The element whose uniqueness rules cover `ref`: its parent, or — when the parent is a wrapper
- * the dialecte looks through (a Private) — that wrapper's own parent, and so on.
+ * The element whose uniqueness rules cover `ref`: its parent, past the dialecte's own wrappers (an SCL Private), as
+ * core reads the chain; a same-name element of another namespace (a vendor's Private) is an ordinary parent.
  */
 export async function findConstraintParent(
 	query: Core.Query<Config>,
 	params: { ref: Scl.Ref<Scl.ElementsOf> },
 ): Promise<Scl.Ref<Scl.ElementsOf> | undefined> {
-	const transparentElements: readonly string[] = SCL_DIALECTE_CONFIG.transparentElements
+	// the parent links are followed one record at a time, as before: a wrapper is read only to tell its namespace
 	let parent = (await query.getRecord(params.ref))?.parent
-	while (parent && transparentElements.includes(parent.tagName)) {
-		parent = (await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>))?.parent
+	while (parent && isTransparentElement(parent.tagName)) {
+		// dialecte-allow query-in-loop: each wrapper's parent is known only once it is read; as many reads as main's walk
+		const wrapper = await query.getRecord(parent as Scl.Ref<Scl.ElementsOf>)
+		if (!wrapper) return undefined
+		if (!isOwnTransparentElement({ record: wrapper })) break
+		parent = wrapper.parent
 	}
 	return parent ? (toRef(parent) as Scl.Ref<Scl.ElementsOf>) : undefined
 }

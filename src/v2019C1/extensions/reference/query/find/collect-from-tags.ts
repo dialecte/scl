@@ -4,6 +4,7 @@ import { noAncestry, toAnyRawRecord } from './collect-with-ancestry.helpers'
 import { orderByConfigSequence } from '@dialecte/core/utils'
 
 import { CHILDREN, DESCENDANTS, ROOT_ELEMENT } from '@/v2019C1/definition/constants.generated'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type {
 	CollectedWithAncestry,
@@ -105,13 +106,14 @@ function stateOfChild(params: {
 	record: AnyRawRecord
 	state: SelectState
 	tagName: string
+	transparent: boolean
 }): SelectState | undefined {
-	const { record, state, tagName } = params
+	const { record, state, tagName, transparent } = params
 	const { select, recursive } = state
 	if (!select) return state
 	const entry = select[tagName]
 	if (entry === undefined) {
-		if (TRANSPARENT_TAGS.has(tagName)) return state
+		if (transparent) return state
 		return recursive && tagName === record.tagName && holdsItself(tagName) ? state : undefined
 	}
 	if (entry === false) return undefined
@@ -134,10 +136,11 @@ function selectedChildren(params: {
 	for (const childRef of record.children) {
 		const tracked = recordsById.get(childRef.id)
 		if (!tracked) continue
-		const childState = stateOfChild({ record, state, tagName: tracked.tagName })
+		const transparent = isOwnTransparentElement({ record: tracked })
+		const childState = stateOfChild({ record, state, tagName: tracked.tagName, transparent })
 		if (!childState) continue
 		const child = toAnyRawRecord(tracked)
-		if (TRANSPARENT_TAGS.has(child.tagName)) {
+		if (transparent) {
 			children.push(...selectedChildren({ record: child, state: childState, recordsById }))
 		} else {
 			children.push({ record: child, tagName: child.tagName, state: childState })

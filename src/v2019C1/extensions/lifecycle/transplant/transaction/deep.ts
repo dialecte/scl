@@ -4,6 +4,8 @@ import { cloneTree } from './primitives/clone-tree'
 import { throwDialecteError } from '@dialecte/core'
 
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
+import { readAttribute } from '@/v2019C1/helpers'
+import { isOwnTransparentElement } from '@/v2019C1/helpers/transparent-elements'
 
 import type { ImportDeepParams, ImportDeepResult } from './deep.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -134,14 +136,19 @@ async function resolveExistingPrivateMergeTarget(
 ): Promise<Scl.Ref<'Private'> | undefined> {
 	const { sourceQuery, ref, targetParent } = params
 	if (ref.tagName !== 'Private') return undefined
+	// only the SCL Private merges: a vendor's Private of another namespace is an element of its own
+	const source = await sourceQuery.getRecord(ref)
+	if (!source || !isOwnTransparentElement({ record: source })) return undefined
 
-	const sourceType = (await sourceQuery.any.getAttributes(ref)).type
+	// the type read from the record already in hand: no second read of it
+	const sourceType = readAttribute({ record: source, name: 'type', defaults: 'none' })
 	if (!sourceType) return undefined
 
 	const parentRecord = await tx.getRecord(targetParent)
-	const privateChildren =
-		parentRecord?.children.filter((child) => child.tagName === 'Private') ?? []
+	const privateRefs = parentRecord?.children.filter((child) => child.tagName === 'Private') ?? []
+	const privateChildren = await tx.getRecords(privateRefs as Scl.Ref<'Private'>[])
 	for (const privateChild of privateChildren) {
+		if (!privateChild || !isOwnTransparentElement({ record: privateChild })) continue
 		const type = (await tx.any.getAttributes(privateChild)).type
 		if (type === sourceType) return { tagName: 'Private', id: privateChild.id }
 	}

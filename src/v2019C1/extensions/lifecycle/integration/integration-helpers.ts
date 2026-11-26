@@ -172,9 +172,8 @@ function canonicalize(element: Core.AnyTreeRecord): string {
 		.filter((attribute) => !attribute.name.endsWith(RECORD_ID_SUFFIX))
 		.map((attribute) => `${attribute.name}="${attribute.value}"`)
 		.sort()
-	const children = element.tree
-		.filter((child) => child.tagName !== 'Private' || child.tree.length > 0)
-		.map((child) => canonicalize(child))
+	// the tree comes unwrapped: an SCL Private is already walked through, a vendor's Private is an element
+	const children = element.tree.map((child) => canonicalize(child))
 	const text = element.tree.length === 0 ? element.value.trim() : ''
 	return `<${element.tagName} ${attributes.join(' ')}>${text}${children.join('')}</${element.tagName}>`
 }

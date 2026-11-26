@@ -1,7 +1,10 @@
 import { toRef } from '@dialecte/core/helpers'
 
 import { readAttribute } from '@/v2019C1/helpers'
-import { isTransparentElement } from '@/v2019C1/helpers/transparent-elements'
+import {
+	isOwnTransparentElement,
+	isTransparentElement,
+} from '@/v2019C1/helpers/transparent-elements'
 
 import type { Config } from '@/v2019C1/config'
 import type * as Core from '@dialecte/core'
@@ -24,8 +27,12 @@ export async function landingParent(
 	const { sourceQuery, sourceChild, instanceParent } = params
 	const wrapper = sourceChild.parent
 	if (!wrapper || !isTransparentElement(wrapper.tagName)) return toRef(instanceParent)
+	// only the SCL Private is a wrapper: a vendor's Private of another namespace is an element the child lands in
+	const wrapperRecord = await sourceQuery.any.getRecord(wrapper)
+	if (!wrapperRecord || !isOwnTransparentElement({ record: wrapperRecord }))
+		return toRef(instanceParent)
 
-	const wrapperAttributes = await sourceQuery.any.getAttributes(wrapper)
+	const wrapperAttributes = await sourceQuery.any.getAttributes(wrapperRecord)
 	const held = await findWrapperOfType(tx, {
 		instanceParent,
 		tagName: wrapper.tagName,
@@ -48,7 +55,7 @@ async function findWrapperOfType(
 	const wrapperRefs = parentRecord?.children.filter((child) => child.tagName === tagName) ?? []
 	const wrappers = await tx.any.getRecords(wrapperRefs)
 	for (const wrapper of wrappers) {
-		if (!wrapper) continue
+		if (!wrapper || !isOwnTransparentElement({ record: wrapper })) continue
 		if (readAttribute({ record: wrapper, name: 'type', defaults: 'none' }) === (type ?? ''))
 			return wrapper
 	}

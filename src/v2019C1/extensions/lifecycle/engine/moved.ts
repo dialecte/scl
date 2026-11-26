@@ -130,6 +130,7 @@ export function withTreeParents(params: TreeParentsParams): DiffNode {
 function withTreeParentsBelow(params: TreeParentsBelowParams): DiffNode {
 	const { node, parentOf } = params
 	const children = node.children.map((child) => withTreeParentsBelow({ node: child, parentOf }))
+	// by tag: for a vendor's Private of another namespace the tree parent taken is that Private itself (the tree keeps it)
 	const wrapped =
 		node.change === 'moved' &&
 		node.movedFrom?.tagName !== undefined &&
