@@ -8,6 +8,8 @@ import { throwDialecteError } from '@dialecte/core'
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { startFile } from '@/v2019C1/extensions/history/transaction/start-file'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
+import { IED_EXTRACT_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import { readIedExportRefusals } from '@/v2019C1/extensions/lifecycle/extract/query/read-ied-export-refusals'
 import { readSelectedIedName } from '@/v2019C1/extensions/lifecycle/extract/query/read-selected-ied-name'
 import { applyIedProcessEdits } from '@/v2019C1/extensions/lifecycle/layers/ied/apply-ied-process-edits'
@@ -29,6 +31,10 @@ import type { ExtractWarning } from './extract.types'
 import type { IedExport, IedExtractResult, IsdExtractParams } from './ied.types'
 import type { TemplateIdentityParams } from './template-identity.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type {
+	EnterPhase,
+	IedExtractProgressPhaseKey,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -78,8 +84,25 @@ export async function extractIsd(
 	tx: Core.Transaction<Config>,
 	params: IsdExtractParams,
 ): Promise<IedExtractResult> {
+	return await withProgressPhases(tx, {
+		phases: IED_EXTRACT_PROGRESS_PHASES,
+		run: async function extractInPhases(enter) {
+			return await extractIsdInPhases(tx, { params, enter })
+		},
+	})
+}
+
+/** The same steps, each entering its progress phase as it starts. */
+async function extractIsdInPhases(
+	tx: Core.Transaction<Config>,
+	context: { params: IsdExtractParams; enter: EnterPhase<IedExtractProgressPhaseKey> },
+): Promise<IedExtractResult> {
+	const { params, enter } = context
+	enter('check')
 	const iedName = await refuseUnavailableExtraction(tx, params)
+	enter('read')
 	const read = await readIedExport(tx, { ...params, iedName })
+	enter('write')
 	await writeIedExport(tx, { params, iedName, read })
 	return {
 		warnings: [...read.selection.warnings, ...read.process.warnings],

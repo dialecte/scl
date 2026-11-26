@@ -4,6 +4,8 @@ import { recheckAfterApply } from './recheck-after-apply'
 import { releaseWrittenImplementation } from './release-written-implementation'
 
 import { assertCopyFits } from '@/v2019C1/extensions/lifecycle/copy/assert-copy-fits'
+import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
+import { APPLY_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import {
 	allGroups,
 	assertDecisionsCoherent,
@@ -34,6 +36,10 @@ import type {
 	LifecycleApplyParams,
 	LifecycleTarget,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	ApplyProgressPhaseKey,
+	EnterPhase,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -75,12 +81,31 @@ import type * as Core from '@dialecte/core'
  * the write produced/reconciled. Run inside `doc.prepare(tx => tx.lifecycle.apply(...))`
  * for a previewable, reversible dry-run.
  *
+ * It reports one progress plan of phases (checking the report, writing, releasing implementation links, the consumer's
+ * step): the clones and type imports it runs nest under it, so the bar only moves forward. The commit runs after it,
+ * with its own plan; a caller that opens a plan in its transaction body holds both nested under its own.
+ *
  * @intent apply a template instantiation or update after review, write a lifecycle report with user decisions, accept or skip changes from a newer FSD/ASD/SSD
  */
 export async function apply(
 	tx: Core.Transaction<Config>,
 	params: LifecycleApplyParams,
 ): Promise<ApplyResult> {
+	return await withProgressPhases(tx, {
+		phases: APPLY_PROGRESS_PHASES,
+		run: async function applyInPhases(enter) {
+			return await applyReport(tx, { params, enter })
+		},
+	})
+}
+
+/** Check the report and the decisions, then write what they say, entering each progress phase as it starts. */
+async function applyReport(
+	tx: Core.Transaction<Config>,
+	context: { params: LifecycleApplyParams; enter: EnterPhase<ApplyProgressPhaseKey> },
+): Promise<ApplyResult> {
+	const { params, enter } = context
+	enter('check')
 	const { report } = params
 	const decisions = params.resolution?.decisions ?? new Map()
 	const decisionMappings = params.resolution?.mappings
@@ -118,7 +143,7 @@ export async function apply(
 	assertNoAcceptedCollision({ groups, decisions })
 
 	try {
-		const instances = await writeReport(tx, { params, decisions })
+		const instances = await writeReport(tx, { params, decisions, enter })
 		return { report, instances }
 	} catch (error) {
 		// the store is rolled back with the transaction: the report points at nothing it wrote
@@ -130,9 +155,13 @@ export async function apply(
 /** Write what the report lists, release what names an implementation the project lacks, then run the consumer's step. */
 async function writeReport(
 	tx: Core.Transaction<Config>,
-	context: { params: LifecycleApplyParams; decisions: DecisionMap },
+	context: {
+		params: LifecycleApplyParams
+		decisions: DecisionMap
+		enter: EnterPhase<ApplyProgressPhaseKey>
+	},
 ): Promise<AppliedInstances> {
-	const { params, decisions } = context
+	const { params, decisions, enter } = context
 	const { report } = params
 	// what the update holds, read once at its entry, as the report read it; an IED's records it itself
 	const removalBase = await resolveRemovalBase({
@@ -145,6 +174,7 @@ async function writeReport(
 	const placeholderLineages = await resolvePlaceholderLineages(tx, {
 		referencesByName: params.resolution?.referencesByName,
 	})
+	enter('write')
 	const writtenFrom = tx.getStagedOperations().length
 	const instances = await runVerb(tx, {
 		target: params,
@@ -156,11 +186,15 @@ async function writeReport(
 
 	// what the template brings keeps the implementation it had there: what this run wrote naming a
 	// logical node, ExtRef or ExtCtrl the project lacks is released, once everything is written
+	enter('release')
 	await releaseWrittenImplementation(tx, { from: writtenFrom })
 
 	// the consumer's own step, once everything is written, in the same transaction
 	const afterApply = params.resolution?.afterApply
-	if (afterApply) await runAfterApply(tx, { afterApply, instances })
+	if (afterApply) {
+		enter('consumer')
+		await runAfterApply(tx, { afterApply, instances })
+	}
 
 	return instances
 }

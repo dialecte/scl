@@ -881,6 +881,36 @@ const prepared = await doc.prepare((tx) =>
 await prepared.commit() // or prepared.discard()
 ```
 
+### Progress
+
+`apply` reports one progress plan on the transaction (`doc.state.progress`), whose main bar only moves forward:
+
+| Phase                             | Share | What runs                                                           |
+| --------------------------------- | ----- | ------------------------------------------------------------------- |
+| `Checking the report…`            | 1/20  | the checks of the report and the decisions, the update's bases      |
+| `Writing the template…`           | 17/20 | the write: its clones and type imports show as the sub-bar (`step`) |
+| `Releasing implementation links…` | 1/20  | what was written naming an implementation the project lacks         |
+| `Running the consumer step…`      | 1/20  | `resolution.afterApply`, when given                                 |
+
+A nested op's caption, when it has one (a type import's `Importing <type>`), shows instead of the phase's. The plan
+runs through `tx.progress.runInPlan`: when `apply` returns or throws, the progress stack is back as `apply` found it
+(apply's plan and any plan left open inside it gone, a caller's own plan back on top), whoever catches the error. A
+`resolution.afterApply` that opens a plan of its own closes it in a `finally`, whether it returns or throws: left
+open, it would take apply's last step until apply ends.
+
+The commit runs after the transaction body, with its own plan: alone in a transaction, apply's bar ends and the
+commit's starts. To keep both in one bar, open a plan in the body around `apply`: apply and the commit then nest under
+it, the main bar is yours, and the caption is that of the deepest plan open (apply's phase, or the clone running).
+
+```ts
+await doc.transaction(async (tx) => {
+	tx.progress.plan({ steps: 2, label: 'Placing the template…' })
+	tx.progress.nextStep()
+	await tx.lifecycle.apply({ ...target, report }) // 0/2, apply's phases and clones nested
+	tx.progress.nextStep('Saving…') // 1/2: the commit nests under it
+})
+```
+
 ### Presentation scope
 
 `presentationScope(target)` is a small, layer-derived descriptor a UI can use to render the merge as a **structural tree**: where to root it, which top-level SCL sections are irrelevant to the layer, and which to include alongside the rooted subtree. For `fsd` / `asd` / `ssd` it roots at `Substation`, includes `DataTypeTemplates` (a sibling of `Substation` that the layer references), and omits `Communication` and `IED`. For `ied` it roots at `SCL`, omitting and including nothing: an IED reaches its data types, its communication and the functions its logical nodes implement.

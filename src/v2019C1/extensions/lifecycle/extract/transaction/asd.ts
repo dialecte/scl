@@ -11,6 +11,8 @@ import {
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
+import { EXTRACT_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance/composed-functions'
 import {
 	cloneApplicationContent,
@@ -23,6 +25,10 @@ import type { ExtractWarning } from './extract.types'
 import type { AsdExtractOptions } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { AppliedSatellite } from '@/v2019C1/extensions/lifecycle/cross-cutting/applied-satellites.types'
+import type {
+	EnterPhase,
+	ExtractProgressPhaseKey,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -42,6 +48,21 @@ export async function asd(
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
 	} & AsdExtractOptions,
 ): Promise<{ warnings: ExtractWarning[] }> {
+	return await withProgressPhases(tx, {
+		phases: EXTRACT_PROGRESS_PHASES,
+		run: async function extractInPhases(enter) {
+			return await extractAsdInPhases(tx, { params, enter })
+		},
+	})
+}
+
+/** Extract an application, entering each progress phase as it starts. */
+async function extractAsdInPhases(
+	tx: Core.Transaction<Config>,
+	context: { params: Parameters<typeof asd>[1]; enter: EnterPhase<ExtractProgressPhaseKey> },
+): Promise<{ warnings: ExtractWarning[] }> {
+	const { params, enter } = context
+	enter('header')
 	const { sourceQuery, applicationRef, tool, who, nameStructure, sections } = params
 	const { as = 'new', templateLink = 'keep' } = params
 
@@ -63,6 +84,7 @@ export async function asd(
 		},
 	})
 
+	enter('copy')
 	const structure = await ensureSubstationTemplateStructure(tx)
 	// the levels above the application land on the TEMPLATE levels of the file: a reference to one names it
 	const landed = await landOnStructure(sourceQuery, { primaryRef: applicationRef, structure })
@@ -107,6 +129,7 @@ export async function asd(
 	// came with its instance lose it — what it holds, the functions it composes that record no file of their own, what
 	// applies to them, what its roles refer to; a function placed from its FSD keeps its link, and so does what applies
 	// to it only; the cloned uuid refs are repointed across ALL clones, before cleanup reads them to detect orphans
+	enter('identity')
 	const unlinked =
 		templateLink === 'break'
 			? await readApplicationInstanceContent(sourceQuery, {
@@ -121,6 +144,7 @@ export async function asd(
 	const root = cloneMappings.find((mapping) => mapping.source.id === applicationRef.id)?.target
 	if (root && templateLink === 'break') await removeOwnProvenance(tx, { element: root })
 
+	enter('cleanup')
 	await postExtractionCleanup(tx)
 
 	return {

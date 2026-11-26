@@ -6,6 +6,8 @@ import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { history } from '@/v2019C1/extensions/history'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
+import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
+import { EXTRACT_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import {
 	cloneTopologyContent,
 	resolveFrameStructure,
@@ -14,6 +16,10 @@ import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { ExtractOptions, ExtractWarning, SsdExtractScope } from './extract.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type {
+	EnterPhase,
+	ExtractProgressPhaseKey,
+} from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -41,6 +47,21 @@ export async function ssd(
 		nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']
 	} & ExtractOptions,
 ): Promise<{ warnings: ExtractWarning[] }> {
+	return await withProgressPhases(tx, {
+		phases: EXTRACT_PROGRESS_PHASES,
+		run: async function extractInPhases(enter) {
+			return await extractSsdInPhases(tx, { params, enter })
+		},
+	})
+}
+
+/** Extract a process scope, entering each progress phase as it starts. */
+async function extractSsdInPhases(
+	tx: Core.Transaction<Config>,
+	context: { params: Parameters<typeof ssd>[1]; enter: EnterPhase<ExtractProgressPhaseKey> },
+): Promise<{ warnings: ExtractWarning[] }> {
+	const { params, enter } = context
+	enter('header')
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
 	const { as = 'new', templateLink = 'keep' } = params
 	const root = await tx.getRoot()
@@ -66,6 +87,7 @@ export async function ssd(
 		},
 	})
 
+	enter('copy')
 	const content = await cloneTopologyContent(tx, {
 		sourceQuery,
 		scopeRef,
@@ -116,8 +138,10 @@ export async function ssd(
 	// the scaffolding loses its template link; the scope keeps its own unless the consumer breaks it: then the scope and
 	// what came with its instance lose it, an application or a function placed from its own file keeps its link; the
 	// cloned uuid refs are repointed across ALL clones, before cleanup reads them to detect orphans
+	enter('identity')
 	await finalizeClonedIdentity(tx, { cloneMappings, mode: 'strip', unlinked, redirectMappings })
 
+	enter('cleanup')
 	await postExtractionCleanup(tx)
 
 	return {
