@@ -7,7 +7,10 @@ import type {
 } from './reference-closure.constants'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
+import type {
+	RecordEdit,
+	ReferencePair,
+} from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -69,7 +72,8 @@ export type PlanReferencesParams = {
 	sourceQuery: Core.Query<Config>
 	/** Where `present` is judged: the document the result lands in (an export's empty target, a copy's destination). */
 	destinationQuery: Core.Query<Config>
-	policy: ReferencePolicy
+	/** The action per IED family and class: needed with IED roots, unread without. */
+	policy?: ReferencePolicy
 	/** The action per process family and class: classified and acted on only when given (a copy's roots). */
 	processPolicy?: ProcessReferencePolicy
 }
@@ -120,3 +124,14 @@ export type ProcessPairNotGrouped = { holder: string; uuidAttribute: string; rea
 export type ProcessReferencePolicy = Readonly<
 	Record<ProcessReferenceFamily, Readonly<Record<ReferenceClass, 'keep' | 'drop'>>>
 >
+
+/** A holder of a process family, its pair, and the uuid it names. */
+export type ProcessHolder = {
+	record: Core.AnyRawRecord
+	family: ProcessReferenceFamily
+	pair: ReferencePair
+	uuid: string
+}
+
+/** A process family and its registry pair, as the holder tag reads them. */
+export type ProcessFamilyPair = { family: ProcessReferenceFamily; pair: ReferencePair }

@@ -1,7 +1,7 @@
 import { COPY_REFERENCE_GROUP_PREFIX } from './copy.constants'
 
+import { isAccepted } from '@/v2019C1/extensions/lifecycle/engine/decide'
 import { planReferences } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/plan-references'
-import { CID_REFERENCE_POLICIES } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.constants'
 import { PROCESS_REFERENCE_FAMILIES } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.constants'
 
 import type { PlanCopyReferencesParams } from './copy.types'
@@ -30,8 +30,6 @@ export async function planCopyReferences(params: PlanCopyReferencesParams): Prom
 		roots: roots.map((ref) => ({ ref, depth: 'whole' })),
 		sourceQuery: query,
 		destinationQuery: query,
-		// no IED is a root of a copy: the IED half reads nothing
-		policy: CID_REFERENCE_POLICIES.keep,
 		processPolicy: copyReferencePolicy({ dropped }),
 	})
 }
@@ -61,16 +59,24 @@ function copyReferencePolicy(params: {
 export function describeReferenceGroups(params: { plan: ReferencePlan }): DecisionGroup[] {
 	const byFamily = new Map<ProcessReferenceFamily, ClassifiedReference[]>()
 	for (const reference of params.plan.references) {
-		if (reference.class !== 'present' || !isProcessFamily(reference.family)) continue
+		// a reference the document holds the target of: what a group decides
+		if (reference.class !== 'present' || !reference.target || !isProcessFamily(reference.family))
+			continue
 		byFamily.set(reference.family, [...(byFamily.get(reference.family) ?? []), reference])
 	}
 	return [...byFamily].map(function groupOf([family, references]): DecisionGroup {
 		const effect = PROCESS_REFERENCE_FAMILIES[family].drop === 'reduce' ? 'cleared' : 'deleted'
-		const rows: OutsideReference[] = references.map((reference) => ({
-			holder: { tagName: reference.holder.tagName, id: reference.holder.id },
-			target: { tagName: reference.target?.tagName ?? '', id: reference.target?.id },
-			effect,
-		}))
+		const rows: OutsideReference[] = references.flatMap(({ holder, target }) =>
+			target
+				? [
+						{
+							holder: { tagName: holder.tagName, id: holder.id },
+							target: { tagName: target.tagName, id: target.id },
+							effect,
+						},
+					]
+				: [],
+		)
 		const [primary, ...companions] = references.map(nodeOf)
 		return {
 			id: `${COPY_REFERENCE_GROUP_PREFIX}${family}`,
@@ -95,10 +101,9 @@ export function droppedFamilies(params: {
 	const dropped = new Set<ProcessReferenceFamily>()
 	for (const group of groups) {
 		if (group.kind !== 'references') continue
-		const decision = decisions?.get(group.id) ?? group.suggestedAction
-		const action = typeof decision === 'string' ? decision : decision.action
+		if (isAccepted({ group, decisions: decisions ?? new Map() })) continue
 		const family = group.id.slice(COPY_REFERENCE_GROUP_PREFIX.length)
-		if (action === 'skip' && isProcessFamily(family)) dropped.add(family)
+		if (isProcessFamily(family)) dropped.add(family)
 	}
 	return dropped
 }

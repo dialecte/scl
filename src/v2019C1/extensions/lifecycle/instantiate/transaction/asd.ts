@@ -7,6 +7,7 @@ import {
 	resolveCopyLanding,
 	readCopyTrees,
 	planCopyReferences,
+	readsOwnDocument,
 	writeCopyReferences,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
@@ -94,8 +95,9 @@ export async function placeApplication(
 				})
 	// a copy is pasted under the anchor, inside the document it reads (a level of the topology: refused else), each
 	// function where the row of the level it sits on in the source says
+	const sourceIsProject = await readsOwnDocument(tx, { sourceQuery, scenario: params.scenario })
 	const copy =
-		policy.placementIdentity === 'copy' && isTopologyLevel(targetParent.tagName)
+		sourceIsProject && isTopologyLevel(targetParent.tagName)
 			? await resolveCopyLanding(tx, {
 					sourceQuery,
 					functionRefs: composedFunctionRefs,
@@ -171,7 +173,7 @@ export async function placeApplication(
 		referenced: content.referenced,
 		index,
 		held: content.held,
-		sourceIsProject: params.sourceIsProject === true,
+		sourceIsProject,
 		landingOf: copy?.landingOf,
 	})
 

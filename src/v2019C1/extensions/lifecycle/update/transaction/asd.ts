@@ -169,7 +169,6 @@ export async function asd(
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
-			sourceIsProject: params.sourceIsProject,
 			// a copy: the references leaving it whose group the consumer skipped
 			droppedReferences: droppedFamilies({ groups: report ? allGroups(report) : [], decisions }),
 			leftOut,

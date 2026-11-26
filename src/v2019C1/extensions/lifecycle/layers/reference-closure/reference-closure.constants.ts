@@ -1,3 +1,4 @@
+import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { EXT_REF_CONTROL_BLOCK_PAIR } from '@/v2019C1/extensions/dataflow/constants/control-blocks.constants'
 import {
 	EXT_CTRL_LATER_BINDING,
@@ -12,12 +13,13 @@ import {
 } from '@/v2019C1/extensions/dataflow/constants/supervision.constants'
 
 import type {
-	ReferencePlan,
+	ProcessFamilyPair,
 	ProcessPairNotGrouped,
 	ProcessReferenceFamily,
 	ProcessReferenceFamilyRow,
 	ReferencePolicy,
 } from './reference-closure.types'
+import type { ReferencePair } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 
 /** Where a reference's target is. */
 export const REFERENCE_CLASSES = ['inside', 'present', 'absent'] as const
@@ -143,8 +145,12 @@ const NOT_GROUPED_BECAUSE = {
 		'a process resource reached through the parent hierarchy: follow-up E1d (copy: process-resource references)',
 	IMPLEMENTATION_MAPPING:
 		'the mapping of a data specification to the implementing logical node: the unbind of the copy clears it',
-	ROLE_SIGNAL_INSIDE:
-		'a role signal naming an input or output specification of a composed function: inside the copy',
+	BELOW_FUNCTION_REFERENCE:
+		'below a FunctionRef: follows its function-reference row (written with it when kept, gone with it when dropped)',
+	PROCESS_RESOURCE_BINDING:
+		'the mandatory binding of a process resource to a process element: kept as written, follow-up E1d',
+	APPLICATION_ALLOCATION_ROLE:
+		'an application naming the allocation role it is allocated to: a shared element, reused by the copy',
 	APPLICATION_VARIANT: 'a variant of the application itself: inside the copy',
 	MANDATORY_ECHO: 'its reference is mandatory: a drop shape of its own, not grouped yet',
 	POWER_SYSTEM_RELATION:
@@ -159,7 +165,7 @@ export const PROCESS_PAIRS_NOT_GROUPED: readonly ProcessPairNotGrouped[] = [
 	{
 		holder: 'AllocationRoleRef',
 		uuidAttribute: 'allocationRoleUuid',
-		reason: NOT_GROUPED_BECAUSE.SHARED_ROLE_REFERENCE,
+		reason: NOT_GROUPED_BECAUSE.APPLICATION_ALLOCATION_ROLE,
 	},
 	{
 		holder: 'BehaviorDescriptionRef',
@@ -211,17 +217,17 @@ export const PROCESS_PAIRS_NOT_GROUPED: readonly ProcessPairNotGrouped[] = [
 	{
 		holder: 'LNodeDataRef',
 		uuidAttribute: 'lnodeUuid',
-		reason: NOT_GROUPED_BECAUSE.ROLE_SIGNAL_INSIDE,
+		reason: NOT_GROUPED_BECAUSE.BELOW_FUNCTION_REFERENCE,
 	},
 	{
 		holder: 'LNodeInputRef',
 		uuidAttribute: 'sourceRefUuid',
-		reason: NOT_GROUPED_BECAUSE.ROLE_SIGNAL_INSIDE,
+		reason: NOT_GROUPED_BECAUSE.BELOW_FUNCTION_REFERENCE,
 	},
 	{
 		holder: 'LNodeOutputRef',
 		uuidAttribute: 'controlRefUuid',
-		reason: NOT_GROUPED_BECAUSE.ROLE_SIGNAL_INSIDE,
+		reason: NOT_GROUPED_BECAUSE.BELOW_FUNCTION_REFERENCE,
 	},
 	{ holder: 'OutputVar', uuidAttribute: 'lnodeUuid', reason: NOT_GROUPED_BECAUSE.SATELLITE_PAIR },
 	{ holder: 'OutputVar', uuidAttribute: 'outputUuid', reason: NOT_GROUPED_BECAUSE.SATELLITE_PAIR },
@@ -248,7 +254,7 @@ export const PROCESS_PAIRS_NOT_GROUPED: readonly ProcessPairNotGrouped[] = [
 	{
 		holder: 'Resource',
 		uuidAttribute: 'sourceUuid',
-		reason: NOT_GROUPED_BECAUSE.PROCESS_RESOURCE_LINK,
+		reason: NOT_GROUPED_BECAUSE.PROCESS_RESOURCE_BINDING,
 	},
 	{
 		holder: 'SDS',
@@ -282,10 +288,11 @@ export const PROCESS_PAIRS_NOT_GROUPED: readonly ProcessPairNotGrouped[] = [
 	},
 ]
 
-/** A plan deciding nothing: what a half of `planReferences` with no root of its kind gives. */
-export const EMPTY_PLAN: ReferencePlan = {
-	references: [],
-	leaveOut: new Set(),
-	edits: [],
-	warnings: [],
-}
+/** Each process family by its holder's tag, with its registry pair: read once, as a record of that tag is met. */
+export const PROCESS_FAMILY_PAIRS: ReadonlyMap<string, readonly ProcessFamilyPair[]> = new Map(
+	Object.entries(PROCESS_REFERENCE_FAMILIES).map(function familyPairOf([family, row]) {
+		const pairs: readonly ReferencePair[] = UUID_REFERENCE_PAIRS[row.holder]
+		const pair = pairs.find((candidate) => candidate.attribute.uuid === row.uuidAttribute)
+		return [row.holder, pair ? [{ family: family as ProcessReferenceFamily, pair }] : []] as const
+	}),
+)

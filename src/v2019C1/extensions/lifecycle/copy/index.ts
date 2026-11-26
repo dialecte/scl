@@ -9,6 +9,7 @@ export {
 } from './plan-copy-references'
 export { writeCopyReferences } from './write-copy-references'
 export { readCopyTrees } from './read-copy-trees'
+export { readsOwnDocument } from './reads-own-document'
 export { resolveCopyLanding } from './resolve-copy-landing'
 export { writeCopyUnbinds } from './write-copy-unbinds'
 export type * from './copy.types'

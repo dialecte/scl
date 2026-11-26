@@ -8,6 +8,7 @@ import {
 	planCopyUnbinds,
 	readCopyTrees,
 	planCopyReferences,
+	readsOwnDocument,
 	writeCopyReferences,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
@@ -33,7 +34,7 @@ import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction'
 
-import type { FsdParams, FsdResult } from './fsd.types'
+import type { FsdParams, FsdResult, PlaceFunctionParams } from './fsd.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction'
@@ -65,10 +66,18 @@ import type * as Core from '@dialecte/core'
  * @intent instantiate an FSD into a project, add a Function from a template under a Bay or Function, place a function template
  */
 export async function fsd(tx: Core.Transaction<Config>, params: FsdParams): Promise<FsdResult> {
+	return placeFunction(tx, params)
+}
+
+/** Place a function as {@link fsd} does, with what the update verb adds: the references a copy drops. */
+export async function placeFunction(
+	tx: Core.Transaction<Config>,
+	params: PlaceFunctionParams,
+): Promise<FsdResult> {
 	const { sourceQuery, functionRef, overrides, keepNameTypesFrom } = params
 	const policy = scenarioPolicy({ scenario: params.scenario ?? 'instantiate' })
 	// the source is the document it is pasted into (a copy): the shared elements it is classified by are the project's own
-	const sourceIsProject = params.sourceIsProject === true
+	const sourceIsProject = await readsOwnDocument(tx, { sourceQuery, scenario: params.scenario })
 
 	// where the function lands: where the consumer started, or — started above the level the
 	// function was made for — on the level its template says, the missing levels created

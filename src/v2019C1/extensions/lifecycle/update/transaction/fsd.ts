@@ -31,10 +31,8 @@ import {
 	foreignScopeResolver,
 	scopeToTargetInstance,
 } from '@/v2019C1/extensions/lifecycle/instance'
-import {
-	fsd as instantiateFsd,
-	resolveTargetStructure,
-} from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { resolveTargetStructure } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
+import { placeFunction as instantiateFsd } from '@/v2019C1/extensions/lifecycle/instantiate/transaction/fsd'
 import {
 	PLACED_FUNCTION_TAGS,
 	placedFunctionTag,
@@ -146,7 +144,6 @@ export async function fsd(
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
-			sourceIsProject: params.sourceIsProject,
 			// a copy: the references leaving it whose group the consumer skipped
 			droppedReferences: droppedFamilies({ groups: report ? allGroups(report) : [], decisions }),
 		})

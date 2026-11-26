@@ -45,8 +45,6 @@ export type UpdateFsdParams = {
 	decisionMappings?: DecisionMappings
 	/** The function is placed by this operation alone (an FSD): see `instantiate.fsd`. */
 	resolvePlacement?: boolean
-	/** The source is the document placed into (a copy), read from both documents' ids at the verb's entry. */
-	sourceIsProject?: boolean
 	/** Placed as part of a larger template: see `instantiate.fsd`. */
 	partOfTemplate?: boolean
 	/**

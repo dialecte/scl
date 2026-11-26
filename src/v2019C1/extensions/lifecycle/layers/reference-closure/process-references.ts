@@ -1,36 +1,24 @@
 import { cutPairLink } from './process-link-cut'
-import { PROCESS_REFERENCE_FAMILIES } from './reference-closure.constants'
+import { PROCESS_FAMILY_PAIRS, PROCESS_REFERENCE_FAMILIES } from './reference-closure.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
-import { UUID_REFERENCE_PAIRS } from '@/v2019C1/constants'
 import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
 import { readAttribute } from '@/v2019C1/helpers'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
 
 import type {
 	ClassifiedReference,
-	ProcessReferenceFamily,
+	ProcessHolder,
 	ProcessReferencePolicy,
 	ReferenceClass,
 	ReferencePlan,
 } from './reference-closure.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type {
-	RecordEdit,
-	ReferencePair,
-} from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
+import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
-
-/** A holder of a process family, its pair, and the uuid it names. */
-type ProcessHolder = {
-	record: AnyRawRecord
-	family: ProcessReferenceFamily
-	pair: ReferencePair
-	uuid: string
-}
 
 /**
  * The process references the roots hold (`PROCESS_REFERENCE_FAMILIES`): each classified by the uuid it names — `inside`
@@ -109,12 +97,11 @@ export async function planProcessReferences(params: {
 
 /** The process references a record holds: one per family whose holder it is, when it names a uuid. */
 function holdersOf(record: AnyRawRecord): ProcessHolder[] {
-	return Object.entries(PROCESS_REFERENCE_FAMILIES).flatMap(function holderOf([family, row]) {
-		if (record.tagName !== row.holder) return []
-		const pair = (UUID_REFERENCE_PAIRS[row.holder] as readonly ReferencePair[]).find(
-			(candidate) => candidate.attribute.uuid === row.uuidAttribute,
-		)
-		const uuid = readAttribute({ record, name: row.uuidAttribute, defaults: 'none' })
-		return pair && uuid ? [{ record, family: family as ProcessReferenceFamily, pair, uuid }] : []
+	return (PROCESS_FAMILY_PAIRS.get(record.tagName) ?? []).flatMap(function holderOf({
+		family,
+		pair,
+	}) {
+		const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
+		return uuid ? [{ record, family, pair, uuid }] : []
 	})
 }

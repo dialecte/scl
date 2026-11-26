@@ -1285,7 +1285,7 @@
 				"add an Application from a template",
 				"place an application template under a Bay"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:63"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/asd.ts:64"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.fsd",
@@ -1298,7 +1298,7 @@
 				"add a Function from a template under a Bay or Function",
 				"place a function template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:67"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/fsd.ts:68"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.ied",

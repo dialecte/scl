@@ -204,7 +204,9 @@ export function writtenInstanceIds(params: {
 	const { report, decisions } = params
 	const written = new Set<string>()
 	for (const instance of report.instances) {
-		if (!instance.groups.some((group) => isAccepted({ group, decisions }))) continue
+		// a group keeping a copy's references writes for no instance: only the placement groups say one is written
+		const placing = instance.groups.filter(isPlacementGroup)
+		if (!placing.some((group) => isAccepted({ group, decisions }))) continue
 		for (const element of [instance.rootRef, instance.placedFor]) {
 			if (element?.id) written.add(element.id)
 		}

@@ -10,7 +10,6 @@ import {
 	IED_RELATIVE_PREFIX,
 	SUPERVISIONS,
 	UUID_TARGET_TAGS,
-	EMPTY_PLAN,
 } from './reference-closure.constants'
 
 import { toRef } from '@dialecte/core/helpers'
@@ -51,22 +50,33 @@ import type * as Core from '@dialecte/core'
  * @intent which references of an IED leave the file, reduce the inputs bound to IEDs outside a file, classify references inside or outside a closure, cut the references of an exported or copied IED
  */
 export async function planReferences(params: PlanReferencesParams): Promise<ReferencePlan> {
-	const { roots, sourceQuery, destinationQuery, processPolicy } = params
-	// the IED section is read only for IED roots; the process references only of the other roots, when asked
+	const { roots, sourceQuery, destinationQuery, policy, processPolicy } = params
+	// the IED section is read only for IED roots; the process references only of the other roots
 	const iedRoots = roots.filter((root) => root.depth === 'interface' || root.ref.tagName === 'IED')
 	const processRoots = roots.flatMap((root) =>
 		root.depth === 'whole' && root.ref.tagName !== 'IED' ? [root.ref] : [],
 	)
+	invariant(iedRoots.length === 0 || policy, {
+		key: 'ELEMENT_NOT_FOUND',
+		detail: 'planReferences: IED roots need a policy for the IED families',
+	})
+	invariant(processRoots.length === 0 || processPolicy, {
+		key: 'ELEMENT_NOT_FOUND',
+		ref: processRoots[0],
+		detail: 'planReferences: a root that is no IED needs a policy for the process families',
+	})
 	const plans = await Promise.all([
-		iedRoots.length > 0 ? planIedReferences({ ...params, roots: iedRoots }) : EMPTY_PLAN,
-		processPolicy && processRoots.length > 0
+		iedRoots.length > 0 && policy
+			? planIedReferences({ ...params, roots: iedRoots, policy })
+			: emptyPlan(),
+		processRoots.length > 0 && processPolicy
 			? planProcessReferences({
 					roots: processRoots,
 					sourceQuery,
 					destinationQuery,
 					policy: processPolicy,
 				})
-			: EMPTY_PLAN,
+			: emptyPlan(),
 	])
 	return {
 		references: plans.flatMap((plan) => plan.references),
@@ -76,8 +86,15 @@ export async function planReferences(params: PlanReferencesParams): Promise<Refe
 	}
 }
 
+/** A plan deciding nothing: what a half of `planReferences` with no root of its kind gives. */
+function emptyPlan(): ReferencePlan {
+	return { references: [], leaveOut: new Set(), edits: [], warnings: [] }
+}
+
 /** The IED half of `planReferences`: the references the IED roots make. */
-async function planIedReferences(params: PlanReferencesParams): Promise<ReferencePlan> {
+async function planIedReferences(
+	params: PlanReferencesParams & { policy: ReferencePolicy },
+): Promise<ReferencePlan> {
 	const { roots, sourceQuery, destinationQuery, policy } = params
 	const ieds = await sourceQuery.getRecordsByTagName('IED')
 	const iedById = new Map(ieds.map((ied) => [ied.id, ied] as const))
