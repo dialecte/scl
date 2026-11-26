@@ -19,3 +19,14 @@ export type CarriedCommunication = {
 	/** One `address-not-carried` per connection, GSE or SMV whose address is left out. */
 	warnings: readonly ExtractWarning[]
 }
+
+/** An address left out, with the connection, GSE or SMV holding it. */
+export type DroppedAddress = {
+	address: string
+	holder: Scl.Ref<'ConnectedAP' | 'GSE' | 'SMV'>
+}
+
+export type DroppedAddressesParams = {
+	/** The connections kept. */
+	keptIds: ReadonlySet<string>
+}

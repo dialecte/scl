@@ -4,9 +4,12 @@ import { SCL_ERRORS } from '@/v2019C1/errors'
 import { boundIeds } from '@/v2019C1/extensions/lifecycle/ied/bound-ieds'
 
 import type { IedSelection } from './extract.types'
-import type { CarriedIeds, SelectCarriedIedsParams } from './select-carried-ieds.types'
+import type {
+	CarriedIeds,
+	CarriesParams,
+	SelectCarriedIedsParams,
+} from './select-carried-ieds.types'
 import type { Config } from '@/v2019C1/config'
-import type { BoundIed } from '@/v2019C1/extensions/lifecycle/ied/bound-ieds.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -45,7 +48,7 @@ export async function selectCarriedIeds(
 }
 
 /** Whether a selection carries a bound IED. */
-function carries(params: { selection: IedSelection; entry: BoundIed }): boolean {
+function carries(params: CarriesParams): boolean {
 	const { selection, entry } = params
 	if (isIedList(selection)) return selection.some((ied) => ied.id === entry.ied.id)
 	return (

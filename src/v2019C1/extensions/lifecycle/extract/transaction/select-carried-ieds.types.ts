@@ -12,3 +12,8 @@ export type CarriedIeds = {
 	/** One `ied-not-carried` per IED tied to the scope that the selection leaves out. */
 	warnings: readonly ExtractWarning[]
 }
+
+export type CarriesParams = {
+	selection: IedSelection
+	entry: BoundIed
+}

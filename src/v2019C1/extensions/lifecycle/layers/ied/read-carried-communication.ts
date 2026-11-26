@@ -5,6 +5,8 @@ import { readAttributes } from '@/v2019C1/helpers'
 
 import type {
 	CarriedCommunication,
+	DroppedAddress,
+	DroppedAddressesParams,
 	ReadCarriedCommunicationParams,
 } from './read-carried-communication.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -85,10 +87,10 @@ export async function readCarriedCommunication(
 /** The `Address` of each kept connection and of the GSE and SMV it holds, with what holds it. */
 async function readDroppedAddresses(
 	query: Core.Query<Config>,
-	params: { keptIds: ReadonlySet<string> },
-): Promise<{ address: string; holder: Scl.Ref<'ConnectedAP' | 'GSE' | 'SMV'> }[]> {
+	params: DroppedAddressesParams,
+): Promise<DroppedAddress[]> {
 	const { keptIds } = params
-	const holders = new Map<string, Scl.Ref<'ConnectedAP' | 'GSE' | 'SMV'>>()
+	const holders = new Map<string, DroppedAddress['holder']>()
 	for (const id of keptIds) holders.set(id, { tagName: 'ConnectedAP', id })
 	const gses = await query.getRecordsByTagName('GSE')
 	const smvs = await query.getRecordsByTagName('SMV')

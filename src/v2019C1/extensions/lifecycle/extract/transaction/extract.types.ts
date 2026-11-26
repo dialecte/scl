@@ -98,7 +98,10 @@ export type ExtractWarning =
 			iedName: string
 	  }
 	| {
-			/** An IED an LNode of the scope is tied to that the selection leaves out: its LNodes are written released. */
+			/**
+			 * An IED an LNode of the scope is tied to that the selection leaves out: an LNode it implements is written released
+			 * (it may then name a carried specification IED its specified naming gives), one it only specifies stays as bound.
+			 */
 			code: 'ied-not-carried'
 			ied: Scl.Ref<'IED'>
 			name: string
@@ -106,10 +109,17 @@ export type ExtractWarning =
 			assignment: BoundIedAssignment
 	  }
 	| {
-			/** An input or an output of a carried IED naming an IED not carried by name: written with those names, its uuids removed. */
+			/**
+			 * An input or an output of a carried IED naming an IED not carried by name: written with its signal names, its uuids
+			 * and the control block it names removed (an expected signal). An output is listed under the same code.
+			 */
 			code: 'external-input'
 			source: Scl.Ref<'ExtRef' | 'ExtCtrl'>
 			iedName?: string
+	  }
+	| {
+			/** An SCD written without the addresses of its connections (`addresses: 'drop'`): not a complete SCD. */
+			code: 'scd-incomplete'
 	  }
 	| {
 			/** A connection, GSE or SMV of a carried IED whose address is not written. */
@@ -168,7 +178,7 @@ export type SsdExtractOptions = {
 	ieds?: IedSelection
 	/** The file type written: default `'SSD'`. */
 	fileType?: SsdExtractFileType
-	/** The addresses of the carried IEDs: default `'drop'`. */
+	/** The addresses of the carried IEDs: default kept in an SCD (a complete SCD needs them), left out of an SSD. */
 	addresses?: AddressChoice
 }
 

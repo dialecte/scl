@@ -136,3 +136,9 @@ export type ProcessHolder = {
 
 /** A process family and its registry pair, as the holder tag reads them. */
 export type ProcessFamilyPair = { family: ProcessReferenceFamily; pair: ReferencePair }
+
+/** What a reference kept by its names loses: the record and its family. */
+export type ClearedSourceReferencesParams = {
+	record: Core.AnyRawRecord
+	family: 'input' | 'output'
+}

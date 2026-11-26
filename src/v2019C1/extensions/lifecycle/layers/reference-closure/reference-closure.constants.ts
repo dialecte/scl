@@ -11,6 +11,7 @@ import {
 	SUPERVISION_KINDS,
 	SUPERVISION_REFERENCE_ATTRIBUTE,
 } from '@/v2019C1/extensions/dataflow/constants/supervision.constants'
+import { TUPLE_ROLES } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.constants'
 
 import type {
 	ProcessFamilyPair,
@@ -53,6 +54,15 @@ export const INPUT_UUID_ATTRIBUTES: readonly string[] = [
 	EXT_REF_SIGNAL.uuid,
 	EXT_REF_CONTROL_BLOCK_PAIR.attribute.uuid,
 ]
+
+/**
+ * The attributes an input names the control block publishing its signal by (its logical device, logical node and name):
+ * they describe the actual incoming signal, not an expected one, and go with the uuids when its source IED is not in
+ * the file.
+ */
+export const INPUT_CONTROL_BLOCK_NAME_ATTRIBUTES: readonly string[] = TUPLE_ROLES.flatMap(
+	(role) => EXT_REF_CONTROL_BLOCK_PAIR.tuple[role] ?? [],
+)
 
 /** The uuid attribute an output names the logical node it controls by. */
 export const OUTPUT_UUID_ATTRIBUTES: readonly string[] = [EXT_CTRL_SIGNAL.uuid]
@@ -115,8 +125,8 @@ export const CID_REFERENCE_POLICIES: Readonly<Record<'keep' | 'cleanAbsent', Ref
 
 /**
  * A template of a part of a substation carrying the IEDs its logical nodes are tied to: references between them kept; an
- * input or output from an IED it does not carry keeps its source names and loses their uuids (a signal expected from
- * outside, bound again where the template is placed); receivers and report clients naming such an IED left out.
+ * input or output naming an IED it does not carry keeps its signal names and loses their uuids and the control block it
+ * names (a signal expected from outside, bound again where the template is placed); receivers and report clients naming such an IED left out.
  */
 export const SSD_REFERENCE_POLICY: ReferencePolicy = {
 	input: { inside: 'keep', present: 'keep-names', absent: 'keep-names' },

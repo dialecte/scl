@@ -2,6 +2,7 @@ import { planProcessReferences } from './process-references'
 import {
 	INPUT_LATER_BINDING_NEEDS,
 	INPUT_SOURCE_ATTRIBUTES,
+	INPUT_CONTROL_BLOCK_NAME_ATTRIBUTES,
 	INPUT_UUID_ATTRIBUTES,
 	INTERNAL_ADDRESS,
 	OUTPUT_UUID_ATTRIBUTES,
@@ -21,6 +22,7 @@ import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 
 import type {
 	ClassifiedReference,
+	ClearedSourceReferencesParams,
 	ClosureRoot,
 	PlanReferencesParams,
 	ReferenceAction,
@@ -546,7 +548,7 @@ function composePlan(params: {
 			if (action === 'keep-names') {
 				edits.push({
 					ref: ref as Scl.Ref<Scl.ElementsOf>,
-					attributes: clearedUuids({ record, family }),
+					attributes: clearedSourceReferences({ record, family }),
 				})
 				warnings.push({
 					code: 'external-input',
@@ -591,13 +593,16 @@ function composePlan(params: {
 	}
 }
 
-/** The uuids an input or output names its source by, those it holds, cleared: its source names stay. */
-function clearedUuids(params: {
-	record: Core.AnyRawRecord
-	family: 'input' | 'output'
-}): Record<string, undefined> {
+/**
+ * What an input or output naming an IED the file does not hold loses, those it holds cleared: the uuids it names its
+ * source by and, for an input, the control block it names; its signal names stay.
+ */
+function clearedSourceReferences(params: ClearedSourceReferencesParams): Record<string, undefined> {
 	const { record, family } = params
-	const names = family === 'input' ? INPUT_UUID_ATTRIBUTES : OUTPUT_UUID_ATTRIBUTES
+	const names =
+		family === 'input'
+			? [...INPUT_UUID_ATTRIBUTES, ...INPUT_CONTROL_BLOCK_NAME_ATTRIBUTES]
+			: OUTPUT_UUID_ATTRIBUTES
 	return Object.fromEntries(
 		names.flatMap(function heldUuid(name) {
 			return readAttribute({ record, name, defaults: 'none' }) ? [[name, undefined]] : []

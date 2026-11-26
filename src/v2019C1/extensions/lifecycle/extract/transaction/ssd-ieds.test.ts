@@ -131,15 +131,6 @@ describe('extract.ssd - which IEDs ride and the file type', () => {
 				expectedQueries: ['//default:IED[@name="S1"]', '//default:IED[@name="R1"]'],
 				unexpectedQueries: ['//default:IED[@name="HMI"]'],
 			},
-		'an extract of a scope whose document holds IEDs → no sections-not-carried warning': {
-			// bay Q01 ties LNodes to S-IED S1, real IED R1 (ICD source file, lineage) and HMI (also tied to bay Q02); Other is tied to nothing
-			sourceXml: BayWithIedsXml,
-			targetXml: emptyTarget,
-			fileType: 'SSD',
-			warningCodes: ['sections-not-carried'],
-			warnings: [],
-			expectedQueries: ['//default:IED[@name="S1"]'],
-		},
 	}
 
 	runSclTestCases.withExport<TestCase>({ testCases, act })

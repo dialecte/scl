@@ -1,5 +1,6 @@
 import { readScopeInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
+import { readImplementationUuids } from './read-implementation-uuids'
 import { satelliteWarnings } from './satellite-warnings'
 import { selectCarriedIeds } from './select-carried-ieds'
 import { ALL_BOUND_IEDS } from './ssd.constants'
@@ -19,23 +20,25 @@ import {
 	cloneTopologyContent,
 	resolveFrameStructure,
 } from '@/v2019C1/extensions/lifecycle/layers/topology'
-import { readLogicalNodeIndex } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type {
 	ExtractOptions,
-	SsdExtractFileType,
+	ExtractWarning,
 	SsdExtractOptions,
 	SsdExtractResult,
 	SsdExtractScope,
 } from './extract.types'
-import type { CarriedIedSections, CarriedIedSectionsParams } from './ssd.types'
+import type {
+	CarriedIedSections,
+	CarriedIedSectionsParams,
+	ResolveFileTypeParams,
+} from './ssd.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type {
 	EnterPhase,
 	ExtractProgressPhaseKey,
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
-import type { BoundIed } from '@/v2019C1/extensions/lifecycle/ied/bound-ieds.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -84,7 +87,7 @@ async function extractSsdInPhases(
 	const { params, enter } = context
 	enter('header')
 	const { sourceQuery, scopeRef, tool, who, nameStructure } = params
-	const { as = 'new', templateLink = 'keep', ieds = ALL_BOUND_IEDS, addresses = 'drop' } = params
+	const { as = 'new', templateLink = 'keep', ieds = ALL_BOUND_IEDS } = params
 	const root = await tx.getRoot()
 
 	const scopeName = (await sourceQuery.getAttribute(scopeRef, { name: 'name' })) || 'Unnamed'
@@ -94,9 +97,9 @@ async function extractSsdInPhases(
 		scopeRef,
 		ieds,
 		fileType: params.fileType ?? 'SSD',
-		addresses,
+		addresses: params.addresses,
 	})
-	const { selection, fileType, references, communication, logicalNodeUuids } = carriedSections
+	const { selection, fileType, references, communication, implementationUuids } = carriedSections
 
 	await history.transaction.startFile(tx, {
 		as,
@@ -126,7 +129,7 @@ async function extractSsdInPhases(
 		sourceQuery,
 		scopeRef,
 		targetParent: root,
-		logicalNodeUuids,
+		implementationUuids,
 	})
 	const { frameIndex, redirectMappings, unit } = content
 	// an LNode the frame writes (under a level or an equipment) brings the data types it names, as one a function holds
@@ -221,15 +224,18 @@ async function readScaffoldingIds(
 /**
  * What an SSD extract reads of the IEDs before writing: those the selection carries among the IEDs the scope's LNodes are
  * tied to, the file type, the cut of their references to what the file holds, their communication, and the uuids of the
- * source's logical nodes (an LNode of the frame may name any; the cleanup releases those the file does not hold).
+ * source's logical nodes, inputs and outputs (an LNode of the frame may name any; the cleanup releases or clears those
+ * the file does not hold).
  */
 async function readCarriedIedSections(
 	tx: Core.Transaction<Config>,
 	params: CarriedIedSectionsParams,
 ): Promise<CarriedIedSections> {
-	const { sourceQuery, scopeRef, ieds, addresses } = params
+	const { sourceQuery, scopeRef, ieds } = params
 	const selection = await selectCarriedIeds(sourceQuery, { scopeRef, ieds })
 	const fileType = resolveFileType({ fileType: params.fileType, carried: selection.carried })
+	// a complete SCD gives each connection an address: its default keeps them; an SSD may describe the topology only
+	const addresses = params.addresses ?? (fileType === 'SCD' ? 'keep' : 'drop')
 	const references = await planReferences({
 		roots: selection.carried.map(({ ied }) => ({ ref: ied, depth: 'whole' })),
 		sourceQuery,
@@ -240,16 +246,20 @@ async function readCarriedIedSections(
 		ieds: selection.carried.map(({ ied, name }) => ({ ied, name })),
 		addresses,
 	})
-	const logicalNodeIndex = await readLogicalNodeIndex(sourceQuery)
-	const logicalNodeUuids = new Set(logicalNodeIndex.byUuid.keys())
-	return { selection, fileType, references, communication, logicalNodeUuids }
+	const implementationUuids = await readImplementationUuids(sourceQuery)
+	const incomplete: ExtractWarning[] =
+		fileType === 'SCD' && addresses === 'drop' ? [{ code: 'scd-incomplete' }] : []
+	return {
+		selection: { ...selection, warnings: [...selection.warnings, ...incomplete] },
+		fileType,
+		references,
+		communication,
+		implementationUuids,
+	}
 }
 
 /** The file type an extract writes: the one given, or by its content (an SCD when it carries an implemented IED). */
-function resolveFileType(params: {
-	fileType: SsdExtractFileType
-	carried: readonly BoundIed[]
-}): 'SSD' | 'SCD' {
+function resolveFileType(params: ResolveFileTypeParams): 'SSD' | 'SCD' {
 	const { fileType, carried } = params
 	if (fileType !== 'by-content') return fileType
 	return carried.some((entry) => entry.kind === 'implemented') ? 'SCD' : 'SSD'
