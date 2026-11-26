@@ -326,6 +326,11 @@ function decideNamedReferences(params: {
 			detail:
 				'planReferences: an association or a key distribution entry is device configuration, kept',
 		})
+		invariant(action !== 'keep-names', {
+			key: 'ASSERTION_FAILED',
+			detail:
+				'planReferences: only an input or an output keeps its source names without their uuids',
+		})
 		return [decisionOf({ record, family, direction: 'incoming', referenceClass, iedName, action })]
 	})
 }
@@ -505,7 +510,12 @@ function composePlan(params: {
 	const edits: RecordEdit[] = []
 	const warnings: ExtractWarning[] = []
 	for (const decision of decisions) {
-		const { record, family, action } = decision
+		const { record, family } = decision
+		// an input or output naming its source by uuid only has no names to keep: it is reduced instead
+		const action =
+			decision.action === 'keep-names' && decision.iedName === undefined
+				? 'reduce'
+				: decision.action
 		const ref = { tagName: record.tagName, id: record.id }
 		const iedName = decision.iedName ?? ''
 		if (action === 'keep') continue
@@ -529,6 +539,18 @@ function composePlan(params: {
 				warnings.push({
 					code: 'input-removed',
 					source: ref as Scl.Ref<'ExtRef'>,
+					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
+				})
+				continue
+			}
+			if (action === 'keep-names') {
+				edits.push({
+					ref: ref as Scl.Ref<Scl.ElementsOf>,
+					attributes: clearedUuids({ record, family }),
+				})
+				warnings.push({
+					code: 'external-input',
+					source: ref as Scl.Ref<'ExtRef' | 'ExtCtrl'>,
 					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
 				})
 				continue
@@ -567,6 +589,20 @@ function composePlan(params: {
 		edits,
 		warnings,
 	}
+}
+
+/** The uuids an input or output names its source by, those it holds, cleared: its source names stay. */
+function clearedUuids(params: {
+	record: Core.AnyRawRecord
+	family: 'input' | 'output'
+}): Record<string, undefined> {
+	const { record, family } = params
+	const names = family === 'input' ? INPUT_UUID_ATTRIBUTES : OUTPUT_UUID_ATTRIBUTES
+	return Object.fromEntries(
+		names.flatMap(function heldUuid(name) {
+			return readAttribute({ record, name, defaults: 'none' }) ? [[name, undefined]] : []
+		}),
+	)
 }
 
 /** An input or output written without its source: the attributes it holds of that source cleared, what it then lacks. */

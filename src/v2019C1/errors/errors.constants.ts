@@ -232,6 +232,11 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2016',
 		message: 'The selected IED has no network address',
 	},
+	/** An SSD extract's IED list names an IED no LNode of the scope is tied to. `meta: { ied }` */
+	EXTRACT_IED_NOT_BOUND: {
+		code: 'SCL2017',
+		message: 'The IED is not tied to an LNode the extract writes',
+	},
 	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`

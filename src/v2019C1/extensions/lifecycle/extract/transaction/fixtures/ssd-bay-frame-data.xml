@@ -1,0 +1,48 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<!-- Bay Q01: breaker QA1 holds an LNode bound to IED X, its data Pos mapped to X's breaker, its type used by nothing else; function PROT holds an LNode bound to IED Y. Y's PTOC has two inputs naming X's breaker by uuid only: one with an internal address, one without. -->
+	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Substation name="S1" uuid="a0000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="E1" uuid="a0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="a0000000-0000-4000-8000-000000000003" dev:db-id="q01">
+				<ConductingEquipment name="QA1" type="CBR" uuid="a0000000-0000-4000-8000-000000000004">
+					<LNode iedName="X" ldInst="LD1" prefix="" lnClass="XCBR" lnInst="1" lnType="XCBR_Only_Type" lnUuid="b0000000-0000-4000-8000-000000000002" dev:db-id="lnode-frame-x">
+						<Private type="eIEC61850-6-100"><eIEC61850-6-100:DOS name="Pos" mappedLnUuid="b0000000-0000-4000-8000-000000000002" mappedDoName="Pos" dev:db-id="dos-frame-x"/></Private>
+					</LNode>
+				</ConductingEquipment>
+				<Function name="PROT" uuid="a0000000-0000-4000-8000-000000000005">
+					<LNode iedName="Y" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" lnUuid="c0000000-0000-4000-8000-000000000002" dev:db-id="lnode-y"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="X" uuid="b0000000-0000-4000-8000-000000000001" dev:db-id="ied-x">
+		<AccessPoint name="AP1" uuid="b0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+			<LDevice inst="LD1" uuid="b0000000-0000-4000-8000-000000000011">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="b0000000-0000-4000-8000-000000000012"/>
+				<LN lnClass="XCBR" inst="1" prefix="" lnType="XCBR_Only_Type" uuid="b0000000-0000-4000-8000-000000000002"/>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<IED name="Y" uuid="c0000000-0000-4000-8000-000000000001" dev:db-id="ied-y">
+		<AccessPoint name="AP1" uuid="c0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+			<LDevice inst="LD1" uuid="c0000000-0000-4000-8000-000000000011">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="c0000000-0000-4000-8000-000000000012"/>
+				<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_Type" uuid="c0000000-0000-4000-8000-000000000002">
+					<Inputs>
+						<ExtRef desc="breaker position" intAddr="PosIn" pLN="XCBR" pDO="Pos" pDA="stVal" pServT="GOOSE" lnUuid="b0000000-0000-4000-8000-000000000002" doName="Pos" daName="stVal" dev:db-id="extref-uuid-with-address"/>
+						<ExtRef desc="breaker position again" lnUuid="b0000000-0000-4000-8000-000000000002" doName="Pos" daName="stVal" dev:db-id="extref-uuid-only"/>
+					</Inputs>
+				</LN>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Beh" type="ENS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="ACT_Type"/></LNodeType>
+		<LNodeType id="XCBR_Only_Type" lnClass="XCBR"><DO name="Pos" type="DPC_Only_Type"/></LNodeType>
+		<DOType id="ENS_Type" cdc="ENS"><DA name="stVal" bType="Enum" type="Beh_Kind" fc="ST"/></DOType>
+		<DOType id="ACT_Type" cdc="ACT"><DA name="general" bType="BOOLEAN" fc="ST"/></DOType>
+		<DOType id="DPC_Only_Type" cdc="DPC"><DA name="stVal" bType="Dbpos" fc="ST"/></DOType>
+		<EnumType id="Beh_Kind"><EnumVal ord="1">on</EnumVal></EnumType>
+	</DataTypeTemplates>
+</SCL>

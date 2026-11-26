@@ -1,5 +1,7 @@
 import type { Scl } from '@/v2019C1/config'
 import type { FileStart } from '@/v2019C1/extensions/history/transaction/start-file.types'
+import type { BoundIedAssignment } from '@/v2019C1/extensions/lifecycle/ied/bound-ieds.types'
+import type { IedKind } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.types'
 import type { TargetStructure } from '@/v2019C1/extensions/lifecycle/transplant/transaction/structure.types'
 
 /** Whether the element extracted stays an instance of the template it was made from. */
@@ -22,8 +24,8 @@ export type ExtractOptions = {
 }
 
 /**
- * What an extract left out or moved and says so: `sections-not-carried` — the `IED` and `Communication` sections of the
- * source, which an SSD does not carry yet, with their count —, a satellite moved, renamed, or not placed.
+ * What an extract left out or moved and says so: an IED the selection leaves out, an input from or an address of what is
+ * not carried, a reference to an IED not carried, a satellite moved, renamed, or not placed.
  */
 export type ExtractWarning =
 	| {
@@ -96,8 +98,23 @@ export type ExtractWarning =
 			iedName: string
 	  }
 	| {
-			code: 'sections-not-carried'
-			counts: { IED: number; Communication: number }
+			/** An IED an LNode of the scope is tied to that the selection leaves out: its LNodes are written released. */
+			code: 'ied-not-carried'
+			ied: Scl.Ref<'IED'>
+			name: string
+			kind: IedKind
+			assignment: BoundIedAssignment
+	  }
+	| {
+			/** An input or an output of a carried IED naming an IED not carried by name: written with those names, its uuids removed. */
+			code: 'external-input'
+			source: Scl.Ref<'ExtRef' | 'ExtCtrl'>
+			iedName?: string
+	  }
+	| {
+			/** A connection, GSE or SMV of a carried IED whose address is not written. */
+			code: 'address-not-carried'
+			source: Scl.Ref<'ConnectedAP' | 'GSE' | 'SMV'>
 	  }
 	| {
 			/**
@@ -125,6 +142,41 @@ export type ExtractWarning =
 			/** The source's variable. */
 			source: Scl.Ref<Scl.ElementsOf>
 	  }
+
+/** Whether an IED of a kind or assignment is carried by an SSD extract. */
+export type CarryChoice = 'carry' | 'leave-out'
+
+/** Which IEDs an SSD extract carries, by kind and assignment: carried when its kind's choice is `carry` and it is fully assigned to the scope or `shared` is `carry`. */
+export type IedSelectionRule = {
+	specification: CarryChoice
+	implemented: CarryChoice
+	shared: CarryChoice
+}
+
+/** Which IEDs an SSD extract carries: a rule, or exactly the IEDs listed (each tied to an LNode of the scope). */
+export type IedSelection = IedSelectionRule | readonly Scl.Ref<'IED'>[]
+
+/** The file type an SSD extract writes: given, or `'by-content'` (an SCD when it carries an implemented IED, else an SSD). */
+export type SsdExtractFileType = 'SSD' | 'SCD' | 'by-content'
+
+/** Whether the addresses of the carried IEDs' connections, GSE and SMV are written. */
+export type AddressChoice = 'drop' | 'keep'
+
+/** The options of an SSD extract about the IEDs it carries. */
+export type SsdExtractOptions = {
+	/** Which IEDs ride: default every IED an LNode of the scope is tied to. */
+	ieds?: IedSelection
+	/** The file type written: default `'SSD'`. */
+	fileType?: SsdExtractFileType
+	/** The addresses of the carried IEDs: default `'drop'`. */
+	addresses?: AddressChoice
+}
+
+/** What an SSD extract returns: its warnings and the file type it wrote. */
+export type SsdExtractResult = {
+	warnings: ExtractWarning[]
+	fileType: 'SSD' | 'SCD'
+}
 
 /** The element an SSD is extracted from: a substation, a voltage level or a bay. */
 export type SsdExtractScope = Scl.Ref<'Substation'> | Scl.Ref<'VoltageLevel'> | Scl.Ref<'Bay'>

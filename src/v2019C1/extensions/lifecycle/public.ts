@@ -51,15 +51,23 @@ export type {
 export type { AppliedInstance, AppliedInstances, AppliedPlacement, ApplyResult } from './apply'
 
 export type {
+	AddressChoice,
 	AsdExtractOptions,
+	CarryChoice,
 	ExtractOptions,
 	ExtractWarning,
 	FsdExtractOptions,
 	FunctionPlacement,
 	FunctionSection,
 	FunctionSections,
+	IedSelection,
+	IedSelectionRule,
+	SsdExtractFileType,
+	SsdExtractOptions,
+	SsdExtractResult,
 	TemplateLink,
 } from './extract/transaction/extract.types'
+export { ALL_BOUND_IEDS, TEMPLATE_IED_SELECTION } from './extract/transaction/ssd.constants'
 
 export type {
 	DecisionMapping,

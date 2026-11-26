@@ -1264,14 +1264,14 @@
 			"path": "tx.lifecycle.extract.ssd",
 			"root": "tx",
 			"otherRoutes": [],
-			"signature": "(params: { sourceQuery: Core.Query<Config>; scopeRef: SsdExtractScope; tool: Scl.AttributesValueObjectOf<'Header'>['toolID']; who: Scl.AttributesValueObjectOf<'Hitem'>['who']; nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']; } & ExtractOptions) => Promise<{ warnings: ExtractWarning[]; }>",
-			"summary": "Extract a bay-typical (or wider process scope) from a project into a standalone SSD template.",
+			"signature": "(params: { sourceQuery: Core.Query<Config>; scopeRef: SsdExtractScope; tool: Scl.AttributesValueObjectOf<'Header'>['toolID']; who: Scl.AttributesValueObjectOf<'Hitem'>['who']; nameStructure?: Scl.AttributesValueObjectOf<'Header'>['nameStructure']; } & ExtractOptions & SsdExtractOptions) => Promise<SsdExtractResult>",
+			"summary": "Extract a bay-typical (or wider process scope) from a project into a standalone template, with the IEDs its LNodes are tied to.",
 			"intents": [
 				"extract a bay typical into an SSD template",
 				"create an SSD from a bay or voltage level of a project",
 				"save a process section as a reusable template"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ssd.ts:40",
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ssd.ts:60",
 			"example": "await tx.lifecycle.extract.ssd({ sourceQuery: source.query, scopeRef, tool: 'TEST', who: 'test' })"
 		},
 		{
