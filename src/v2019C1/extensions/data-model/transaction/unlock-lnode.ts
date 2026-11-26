@@ -11,7 +11,7 @@ import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query/is-lnode-locked'
 import { readValueTypes } from '@/v2019C1/extensions/data-model/query/read-value-types'
 import { VALUE_TAGS } from '@/v2019C1/extensions/data-model/query/read-value-types.constants'
-import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { all } from '@/v2019C1/extensions/dataflow/query/all'
 import { resolveMappedData } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-data'
 import { readAttribute, readValueImport } from '@/v2019C1/helpers'
 import { holdsNothingBut } from '@/v2019C1/helpers/pruned-when-empty'
@@ -27,6 +27,8 @@ import type {
 	TypeMember,
 	ValueTypes,
 } from '@/v2019C1/extensions/data-model/query/read-value-types.types'
+import type { Dataflow } from '@/v2019C1/extensions/dataflow/dataflow.types'
+import type { UnsubscribeResult } from '@/v2019C1/extensions/dataflow/transaction/unsubscribe.types'
 import type * as Core from '@dialecte/core'
 import type { AnyRawRecord } from '@dialecte/core'
 
@@ -37,16 +39,17 @@ import type { AnyRawRecord } from '@dialecte/core'
  * path names, when that `DAI`'s effective `valImport` is true (`readValueImport`), it holds exactly one
  * `Val`, with no `sGroup`, and that `Val` (trimmed) equals the `DAS`'s, else the type default of its
  * `DA` / `BDA`. The `DAI` goes with it only when nothing else is left on it (no attribute but its
- * `name` / `ix`, no child), each `SDI` / `DOI` above it the same; everything else stays. Its signals
- * are no longer implemented (its `SourceRef` / `ControlRef` lose the address and uuid naming their
- * ExtRef / ExtCtrl; the ExtRef / ExtCtrl themselves stay), and it goes back to the specification its
- * `LNodeSpecNaming` keeps, which is left as it is: bound to the logical node of the specification IED
- * it is specified on when that IED holds it, no other LNode is bound to it and the LNode is not
- * unlocked from that IED itself; else assigned to no IED (`iedName` `None`, `lnUuid` cleared), its
- * logical device, prefix, class and instance those of its `LNodeSpecNaming`. An LNode assigned to no
- * IED is left as it is.
+ * `name` / `ix`, no child), each `SDI` / `DOI` above it the same; everything else stays. Its input
+ * subscriptions go through `tx.dataflow.unsubscribe`, including companions; with `unsubscribeOthers`
+ * it also ends other LNodes' ExtRefs subscribing to its data. Its `ControlRef` and dangling input
+ * links go too. It then goes back to the specification its `LNodeSpecNaming` keeps, which is left as
+ * it is: bound to the logical node of the specification IED it is specified on when that IED holds
+ * it, no other LNode is bound to it and the LNode is not unlocked from that IED itself; else assigned
+ * to no IED (`iedName` `None`, `lnUuid` cleared), its logical device, prefix, class and instance
+ * those of its `LNodeSpecNaming`. An LNode assigned to no IED is left as it is.
  *
- * Answers what it removed and, per `DAI` a `DAS` names whose value stays, why (`KeptValueReason`).
+ * Answers what it removed, per `DAI` a `DAS` names whose value stays why (`KeptValueReason`), and
+ * the unsubscribe result.
  *
  * @intent unbind an LNode from its IED, make the data model of an LNode editable again, deallocate an LNode, remove the values an LNode's specification imported into its IED and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl
  */
@@ -54,38 +57,93 @@ export async function unlockLNode(
 	tx: Core.Transaction<Config>,
 	params: UnlockLNodeParams,
 ): Promise<UnlockLNodeResult> {
-	const { lnode } = params
+	const { lnode, unsubscribeOthers = false } = params
 	const locked = await isLNodeLocked(tx, lnode)
-	if (!locked) return { removed: [], kept: [] }
+	if (!locked) return { removed: [], kept: [], unsubscribe: emptyUnsubscribeResult() }
 
 	// Read while the LNode is still bound: its binding names the LN holding the values.
 	const result = await removeOwnedValues(tx, { lnode })
-	await unimplementSignals(tx, { lnode })
+	const unsubscribe = await unimplementSignals(tx, { lnode, unsubscribeOthers })
 
 	await releaseLNodeBinding(tx, { lnode })
-	return result
+	return { ...result, unsubscribe }
 }
 
-/** Drop the implementation of the signals of an LNode: the attributes of their `ied-address` pairs. */
+/**
+ * End the subscriptions that implement the LNode's inputs. Optionally end other LNodes' ExtRefs
+ * subscribing to its data. Its control signals and dangling inputs are still unlinked.
+ */
 async function unimplementSignals(
 	tx: Core.Transaction<Config>,
-	params: { lnode: Scl.Ref<'LNode'> },
-): Promise<void> {
-	const descendants = await tx.findDescendants(params.lnode)
-	for (const records of Object.values(descendants) as Scl.TrackedRecord<Scl.ElementsOf>[][]) {
-		for (const record of records) {
-			const implementation = (PAIRS_BY_REF.get(record.tagName) ?? []).filter(
-				(pair) => pair.resolution === RESOLUTION_TYPE.iedAddress,
-			)
-			if (implementation.length === 0) continue
-			const cleared = Object.fromEntries(
-				implementation.flatMap((pair) => [
-					[pair.pathAttr, ''],
-					[pair.uuidAttr, ''],
-				]),
-			)
-			await tx.any.update(record, { attributes: cleared })
+	params: { lnode: Scl.Ref<'LNode'>; unsubscribeOthers: boolean },
+): Promise<UnsubscribeResult> {
+	const { lnode, unsubscribeOthers } = params
+	const dataflows = await all(tx)
+	const extRefs = subscriptionExtRefs({ dataflows, lnode, unsubscribeOthers })
+	const ending = new Set(extRefs.map(({ id }) => id))
+	const sclDataflow = (tx as Scl.Transaction).dataflow
+	const unsubscribe = await sclDataflow.unsubscribe({
+		extRefs,
+		withCompanions: true,
+	})
+	for (const dataflow of ownSignals({ dataflows, lnode })) {
+		const { element } = dataflow.implementation
+		if (dataflow.signal.tagName === 'SourceRef' && element?.tagName === 'ExtRef') {
+			if (ending.has(element.id)) continue
 		}
+		await sclDataflow.unlink({ signal: dataflow.signal })
+	}
+	return unsubscribe
+}
+
+/** The ExtRefs implementing the LNode's inputs, plus subscribers to its data when requested. */
+function subscriptionExtRefs(params: {
+	dataflows: readonly Dataflow[]
+	lnode: Scl.Ref<'LNode'>
+	unsubscribeOthers: boolean
+}): Scl.Ref<'ExtRef'>[] {
+	const { dataflows, lnode, unsubscribeOthers } = params
+	const extRefs = new Map<string, Scl.Ref<'ExtRef'>>()
+	for (const dataflow of dataflows) {
+		const element = dataflow.implementation.element
+		if (element?.tagName !== 'ExtRef') continue
+		const ownsSignal =
+			dataflow.kind === 'specified' &&
+			dataflow.signal.tagName === 'SourceRef' &&
+			dataflow.specification.holder.id === lnode.id
+		const subscribesToLNode =
+			unsubscribeOthers &&
+			(dataflow.kind === 'specified'
+				? dataflow.specification.other?.lnode.id === lnode.id &&
+					dataflow.specification.holder.id !== lnode.id
+				: dataflow.lnodes.sender.some((sender) => sender.id === lnode.id) &&
+					!dataflow.lnodes.subscriber.some((subscriber) => subscriber.id === lnode.id))
+		if (ownsSignal || subscribesToLNode) extRefs.set(element.id, element)
+	}
+	return [...extRefs.values()]
+}
+
+/** The signals held by the LNode, in document order. */
+function ownSignals(params: {
+	dataflows: readonly Dataflow[]
+	lnode: Scl.Ref<'LNode'>
+}): Extract<Dataflow, { kind: 'specified' }>[] {
+	const { dataflows, lnode } = params
+	return dataflows.filter(
+		(dataflow): dataflow is Extract<Dataflow, { kind: 'specified' }> =>
+			dataflow.kind === 'specified' && dataflow.specification.holder.id === lnode.id,
+	)
+}
+
+/** The empty answer for an unlock that has nothing to unsubscribe. */
+function emptyUnsubscribeResult(): UnsubscribeResult {
+	return {
+		unbound: [],
+		removed: [],
+		unlinked: [],
+		registrations: [],
+		supervisions: [],
+		kept: [],
 	}
 }
 
@@ -96,13 +154,13 @@ async function unimplementSignals(
 async function removeOwnedValues(
 	tx: Core.Transaction<Config>,
 	params: { lnode: Scl.Ref<'LNode'> },
-): Promise<UnlockLNodeResult> {
+): Promise<Pick<UnlockLNodeResult, 'removed' | 'kept'>> {
 	const descendants = (await tx.findDescendants(params.lnode)) as Record<
 		string,
 		Scl.TrackedRecord<Scl.ElementsOf>[]
 	>
 	const specifications = descendants[SPECIFIED_VALUE_TAG] ?? []
-	const result: UnlockLNodeResult = { removed: [], kept: [] }
+	const result: Pick<UnlockLNodeResult, 'removed' | 'kept'> = { removed: [], kept: [] }
 	if (specifications.length === 0) return result
 
 	const types = await readValueTypes(tx)
@@ -243,6 +301,16 @@ async function findDataInstance(
 ): Promise<{ instance: AnyRawRecord; member: TypeMember | undefined } | undefined> {
 	const ln = await tx.getRecord(params.ln as Scl.Ref<Scl.ElementsOf>)
 	if (!ln) return undefined
+	const descendants = (await tx.findDescendants(params.ln)) as Record<
+		string,
+		Scl.TrackedRecord<Scl.ElementsOf>[]
+	>
+	const instancesById = new Map(
+		Object.values(descendants)
+			.flat()
+			.filter((record) => DATA_INSTANCE_TAGS.has(record.tagName))
+			.map((record) => [record.id, record]),
+	)
 	let current: AnyRawRecord = ln
 	let typeId: string | undefined = readAttribute({
 		record: ln,
@@ -252,11 +320,10 @@ async function findDataInstance(
 	let member: TypeMember | undefined
 	for (const segment of params.dataPath) {
 		const { name, ix } = splitArrayIndex(segment)
-		const children = await tx.getRecords(
-			current.children.filter((child) =>
-				DATA_INSTANCE_TAGS.has(child.tagName),
-			) as Scl.Ref<Scl.ElementsOf>[],
-		)
+		const children = current.children.flatMap((child) => {
+			const instance = instancesById.get(child.id)
+			return instance ? [instance] : []
+		})
 		const next = children.find(
 			(child) =>
 				child !== undefined &&

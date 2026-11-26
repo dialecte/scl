@@ -1119,14 +1119,14 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: UnlockLNodeParams) => Promise<UnlockLNodeResult>",
-			"summary": "Unlock an LNode bound to an (S-)IED, so its data model can be changed and it can be allocated again. The IED tool owns the data model of the LN implementing it and its values; the unlock removes only the values the system tool owns: for each `DAS` of the LNode, the `Val` of the `DAI` its data path names, when that `DAI`'s effective `valImport` is true (`readValueImport`), it holds exactly one `Val`, with no `sGroup`, and that `Val` (trimmed) equals the `DAS`'s, else the type default of its `DA` / `BDA`. The `DAI` goes with it only when nothing else is left on it (no attribute but its `name` / `ix`, no child), each `SDI` / `DOI` above it the same; everything else stays. Its signals are no longer implemented (its `SourceRef` / `ControlRef` lose the address and uuid naming their ExtRef / ExtCtrl; the ExtRef / ExtCtrl themselves stay), and it goes back to the specification its `LNodeSpecNaming` keeps, which is left as it is: bound to the logical node of the specification IED it is specified on when that IED holds it, no other LNode is bound to it and the LNode is not unlocked from that IED itself; else assigned to no IED (`iedName` `None`, `lnUuid` cleared), its logical device, prefix, class and instance those of its `LNodeSpecNaming`. An LNode assigned to no IED is left as it is.",
+			"summary": "Unlock an LNode bound to an (S-)IED, so its data model can be changed and it can be allocated again. The IED tool owns the data model of the LN implementing it and its values; the unlock removes only the values the system tool owns: for each `DAS` of the LNode, the `Val` of the `DAI` its data path names, when that `DAI`'s effective `valImport` is true (`readValueImport`), it holds exactly one `Val`, with no `sGroup`, and that `Val` (trimmed) equals the `DAS`'s, else the type default of its `DA` / `BDA`. The `DAI` goes with it only when nothing else is left on it (no attribute but its `name` / `ix`, no child), each `SDI` / `DOI` above it the same; everything else stays. Its input subscriptions go through `tx.dataflow.unsubscribe`, including companions; with `unsubscribeOthers` it also ends other LNodes' ExtRefs subscribing to its data. Its `ControlRef` and dangling input links go too. It then goes back to the specification its `LNodeSpecNaming` keeps, which is left as it is: bound to the logical node of the specification IED it is specified on when that IED holds it, no other LNode is bound to it and the LNode is not unlocked from that IED itself; else assigned to no IED (`iedName` `None`, `lnUuid` cleared), its logical device, prefix, class and instance those of its `LNodeSpecNaming`. An LNode assigned to no IED is left as it is.",
 			"intents": [
 				"unbind an LNode from its IED",
 				"make the data model of an LNode editable again",
 				"deallocate an LNode",
 				"remove the values an LNode's specification imported into its IED and unlink its SourceRef/ControlRef from their ExtRef/ExtCtrl"
 			],
-			"declaredAt": "src/v2019C1/extensions/data-model/transaction/unlock-lnode.ts:53"
+			"declaredAt": "src/v2019C1/extensions/data-model/transaction/unlock-lnode.ts:56"
 		},
 		{
 			"path": "tx.history.addEntry",

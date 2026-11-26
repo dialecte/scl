@@ -1,0 +1,79 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<Substation name="S1">
+		<Function name="F1">
+			<LNode dev:db-id="lnode-publisher" uuid="10000000-0000-4000-8000-000000000001" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" lnUuid="20000000-0000-4000-8000-000000000001" lnType="PTOC_T" />
+			<LNode dev:db-id="lnode-target" uuid="10000000-0000-4000-8000-000000000002" iedName="T" ldInst="LD0" prefix="" lnClass="XSWI" lnInst="1" lnUuid="20000000-0000-4000-8000-000000000002" lnType="XSWI_T">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeSpecNaming sLnClass="XSWI" sLnInst="1" />
+					<eIEC61850-6-100:LNodeInputs>
+						<eIEC61850-6-100:SourceRef dev:db-id="target-source" input="Trip" sourceLNodeUuid="10000000-0000-4000-8000-000000000001" sourceDoName="Op" extRefUuid="30000000-0000-4000-8000-000000000001" />
+					</eIEC61850-6-100:LNodeInputs>
+				</Private>
+			</LNode>
+			<LNode dev:db-id="lnode-receiver" uuid="10000000-0000-4000-8000-000000000003" iedName="R" ldInst="LD0" prefix="" lnClass="GGIO" lnInst="1" lnUuid="20000000-0000-4000-8000-000000000003" lnType="GGIO_T">
+				<Private type="eIEC61850-6-100">
+					<eIEC61850-6-100:LNodeInputs>
+						<eIEC61850-6-100:SourceRef dev:db-id="receiver-source" input="State" sourceLNodeUuid="10000000-0000-4000-8000-000000000002" sourceDoName="Pos" extRefUuid="30000000-0000-4000-8000-000000000003" />
+					</eIEC61850-6-100:LNodeInputs>
+				</Private>
+			</LNode>
+		</Function>
+	</Substation>
+	<IED name="P" dev:db-id="ied-p">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication />
+				<LDevice inst="LD0">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+						<DataSet name="DS"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" /></DataSet>
+						<GSEControl name="GCB" appID="P-GCB" confRev="10000" datSet="DS" dev:db-id="publisher-gcb"><IEDName apRef="AP1" dev:db-id="registration-p">T</IEDName></GSEControl>
+					</LN0>
+					<LN dev:db-id="publisher-ln" lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T" uuid="20000000-0000-4000-8000-000000000001" />
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="T" dev:db-id="ied-target">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication />
+				<LDevice inst="LD0">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+						<DataSet name="DS"><FCDA ldInst="LD0" prefix="" lnClass="XSWI" lnInst="1" doName="Pos" daName="stVal" fc="ST" /></DataSet>
+						<GSEControl name="GCB" appID="T-GCB" confRev="10000" datSet="DS" dev:db-id="target-gcb"><IEDName apRef="AP1" dev:db-id="registration-target">R</IEDName></GSEControl>
+					</LN0>
+					<LN dev:db-id="target-ln" lnClass="XSWI" inst="1" prefix="" lnType="XSWI_T" uuid="20000000-0000-4000-8000-000000000002">
+						<Inputs>
+							<ExtRef dev:db-id="target-ext-stval" uuid="30000000-0000-4000-8000-000000000001" intAddr="Trip.stVal" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="GCB" pDO="Op" />
+							<ExtRef dev:db-id="target-ext-q" uuid="30000000-0000-4000-8000-000000000002" intAddr="Trip.q" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="q" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="GCB" pDO="Op" />
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<IED name="R" dev:db-id="ied-receiver">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication />
+				<LDevice inst="LD0">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_T" />
+					<LN dev:db-id="receiver-ln" lnClass="GGIO" inst="1" prefix="" lnType="GGIO_T" uuid="20000000-0000-4000-8000-000000000003">
+						<Inputs>
+							<ExtRef dev:db-id="receiver-ext" uuid="30000000-0000-4000-8000-000000000003" intAddr="State.stVal" iedName="T" ldInst="LD0" prefix="" lnClass="XSWI" lnInst="1" doName="Pos" daName="stVal" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="GCB" pDO="Pos" />
+						</Inputs>
+					</LN>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_T" lnClass="LLN0"><DO name="Beh" type="ENS_T" /></LNodeType>
+		<LNodeType id="PTOC_T" lnClass="PTOC"><DO name="Op" type="ACT_T" /></LNodeType>
+		<LNodeType id="XSWI_T" lnClass="XSWI"><DO name="Pos" type="DPC_T" /></LNodeType>
+		<LNodeType id="GGIO_T" lnClass="GGIO"><DO name="Beh" type="ENS_T" /></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="Enum" /></DOType>
+		<DOType id="ACT_T" cdc="ACT"><DA name="general" fc="ST" bType="BOOLEAN" /><DA name="q" fc="ST" bType="Quality" /></DOType>
+		<DOType id="DPC_T" cdc="DPC"><DA name="stVal" fc="ST" bType="Dbpos" /></DOType>
+	</DataTypeTemplates>
+</SCL>

@@ -57,6 +57,14 @@ describe('unlockLNode: what it answers', () => {
 						ref({ tagName: 'DAI', name: 'nested-shared' }),
 					],
 					kept: [],
+					unsubscribe: {
+						unbound: [],
+						removed: [],
+						unlinked: [],
+						registrations: [],
+						supervisions: [],
+						kept: [],
+					},
 				},
 			},
 		// every DOS of kept-values.xml
@@ -80,6 +88,14 @@ describe('unlockLNode: what it answers', () => {
 					kept({ name: 'spec-blank', reason: 'no-specified-value' }),
 					kept({ name: 'multi-default', reason: 'no-specified-value' }),
 				],
+				unsubscribe: {
+					unbound: [],
+					removed: [],
+					unlinked: [],
+					registrations: [],
+					supervisions: [],
+					kept: [],
+				},
 			},
 		},
 	}
@@ -94,6 +110,7 @@ describe('unlockLNode: what it answers', () => {
 			expect(result).toEqual({
 				removed: expect.arrayContaining(removed),
 				kept: expect.arrayContaining(keptValues),
+				unsubscribe: testCase.expected.unsubscribe,
 			})
 			expect(result.removed).toHaveLength(removed.length)
 			expect(result.kept).toHaveLength(keptValues.length)
@@ -137,6 +154,14 @@ describe('unlockLNode: the data it walks to', () => {
 			expect(result).toEqual({
 				removed: expect.arrayContaining(testCase.removed),
 				kept: [],
+				unsubscribe: {
+					unbound: [],
+					removed: [],
+					unlinked: [],
+					registrations: [],
+					supervisions: [],
+					kept: [],
+				},
 			})
 			const start = result.removed.findIndex((entry) => entry.id === testCase.removed[0].id)
 			expect(result.removed.slice(start, start + testCase.removed.length)).toEqual(testCase.removed)
@@ -177,7 +202,18 @@ describe('unlockLNode: an LNode assigned to no IED', () => {
 				</SCL>
 			`,
 			expectedQueries: ['//default:DOI[@name="Equal"]/default:DAI/default:Val[text()="1"]'],
-			expected: { removed: [], kept: [] },
+			expected: {
+				removed: [],
+				kept: [],
+				unsubscribe: {
+					unbound: [],
+					removed: [],
+					unlinked: [],
+					registrations: [],
+					supervisions: [],
+					kept: [],
+				},
+			},
 		},
 	}
 

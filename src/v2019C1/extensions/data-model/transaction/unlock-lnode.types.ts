@@ -1,7 +1,12 @@
 import type { KEPT_VALUE_REASONS } from './unlock-lnode.constants'
 import type { Scl } from '@/v2019C1/config'
+import type { UnsubscribeResult } from '@/v2019C1/extensions/dataflow/transaction/unsubscribe.types'
 
-export type UnlockLNodeParams = { lnode: Scl.Ref<'LNode'> }
+export type UnlockLNodeParams = {
+	lnode: Scl.Ref<'LNode'>
+	/** End ExtRefs of other LNodes subscribing to this LNode's data. Default false. */
+	unsubscribeOthers?: boolean
+}
 
 /** Why an unlock keeps the value of a `DAI` its specification names: see `unlockLNode`. */
 export type KeptValueReason = (typeof KEPT_VALUE_REASONS)[number]
@@ -22,4 +27,6 @@ export type UnlockLNodeResult = {
 	removed: RemovedData[]
 	/** Each `DAI` named by a `DAS` of the LNode whose value stays, with why. */
 	kept: KeptValue[]
+	/** The subscriptions and their bookkeeping ended by the unlock. */
+	unsubscribe: UnsubscribeResult
 }
