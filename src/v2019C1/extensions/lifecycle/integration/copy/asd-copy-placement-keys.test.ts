@@ -39,15 +39,18 @@ describe('asd copy - the key taken judged where each function lands', () => {
 				],
 			},
 		// A3's F1 (from B1) and F1b (named F1, from B3) both land in B9, which holds no function
-		'A3 to VL2/B9 → the second F1 placed there taken by the first, F1_1 proposed and written': {
-			sourceXml: overTwoBaysXml,
-			copy: { verb: 'asd', ref: A3, anchor: B9 },
-			expected: ['Function uniqueChildNameInBay name=F1 taken by Function f1 → name=F1_1'],
-			expectedQueries: [
-				'//default:Bay[@name="B9"]/default:Function[@name="F1"][not(@uuid="f1")]',
-				'//default:Bay[@name="B9"]/default:Function[@name="F1_1"]',
-			],
-		},
+		'A3 to VL2/B9 → the second F1 placed there taken by the copy of the first, F1_1 proposed and written':
+			{
+				sourceXml: overTwoBaysXml,
+				copy: { verb: 'asd', ref: A3, anchor: B9 },
+				expected: [
+					'Function uniqueChildNameInBay name=F1 taken by the copy of Function f1 → name=F1_1',
+				],
+				expectedQueries: [
+					'//default:Bay[@name="B9"]/default:Function[@name="F1"][not(@uuid="f1")]',
+					'//default:Bay[@name="B9"]/default:Function[@name="F1_1"]',
+				],
+			},
 		// A3's F1 lands in VL1/B1 beside F1, its F1b (named F1) in VL1/B3 beside F1b: each judged in its own bay only
 		'A3 to VL1 → F1 taken in B1 and F1b taken in B3, each F1_1 where it lands, never F1_2': {
 			sourceXml: overTwoBaysXml,

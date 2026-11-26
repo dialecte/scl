@@ -25,7 +25,10 @@ export function describeLevelRows(report: DiffReport): string[] {
 		})
 }
 
-/** Each key taken the report tells, on the group of the root it places, read for a person. */
+/**
+ * Each key taken the report tells, on the group of the root it places, read for a person: taken by an element of the
+ * document, or by the copy of a source element the copy placed there before.
+ */
 export function describeKeysTaken(report: DiffReport): string[] {
 	return report.instances
 		.flatMap((instance) => instance.groups)
@@ -33,7 +36,7 @@ export function describeKeysTaken(report: DiffReport): string[] {
 			const taken = group.keyTaken
 			if (!taken) return []
 			return [
-				`${group.primary.tagName} ${taken.constraint} ${describeValues(taken.values)} taken by ${taken.takenBy.tagName} ${taken.takenBy.id} → ${describeValues(taken.proposed)}`,
+				`${group.primary.tagName} ${taken.constraint} ${describeValues(taken.values)} taken by ${taken.takenBy.copyOf ? 'the copy of ' : ''}${taken.takenBy.tagName} ${taken.takenBy.id} → ${describeValues(taken.proposed)}`,
 			]
 		})
 		.sort()

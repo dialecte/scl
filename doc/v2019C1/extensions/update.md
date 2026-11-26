@@ -319,8 +319,9 @@ query and `anchor` the parent the consumer picked: `report` lists the copy as a 
 - **Names**: a name a sibling holds where the copy lands is numbered (`F1` -> `F1_1`), a typed name taken too, each
   root judged where it lands, apart from what the copy placed there before it. The report gives it on the group of each
   root it places (the Function; the Application and each Function it composes): `keyTaken: { constraint, values,
-  takenBy, proposed }` — the values `apply` writes unless the review types others; `takenBy` names a root the copy
-  placed before by its source element.
+  takenBy, proposed }` — the values `apply` writes unless the review types others; `takenBy` is the sibling of the
+  document holding it, or, with `copyOf: true`, the copy of a source element the copy places there before (named by
+  that source element: it has no id before it is written).
 - **Outside references** the copy carries (a signal input from another function, a terminal on a node of another bay)
   are kept as written.
 - **LNodes**: no IED travels with the copy, so each copied LNode bound to one is released from it — `iedName` `None`,

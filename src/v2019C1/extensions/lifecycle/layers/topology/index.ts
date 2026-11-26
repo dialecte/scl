@@ -29,7 +29,7 @@ export {
 	resolveUnitPlacement,
 } from './scope-content'
 export { resolvePlacementMappings } from './resolve-placement-mappings'
-export { resolvePrimaryPlacement } from './resolve-primary-placement'
+export { readSourceLevels, resolvePrimaryPlacement } from './resolve-primary-placement'
 export { landPrimaries } from './land-primaries'
 export { assertPlacementDecided, findLanding } from './placement-landing'
 export { createLandingOf, resolveLevelLandings } from './source-landing'
@@ -74,7 +74,7 @@ export type {
 	ResolvePrimaryParentsParams,
 } from './resolve-primary-parents.types'
 export type { HeldLevels, InstanceCounterpart } from './resolve-held-levels.types'
-export type { OffLevel, PrimaryPlacement } from './resolve-primary-placement.types'
+export type { OffLevel, PrimaryPlacement, SourceLevel } from './resolve-primary-placement.types'
 export type { PrimaryLanding } from './land-primaries.types'
 export { findDroppedPrimaries } from './find-dropped-primaries'
 export { landGroundedTerminals, placeLevelsOnStructure } from './grounded-terminals'

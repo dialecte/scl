@@ -21,6 +21,8 @@ export type ResolvePrimaryPlacementParams = {
 	 * of the same tag and name directly under where the level above it lands, else on that place itself.
 	 */
 	levels?: 'template' | 'source'
+	/** With `levels: 'source'`: the levels the primaries sit on, already read by the caller (`readSourceLevels`). */
+	sourceLevels?: readonly SourceLevel[]
 }
 
 /** The consumer started above the level a template was made for: its content lands below. */
@@ -49,4 +51,6 @@ export type SourceLevel = {
 	aboveIds: string[]
 	/** The tags of the primaries it holds. */
 	primaryTags: Set<string>
+	/** The record ids of the primaries it holds, as the primaries list them. */
+	primaryIds: string[]
 }

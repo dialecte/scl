@@ -139,12 +139,17 @@ async function resolveUnitLevel(
 /** The element of the project the consumer chose for a level, when it chose one. */
 export async function resolveChosenLevel(
 	reader: MappingReader,
-	params: ResolveLevelParams,
+	params: ResolveLevelParams & {
+		/** The element chosen, already read by the caller with the others (`undefined`: the document lacks it). */
+		read?: { existing: AnyTrackedRecord | undefined }
+	},
 ): Promise<ResolvedLevel | undefined> {
 	const { decision } = params
 	if (!decision || !('existing' in decision)) return undefined
 
-	const existing = await reader.any.getRecord(decision.existing)
+	const existing = params.read
+		? params.read.existing
+		: await reader.any.getRecord(decision.existing)
 	if (!existing) return undefined
 	return existingLevel({ ...params, existing, reason: 'decision' })
 }

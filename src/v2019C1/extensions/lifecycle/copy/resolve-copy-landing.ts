@@ -1,5 +1,6 @@
 import {
 	assertPlacementDecided,
+	readSourceLevels,
 	createLandingOf,
 	resolveLevelLandings,
 	resolvePrimaryPlacement,
@@ -20,26 +21,27 @@ export async function resolveCopyLanding(
 	params: Omit<ResolveCopyLandingParams, 'tx'>,
 ): Promise<CopyLanding> {
 	const { sourceQuery, functionRefs, anchor, decisionMappings, operation } = params
+	// the levels the functions sit on, read once: the rows, and the level each function lands by
+	const sourceLevels = await readSourceLevels({ sourceQuery, primaryRefs: functionRefs })
 	const { levels } = await resolvePrimaryPlacement(tx, {
 		sourceQuery,
 		primaryRefs: functionRefs,
 		anchor,
 		decisionMappings,
 		levels: 'source',
+		sourceLevels,
 	})
 	assertPlacementDecided({ placementLevels: levels, operation })
-	const landingOf = createLandingOf({ landings: resolveLevelLandings({ placementLevels: levels }) })
-	const ancestries =
-		levels.length > 0
-			? await sourceQuery.findAncestorsOfEach(functionRefs, { stopAtTagName: 'Substation' })
-			: []
+	const landings = resolveLevelLandings({ placementLevels: levels })
+	const landingOf = createLandingOf({ landings })
 	// a level lands what it holds on a Substation, a VoltageLevel or a Bay: what admits a function
 	const functionLandings = new Map<string, Scl.Ref<TopologyStructuralTag>>()
-	functionRefs.forEach(function landFunction(functionRef, index) {
-		const landing = landingOf(ancestries[index] ?? [])
-		if (landing && functionRef.id) {
-			functionLandings.set(functionRef.id, landing as Scl.Ref<TopologyStructuralTag>)
+	for (const { sourceRef, primaryIds } of sourceLevels) {
+		const landing = landings.get(sourceRef.id)
+		if (!landing) continue
+		for (const functionId of primaryIds) {
+			functionLandings.set(functionId, landing as Scl.Ref<TopologyStructuralTag>)
 		}
-	})
+	}
 	return { placeUnder: anchor, landingOf, functionLandings }
 }

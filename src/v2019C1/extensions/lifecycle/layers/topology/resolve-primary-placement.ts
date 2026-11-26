@@ -90,8 +90,10 @@ function byRank(first: PlacementLevel, second: PlacementLevel): number {
  * VoltageLevel or Bay of a primary, none when they all sit on one (they land where the consumer started). Resolved
  * top-down, each under where the nearest of them above it lands (else the anchor): the consumer's choice; else the
  * element there of the level's tag and name; else that place itself, when it may hold the level's primaries — else the
- * consumer's to choose. A level is never created. One read of the primaries' ancestors, of the anchor, and of the
- * children of a tag per place a level lands under, whatever the number of levels.
+ * consumer's to choose. A level is never created. One read of the primaries' ancestors, of the anchor, of the elements
+ * chosen, and of the children of a tag per place a level lands under, whatever the number of levels. (The read-cost
+ * test measures levels all landing under the anchor; a level landing under another level's landing adds one children
+ * read per such landing and tag, not measured there.)
  */
 async function resolveSourceLevels(
 	reader: MappingReader,
@@ -99,9 +101,18 @@ async function resolveSourceLevels(
 ): Promise<PlacementLevel[]> {
 	const { sourceQuery, anchor, decisionMappings } = params
 
-	const sourceLevels = await readSourceLevels(params)
+	const sourceLevels = params.sourceLevels ?? (await readSourceLevels(params))
 	if (sourceLevels.length <= 1) return []
 	const anchorRecord = await reader.any.getRecord(anchor)
+	// the elements the consumer chose, read once for every level
+	const decided = sourceLevels.flatMap(function decidedOf({ sourceRef }) {
+		const decision = decisionMappings?.get(sourceRef.id)
+		return decision && 'existing' in decision ? [decision.existing] : []
+	})
+	const decidedRecords = decided.length > 0 ? await reader.any.getRecords(decided) : []
+	const decidedById = new Map(
+		decided.map((ref, index) => [ref.id ?? '', decidedRecords[index] ?? undefined] as const),
+	)
 	// the children of a tag of each place a level lands under, read once for every level landing there
 	const childrenOf = new Map<string, AnyTrackedRecord[]>()
 	async function readChildren(parent: Scl.Ref<Scl.ElementsOf>, tagName: string) {
@@ -144,7 +155,14 @@ async function resolveSourceLevels(
 			parentTarget,
 			decision: decisionMappings?.get(sourceRef.id),
 		}
-		const chosen = await resolveChosenLevel(reader, levelParams)
+		const decision = levelParams.decision
+		const chosen = await resolveChosenLevel(reader, {
+			...levelParams,
+			read:
+				decision && 'existing' in decision
+					? { existing: decidedById.get(decision.existing.id ?? '') }
+					: undefined,
+		})
 		if (chosen) {
 			levels.push({ ...chosen, ...placed })
 			continue
@@ -166,9 +184,12 @@ async function resolveSourceLevels(
 
 /**
  * The distinct nearest levels the primaries sit on in the source, top-down (by rank, then as the primaries list them):
- * each with the record ids of the levels above it, nearest first, and the tags of the primaries it holds. One read.
+ * each with the record ids of the levels above it, nearest first, and the tags and ids of the primaries it holds. One
+ * read. The one definition of a source level: the resolver, the copy's landing and its entry checks read it.
  */
-async function readSourceLevels(params: ResolvePrimaryPlacementParams): Promise<SourceLevel[]> {
+export async function readSourceLevels(
+	params: Pick<ResolvePrimaryPlacementParams, 'sourceQuery' | 'primaryRefs'>,
+): Promise<SourceLevel[]> {
 	const { sourceQuery, primaryRefs } = params
 	const ancestries = await sourceQuery.findAncestorsOfEach(primaryRefs, {
 		stopAtTagName: 'Substation',
@@ -182,6 +203,7 @@ async function readSourceLevels(params: ResolvePrimaryPlacementParams): Promise<
 		const known = byId.get(nearest.id)
 		if (known) {
 			known.primaryTags.add(primaryRef.tagName)
+			if (primaryRef.id) known.primaryIds.push(primaryRef.id)
 			return
 		}
 		byId.set(nearest.id, {
@@ -189,6 +211,7 @@ async function readSourceLevels(params: ResolvePrimaryPlacementParams): Promise<
 			record: nearest,
 			aboveIds: above.map((ancestor) => ancestor.id),
 			primaryTags: new Set([primaryRef.tagName]),
+			primaryIds: primaryRef.id ? [primaryRef.id] : [],
 		})
 	})
 	return [...byId.values()].sort(

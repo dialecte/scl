@@ -11,6 +11,3 @@ export const NO_LEVEL_LANDED: StructureLanding = { levels: [], redirects: [] }
 
 /** The tags of the roots a copy is made of: what it holds is the copy, what applies to it outside them a satellite. */
 export const COPY_ROOT_TAGS: ReadonlySet<string> = new Set(Object.values(COPY_ROOT_TAG_BY_VERB))
-
-/** What tells a root the copy placed before another apart from its source element, where both are judged. */
-export const PLACED_SUFFIX = '-placed'
