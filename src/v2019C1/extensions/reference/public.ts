@@ -1,7 +1,14 @@
 export * from './constants'
 export type * from './constants'
 export * from './guards'
-export type { MappedData, ResolvedReference, ResolveMappedDataParams } from './query'
+export type {
+	MappedData,
+	ResolvedReference,
+	ResolveMappedDataParams,
+	ResolvedTuplePair,
+	TupleReferenceDraft,
+	TupleToResolve,
+} from './query'
 export type {
 	SetMappedDataParams,
 	SetMappedDataResult,
