@@ -1,3 +1,0 @@
-### Changed
-
-- **Behaviour change: the commit refuses a reference retargeted to a uuid naming nothing** (`REFERENCE_INCOHERENT`, `reason: 'uuid-unresolved'`): an existing path reference whose uuid the transaction changes to one no element of the document holds; an element the same transaction creates counts, and a reference named by a tuple (`ExtRef`, `FCDA`...) is not checked. A reference created with such a uuid still commits: a copy from another document keeps that document's uuids by design, and is healed later (a remap, an identity restore) or kept on purpose. Each retargeted uuid is looked up once at the commit, one lookup per target tag; a create reads nothing more than before.
