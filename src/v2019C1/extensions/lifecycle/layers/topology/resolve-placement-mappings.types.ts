@@ -1,5 +1,6 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type {
+	DecisionMapping,
 	DecisionMappings,
 	ResolvedMapping,
 	StoredRef,
@@ -40,4 +41,21 @@ export type PlacementLevel = {
 	 * choose, or the level above is itself not decided. Nothing can be placed until it is.
 	 */
 	undecided: boolean
+	/**
+	 * The element the level above lands on (`parentTarget`) is itself a place the level's content may land on: listed as
+	 * its first candidate. Set where a level places what it holds, not itself (a copy's source levels).
+	 */
+	parentIsCandidate?: true
+}
+
+/** A level as resolved on its own, before it is placed among the others. */
+export type ResolvedLevel = Omit<PlacementLevel, 'context' | 'parentSourceId'>
+
+/** What one level is resolved from: its source element, where the level above lands, the consumer's choice. */
+export type ResolveLevelParams = {
+	sourceQuery: Core.Query<Config>
+	sourceRef: StoredRef
+	/** The project element the level above lands on — none when that one is created. */
+	parentTarget?: Scl.Ref<Scl.ElementsOf>
+	decision?: DecisionMapping
 }

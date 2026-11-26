@@ -127,10 +127,14 @@ export async function cloneApplicationContent(
 		placedCategories?: Map<string, Scl.Ref<'FunctionCategory'>>
 		/**
 		 * A copy inside one document: every function the application composes copied with it (none is missing there),
-		 * the application and its functions under `placeUnder`, what they carry kept as written, the shared elements
+		 * the application under `placeUnder`, each function where its source level's row lands it (`functionLandings`,
+		 * by source record id; one absent under `placeUnder`), what they carry kept as written, the shared elements
 		 * reused (the source is the project: a reference it holds is never one the placement wrote).
 		 */
-		copy?: { placeUnder: Scl.Ref<TopologyStructuralTag> }
+		copy?: {
+			placeUnder: Scl.Ref<TopologyStructuralTag>
+			functionLandings: ReadonlyMap<string, Scl.Ref<TopologyStructuralTag>>
+		}
 	},
 ): Promise<CloneApplicationContentResult> {
 	const { sourceQuery, applicationRef, structure, omit, keepNameTypesFrom, leftOut } = params
@@ -219,8 +223,9 @@ export async function cloneApplicationContent(
 			? nothingCarried()
 			: await scopeOwnCarried(sourceQuery, { missingFunctions, scope: params.scope, index, held }))
 	for (const ref of missingFunctions) {
-		const targetParentRef =
-			copy?.placeUnder ?? (await resolveStructureRef(sourceQuery, ref, structure))
+		const targetParentRef = copy
+			? (copy.functionLandings.get(ref.id) ?? copy.placeUnder)
+			: await resolveStructureRef(sourceQuery, ref, structure)
 		const cloneMappings = await cloneFunction(tx, {
 			sourceQuery,
 			functionRef: ref,

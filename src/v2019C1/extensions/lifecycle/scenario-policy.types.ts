@@ -62,10 +62,12 @@ export type ScenarioPolicy = {
 	subNetworkSettings: 'project' | 'source'
 	/**
 	 * Where a placement lands: on the levels its template says, those the structure lacks created, the references to
-	 * the template's own levels naming where it landed (`template-levels`), or under the anchor itself, the levels it
-	 * names left as they are (`anchor`: a copy is pasted where the consumer picked).
+	 * the template's own levels naming where it landed (`template-levels`), or by the levels its content sits on in the
+	 * source, each landing that content under the level of its tag and name where the level above lands, else there
+	 * itself, the levels it names left as they are (`source-levels`: a copy, pasted where the consumer picked; with one
+	 * level, under the anchor).
 	 */
-	placement: 'template-levels' | 'anchor'
+	placement: 'template-levels' | 'source-levels'
 	/**
 	 * The functions an application places with it: those the target lacks (`missing`: the project's own stand for the
 	 * others), or every one it composes (`all`: a copy composes copies, never the originals).

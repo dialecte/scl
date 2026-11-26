@@ -1,15 +1,19 @@
 import { COPY_ROOT_TAG_BY_VERB } from './copy.constants'
 
 import { throwDialecteError } from '@dialecte/core'
+import { invariant } from '@dialecte/core/utils'
 
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+import { SCL_ERRORS } from '@/v2019C1/errors'
 import { findComposedFunctionRefs } from '@/v2019C1/extensions/lifecycle/instance/composed-functions'
 import { placedFunctionTag } from '@/v2019C1/extensions/lifecycle/layers/function/placed-function-tag'
+import { readSourceLevels } from '@/v2019C1/extensions/lifecycle/layers/topology/resolve-primary-placement'
 import { throwRefusal } from '@/v2019C1/extensions/lifecycle/refusal'
 import { isTopologyLevel } from '@/v2019C1/helpers'
 
 import type { AssertCopyFitsParams } from './copy.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -17,9 +21,9 @@ import type * as Core from '@dialecte/core'
  * offer, with `OPTION_NOT_AVAILABLE`: one read from another document than the one it is pasted into, or made with
  * another verb than `fsd` or `asd` (`meta: { option: 'scenario', value: 'copy' }`); a root other than a Function (fsd)
  * or an Application (asd) (`{ option: 'ref', value: <its tag> }`); an application merged onto the functions it
- * composes (`{ option: 'sharedFunctions', value: 'merge' }`); an application whose functions sit under several parents
- * (`{ option: 'scenario', value: 'copy', reason: 'functions-under-several-parents' }`). A parent the definition does not
- * let the copy sit under is refused with `INVALID_PARENT_CHILD`. Nothing for another scenario.
+ * composes (`{ option: 'sharedFunctions', value: 'merge' }`).
+ * A parent the definition does not let the copy sit under is refused with `INVALID_PARENT_CHILD`; a choice for a level
+ * row the paste cannot honour as `assertLevelChoicesFit` says. Nothing for another scenario.
  */
 export async function assertCopyFits(params: AssertCopyFitsParams): Promise<void> {
 	const { query, target } = params
@@ -76,9 +80,11 @@ export async function assertCopyFits(params: AssertCopyFitsParams): Promise<void
 			detail: `${operation}: a copy composes copies of its functions, it never stands on the originals`,
 		})
 	}
-	await assertFunctionsUnderOneParent({
+	await assertLevelChoicesFit({
 		sourceQuery: target.sourceQuery,
 		applicationRef: target.ref,
+		anchor: target.anchor,
+		mappings: target.resolution?.mappings,
 		operation,
 	})
 }
@@ -98,25 +104,66 @@ function assertParentAdmits(params: {
 	})
 }
 
-/** Refuse an application whose functions sit under several parents: where each lands is not one choice yet. */
-async function assertFunctionsUnderOneParent(params: {
+/**
+ * Refuse a choice the consumer made for a level row of the copy (a level its functions sit on in the source) that the
+ * paste cannot honour: a level created (`OPTION_NOT_AVAILABLE`: a copy creates no level); an element the document does
+ * not hold, or one outside the anchor (`MAPPING_CHOICE_NOT_A_CANDIDATE`: a paste lands under what was picked); one that
+ * cannot hold a function (`INVALID_PARENT_CHILD`). A choice for anything else is not read here.
+ */
+async function assertLevelChoicesFit(params: {
 	sourceQuery: Core.Query<Config>
 	applicationRef: Scl.Ref<'Application'>
+	anchor: Scl.Ref<Scl.ElementsOf>
+	mappings: DecisionMappings | undefined
 	operation: string
 }): Promise<void> {
-	const { sourceQuery, applicationRef, operation } = params
+	const { sourceQuery, applicationRef, anchor, mappings, operation } = params
+	if (!mappings || mappings.size === 0) return
 	const functionRefs = await findComposedFunctionRefs(sourceQuery, applicationRef)
-	const functions = await sourceQuery.getRecords(functionRefs)
-	const parents = new Set(
-		functions.flatMap(function parentOf(record) {
-			return record?.parent ? [record.parent.id] : []
-		}),
+	// the rows: the levels the functions sit on, as the placement reads them, when they are several (one lands where
+	// the copy is pasted)
+	const sourceLevels = await readSourceLevels({ sourceQuery, primaryRefs: functionRefs })
+	if (sourceLevels.length <= 1) return
+	const levels = new Map(sourceLevels.map((level) => [level.sourceRef.id, level] as const))
+	const chosen: {
+		sourceId: string
+		tagName: string
+		primaryTags: ReadonlySet<string>
+		existing: Scl.Ref<Scl.ElementsOf>
+	}[] = []
+	for (const [sourceId, decision] of mappings) {
+		const level = levels.get(sourceId)
+		if (!level) continue
+		const { tagName } = level.sourceRef
+		if (!('existing' in decision)) {
+			return throwRefusal({
+				code: 'OPTION_NOT_AVAILABLE',
+				reason: 'copy-not-offered',
+				meta: { option: 'decisionMappings', value: 'create' },
+				detail: `${operation}: a copy places what the <${tagName}> "${sourceId}" holds under a level the document has, it creates none`,
+			})
+		}
+		chosen.push({ sourceId, tagName, primaryTags: level.primaryTags, existing: decision.existing })
+	}
+	// the elements chosen and their ancestors, read once for every choice
+	const records = await sourceQuery.getRecords(chosen.map(({ existing }) => existing))
+	const held = records.flatMap((record) => (record ? [record] : []))
+	const chosenAncestries = await sourceQuery.findAncestorsOfEach(held)
+	const ancestorIdsOf = new Map(
+		held.map((record, index) => [record.id, (chosenAncestries[index] ?? []).map(({ id }) => id)]),
 	)
-	if (parents.size <= 1) return
-	throwRefusal({
-		code: 'OPTION_NOT_AVAILABLE',
-		reason: 'copy-not-offered',
-		meta: { option: 'scenario', value: 'copy', reason: 'functions-under-several-parents' },
-		detail: `${operation}: the functions the application composes sit under ${parents.size} parents: a copy lands them under one`,
+	chosen.forEach(function assertChoiceFits({ sourceId, tagName, primaryTags, existing }, index) {
+		const record = records[index]
+		const underAnchor =
+			record !== undefined &&
+			(record.id === anchor.id || (ancestorIdsOf.get(record.id) ?? []).includes(anchor.id ?? ''))
+		invariant(underAnchor, {
+			key: SCL_ERRORS.MAPPING_CHOICE_NOT_A_CANDIDATE,
+			detail: `${operation}: the content of the <${tagName}> "${sourceId}" lands at or below the ${anchor.tagName} it is pasted under, <${existing.tagName}> "${existing.id}" is not there`,
+			meta: { sourceId, tagName, chosen: { tagName: existing.tagName, id: existing.id } },
+		})
+		for (const primaryTag of primaryTags) {
+			assertParentAdmits({ anchor: existing, tagName: primaryTag as Scl.ElementsOf, operation })
+		}
 	})
 }

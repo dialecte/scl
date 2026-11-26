@@ -17,6 +17,7 @@ import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
 
 import type { CopiedRecord, CopyWrite, ListCopyRefusalsParams } from './copy.types'
 import type { Config, Scl } from '@/v2019C1/config'
+import type { LandingOf } from '@/v2019C1/extensions/lifecycle/layers/topology/source-landing.types'
 import type { CommitRefusal } from '@/v2019C1/hooks/before-commit/commit-plan.types'
 import type { BoundPair } from '@/v2019C1/hooks/before-commit/uuid-references.types'
 import type * as Core from '@dialecte/core'
@@ -31,7 +32,7 @@ import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
  * targets, the level of each satellite and the paths are read once each, whatever the copy carries.
  */
 export async function listCopyRefusals(params: ListCopyRefusalsParams): Promise<CommitRefusal[]> {
-	const { query, trees, unbinds, anchor } = params
+	const { query, trees, unbinds, anchor, landingOf } = params
 	const writes = new Map(
 		unbinds
 			.flatMap((unbind) => [
@@ -74,7 +75,7 @@ export async function listCopyRefusals(params: ListCopyRefusalsParams): Promise<
 			.map((pair) => ({ pair, root })),
 	)
 	if (naming.length === 0) return refusals
-	const outOfReach = await findOutOfReach(query, { naming, anchor })
+	const outOfReach = await findOutOfReach(query, { naming, anchor, landingOf })
 	return [
 		...refusals,
 		...outOfReach.map((pair) =>
@@ -99,9 +100,10 @@ async function findOutOfReach(
 	params: {
 		naming: readonly { pair: BoundPair; root: AnyTreeRecord }[]
 		anchor: Scl.Ref<Scl.ElementsOf>
+		landingOf?: LandingOf
 	},
 ): Promise<BoundPair[]> {
-	const { naming, anchor } = params
+	const { naming, anchor, landingOf } = params
 	const targets = await findTargetsByUuid(query, {
 		sought: naming.map(({ pair }) => ({ uuid: pair.uuid, targetTagNames: pair.pair.target })),
 	})
@@ -116,7 +118,7 @@ async function findOutOfReach(
 				.map(({ root }) => [root.id, root] as const),
 		).values(),
 	]
-	const landing = await landingLevels(query, { satellites, anchor })
+	const landing = await landingLevels(query, { satellites, anchor, landingOf })
 	const levelRefs = [
 		...new Map([...landing.values()].map((level) => [level.id ?? '', level])).values(),
 	]
@@ -138,12 +140,20 @@ async function findOutOfReach(
 	})
 }
 
-/** The level each satellite lands on where the copy is pasted, as `cloneAppliedSatellites` places it. */
+/**
+ * The level each satellite lands on where the copy is pasted, as `cloneAppliedSatellites` places it: where its source
+ * level's row lands it, else the structure's level of its tag.
+ */
 async function landingLevels(
 	query: Core.Query<Config>,
-	params: { satellites: readonly AnyTreeRecord[]; anchor: Scl.Ref<Scl.ElementsOf> },
+	params: {
+		satellites: readonly AnyTreeRecord[]
+		anchor: Scl.Ref<Scl.ElementsOf>
+		/** Where a satellite held by a source level lands (a copy by its rows): there, before the structure's level. */
+		landingOf?: LandingOf
+	},
 ): Promise<Map<string, Scl.Ref<Scl.ElementsOf>>> {
-	const { satellites, anchor } = params
+	const { satellites, anchor, landingOf } = params
 	if (satellites.length === 0) return new Map()
 	const structure = await resolveTargetStructure(query, anchor)
 	const ancestries = await query.findAncestorsOfEach(
@@ -155,7 +165,8 @@ async function landingLevels(
 	return new Map(
 		satellites.map((satellite, index) => [
 			satellite.id,
-			readStructureLevel({ ancestors: ancestries[index] ?? [], structure }),
+			landingOf?.(ancestries[index] ?? []) ??
+				readStructureLevel({ ancestors: ancestries[index] ?? [], structure }),
 		]),
 	)
 }

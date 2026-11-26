@@ -11,7 +11,12 @@ import type { AnyTreeRecord } from '@dialecte/core'
 export type KeyTaken = {
 	constraint: string
 	values: Readonly<Record<string, string>>
-	takenBy: { tagName: string; id: string }
+	/**
+	 * The sibling holding the key: an element of the document (`copyOf` absent), or — for a copy, whose roots are judged
+	 * in turn — the copy of a source element the copy places there before this one (`copyOf: true`, `id` its source
+	 * element's: "the copy of F1"), which has no id of its own before it is written.
+	 */
+	takenBy: { tagName: string; id: string; copyOf?: true }
 	proposed: Readonly<Record<string, string>>
 }
 
