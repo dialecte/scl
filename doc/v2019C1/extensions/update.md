@@ -322,8 +322,19 @@ query and `anchor` the parent the consumer picked: `report` lists the copy as a 
   takenBy, proposed }` — the values `apply` writes unless the review types others; `takenBy` is the sibling of the
   document holding it, or, with `copyOf: true`, the copy of a source element the copy places there before (named by
   that source element: it has no id before it is written).
-- **Outside references** the copy carries (a signal input from another function, a terminal on a node of another bay)
-  are kept as written.
+- **Outside references** — what the copy carries naming an element of the document outside it is listed per family, one
+  `DecisionGroup` each (`kind: 'references'`, id `outside-references:<family>`, kept by default, depending on nothing),
+  its rows in `references: { holder, target, effect }[]`: `source-signal` (a `SourceRef` naming an LNode, effect
+  `cleared`), `control-signal` (a `ControlRef` controlling an LNode, `cleared`), `function-reference` (a role's
+  `FunctionRef` naming a function the application does not compose, an EqFunction, `deleted`), `terminal-node` (a
+  `Terminal` on a connectivity node, `deleted`). Accepted, the reference is written as it is. Skipped, a `SourceRef` /
+  `ControlRef` keeps its own content and loses its link — path, uuid and what names the data there removed together —,
+  the expected data it lacked filled from what it named (`pLN`, `pDO`, `pDA`, none overwritten); a `FunctionRef` (with
+  its `SignalRole`s) or a `Terminal` is not written. A skipped group never leaves its holders' elements out, and a group
+  is decided over the roots the copy places only. A reference naming what the copy places follows the copy (one naming
+  a function left out names the original), one naming nothing stays as written, and the other references the copy
+  carries (a behaviour's variables, a variable's application, a process resource, a terminal on the grounded node) are
+  kept as written.
 - **LNodes**: no IED travels with the copy, so each copied LNode bound to one is released from it — `iedName` `None`,
   `ldInst` and `lnUuid` removed, its prefix, class and instance as its `LNodeSpecNaming` gives them, the specification
   IED that names removed (its logical device kept), the references of its implementation (a `DOS` / `SDS` / `DAS`

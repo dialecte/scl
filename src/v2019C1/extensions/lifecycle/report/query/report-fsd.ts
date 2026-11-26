@@ -139,7 +139,7 @@ export async function reportFsd(
 		// names where it landed
 		// a copy keeps what it carries as written
 		const carried =
-			params.placementListing || policy.outsideReferences === 'keep'
+			params.placementListing || params.diffPolicy.sourceIsProject === true
 				? undefined
 				: await scopeFunctionPlacedAlone(query, {
 						sourceQuery,

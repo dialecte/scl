@@ -6,6 +6,9 @@ import {
 	planCopyUnbinds,
 	resolveCopyLanding,
 	readCopyTrees,
+	planCopyReferences,
+	readsOwnDocument,
+	writeCopyReferences,
 	writeCopyUnbinds,
 } from '@/v2019C1/extensions/lifecycle/copy'
 import { NO_LEVEL_LANDED } from '@/v2019C1/extensions/lifecycle/copy/copy.constants'
@@ -92,8 +95,9 @@ export async function placeApplication(
 				})
 	// a copy is pasted under the anchor, inside the document it reads (a level of the topology: refused else), each
 	// function where the row of the level it sits on in the source says
+	const sourceIsProject = await readsOwnDocument(tx, { sourceQuery, scenario: params.scenario })
 	const copy =
-		policy.placementIdentity === 'copy' && isTopologyLevel(targetParent.tagName)
+		sourceIsProject && isTopologyLevel(targetParent.tagName)
 			? await resolveCopyLanding(tx, {
 					sourceQuery,
 					functionRefs: composedFunctionRefs,
@@ -169,9 +173,8 @@ export async function placeApplication(
 		referenced: content.referenced,
 		index,
 		held: content.held,
-		sourceIsProject: copy !== undefined,
+		sourceIsProject,
 		landingOf: copy?.landingOf,
-		keepsOutsideReferences: policy.outsideReferences === 'keep',
 	})
 
 	const allMappings = [
@@ -199,6 +202,17 @@ export async function placeApplication(
 			unbinds: planCopyUnbinds({ trees }),
 			cloneMappings: allMappings,
 		})
+	}
+	// a copy drops the references leaving it the consumer skipped, each in its family's shape: classified as the report
+	// classified them (over every root it listed, so a reference to a function left out stays as written), written on what
+	// it placed only (a function left out asks nothing)
+	if (copy && params.droppedReferences?.size) {
+		const plan = await planCopyReferences({
+			roots: [applicationRef, ...composedFunctionRefs],
+			query: sourceQuery,
+			dropped: params.droppedReferences,
+		})
+		await writeCopyReferences(tx, { plan, cloneMappings: allMappings })
 	}
 
 	// resolve a name collision for each placed composed Function at its own structural

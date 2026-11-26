@@ -128,7 +128,7 @@ export async function cloneAppliedSatellites(
 						...(leftOut ?? []),
 						...(params.carried?.leaveOut ?? []),
 						...(duplicates ?? []),
-						...(params.keepsOutsideReferences ? [] : collectOutOfScopeReferences({ tree, scope })),
+						...(params.sourceIsProject ? [] : collectOutOfScopeReferences({ tree, scope })),
 					])
 				)
 			},

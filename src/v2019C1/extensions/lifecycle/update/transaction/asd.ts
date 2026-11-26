@@ -9,6 +9,7 @@ import { writesToInstance } from './writes-to-instance'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { droppedFamilies } from '@/v2019C1/extensions/lifecycle/copy'
 import {
 	annotateInstance,
 	sourceToTargetMap,
@@ -23,6 +24,7 @@ import {
 	leftOutRefIds,
 	reportInstanceById,
 } from '@/v2019C1/extensions/lifecycle/engine/decide'
+import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { reconcile } from '@/v2019C1/extensions/lifecycle/engine/reconcile'
 import {
 	deleteDropped,
@@ -167,6 +169,8 @@ export async function asd(
 			decisionMappings: params.decisionMappings,
 			resolvePlacement: params.resolvePlacement,
 			partOfTemplate: params.partOfTemplate,
+			// a copy: the references leaving it whose group the consumer skipped
+			droppedReferences: droppedFamilies({ groups: report ? allGroups(report) : [], decisions }),
 			leftOut,
 			sharedFunctions: params.sharedFunctions,
 		})

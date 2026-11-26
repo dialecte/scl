@@ -83,10 +83,11 @@ export async function report(
 		referencesByName: target.resolution?.referencesByName,
 	})
 	// what the resolution tells every diff of the report, read once as well
-	// a copy reads the document it is placed into (its entry refused any other): the source is the project
+	// the source is the project: a copy, reading the document it is made in (a template placed from the same document is
+	// a placement from a file all the same)
 	const diffPolicy = readDiffPolicy({
 		resolution: target.resolution,
-		sourceIsProject: scenarioPolicy({ scenario: target.scenario }).placementIdentity === 'copy',
+		sourceIsProject: target.scenario === 'copy' && reportTarget.document === reportTarget.source,
 	})
 	const report = await reportVerb(query, {
 		target,
@@ -132,6 +133,9 @@ export async function report(
 			const keyTaken = copied.keysTaken.get(group.id)
 			if (keyTaken) group.keyTaken = keyTaken
 		}
+		// listed with the copied root's instance: decided once for the whole copy
+		const [rootInstance] = report.instances
+		if (rootInstance) rootInstance.groups.push(...copied.referenceGroups)
 	}
 
 	// what a removal makes the delete hooks do outside it, read before anything is decided

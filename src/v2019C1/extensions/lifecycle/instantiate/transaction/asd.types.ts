@@ -5,6 +5,7 @@ import type {
 	SharedFunctions,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ProcessReferenceFamily } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -46,6 +47,11 @@ export type AsdParams = {
 }
 
 export type PlaceApplicationParams = AsdParams & {
+	/**
+	 * A copy: the families of the references leaving it whose group the consumer skipped, dropped in their family's shape
+	 * (see `planCopyReferences`). None dropped by default.
+	 */
+	droppedReferences?: ReadonlySet<ProcessReferenceFamily>
 	/**
 	 * The source elements the consumer left out (record ids): the application, or functions it
 	 * composes. Left out, the application is not placed and the functions it composes that are kept

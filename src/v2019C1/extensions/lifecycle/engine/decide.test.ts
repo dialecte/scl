@@ -17,6 +17,7 @@ import type {
 	DiffNode,
 	DiffReport,
 	ReportInstance,
+	ReportedElement,
 } from './diff.types'
 
 // ── fixtures ─────────────────────────────────────────────────────────
@@ -354,5 +355,41 @@ describe('decide', () => {
 
 			expect([...writtenInstanceIds({ report, decisions })]).toEqual(['app-1'])
 		})
+
+		// a group keeping a copy's references decides them, never that the copy writes anything
+		it('a copy whose root group is skipped, its reference group left at its suggestion → written for nothing', () => {
+			const copied = instance({ groupId: 'root', rootId: 'fn-1' })
+			copied.groups.push(referenceGroup({ holderId: 'sr-1' }))
+			const report = { instances: [copied] } as unknown as DiffReport
+			const decisions: DecisionMap = new Map([['root', 'skip']])
+
+			expect([...writtenInstanceIds({ report, decisions })]).toEqual([])
+		})
+	})
+
+	// a holder a reference group lists is written by the group placing its root: the reference group is no primary
+	describe("acceptedRefIds - a group keeping a copy's references", () => {
+		it('a root group holding a SourceRef, and the group of that reference → the SourceRef among what the root writes', () => {
+			const sourceRef = node('added', 'SourceRef', 'sr-1')
+			const lnode = { ...node('added', 'LNode', 'ln-1'), children: [sourceRef] }
+			const root = group('root', 'added', {
+				...node('added', 'Function', 'fn-1'),
+				children: [lnode],
+			})
+			const references = referenceGroup({ holderId: 'sr-1' })
+
+			const { sourceIds } = acceptedRefIds({ groups: [root, references], decisions: new Map() })
+
+			expect([...sourceIds].sort()).toEqual(['fn-1', 'ln-1', 'sr-1'])
+		})
 	})
 })
+
+/** A group keeping a copy's references of one family, whose primary is the holder of its one row. */
+function referenceGroup(params: { holderId: string }): DecisionGroup {
+	const primary = node('added', 'SourceRef', params.holderId)
+	const target = { tagName: 'LNode', id: 'outside' }
+	const row = { holder: primary.sourceRef as ReportedElement, target, effect: 'cleared' as const }
+	const references = group('outside-references:source-signal', 'added', primary)
+	return { ...references, kind: 'references', references: [row] }
+}

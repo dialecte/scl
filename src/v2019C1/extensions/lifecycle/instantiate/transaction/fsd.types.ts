@@ -5,6 +5,7 @@ import type {
 	SourceFunctionRef,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
+import type { ProcessReferenceFamily } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
 import type * as Core from '@dialecte/core'
 
@@ -37,6 +38,15 @@ export type FsdParams = {
 	 * template's, the function carries none of its own.
 	 */
 	partOfTemplate?: boolean
+}
+
+/** What the update verb places a function with, beyond what `instantiate.fsd` takes: internal, never public. */
+export type PlaceFunctionParams = FsdParams & {
+	/**
+	 * A copy: the families of the references leaving it whose group the consumer skipped, dropped in their family's shape
+	 * (see `planCopyReferences`). None dropped by default.
+	 */
+	droppedReferences?: ReadonlySet<ProcessReferenceFamily>
 }
 
 export type FsdResult = {

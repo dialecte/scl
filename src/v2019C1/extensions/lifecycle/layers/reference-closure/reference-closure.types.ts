@@ -1,4 +1,5 @@
 import type {
+	PROCESS_REFERENCE_FAMILY_NAMES,
 	REFERENCE_ACTIONS,
 	REFERENCE_CLASSES,
 	REFERENCE_FAMILIES,
@@ -6,7 +7,10 @@ import type {
 } from './reference-closure.constants'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
+import type {
+	RecordEdit,
+	ReferencePair,
+} from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -15,7 +19,11 @@ import type * as Core from '@dialecte/core'
  * never read here); an interface root names the uuids and the control blocks it keeps.
  */
 export type ClosureRoot =
-	| { ref: Scl.Ref<'IED'>; depth: 'whole' }
+	| {
+			/** An IED, or any element whose process references are classified (a copied Function or Application). */
+			ref: Scl.Ref<Scl.ElementsOf>
+			depth: 'whole'
+	  }
 	| {
 			ref: Scl.Ref<'IED'>
 			depth: 'interface'
@@ -46,13 +54,15 @@ export type ReferencePolicy = Readonly<
 /** One reference a written record makes, classified before any action. */
 export type ClassifiedReference = {
 	holder: Scl.Ref<Scl.ElementsOf>
-	family: ReferenceFamily
+	family: ReferenceFamily | ProcessReferenceFamily
 	direction: 'outgoing' | 'incoming'
 	class: ReferenceClass
 	/** The IED the reference names, when it names one by name. */
 	iedName?: string
 	/** The reference value a supervision holds, for a supervision. */
 	reference?: string
+	/** The element a process reference names, when the destination holds it. */
+	target?: Scl.Ref<Scl.ElementsOf>
 	action: ReferenceAction
 }
 
@@ -62,7 +72,10 @@ export type PlanReferencesParams = {
 	sourceQuery: Core.Query<Config>
 	/** Where `present` is judged: the document the result lands in (an export's empty target, a copy's destination). */
 	destinationQuery: Core.Query<Config>
-	policy: ReferencePolicy
+	/** The action per IED family and class: needed with IED roots, unread without. */
+	policy?: ReferencePolicy
+	/** The action per process family and class: classified and acted on only when given (a copy's roots). */
+	processPolicy?: ProcessReferencePolicy
 }
 
 /** What a reference cut decides: the classes, the records left out, the attribute edits and what it says. */
@@ -92,3 +105,33 @@ export type Landing = {
 
 /** One decision of the cut, before it becomes edits, left-out records and warnings. */
 export type Decision = ClassifiedReference & { record: Core.AnyRawRecord }
+
+/** A kind of process reference a copy reads: one pair of the reference-pair registry, see `PROCESS_REFERENCE_FAMILIES`. */
+export type ProcessReferenceFamily = (typeof PROCESS_REFERENCE_FAMILY_NAMES)[number]
+
+/** What a process family is: its holder, the uuid attribute of its pair, and the shape its holder takes when dropped. */
+export type ProcessReferenceFamilyRow = {
+	holder: Scl.ElementsOf
+	uuidAttribute: string
+	/** Dropped: the pair cleared and the holder kept (`'reduce'`), or the holder left out (`'remove'`). */
+	drop: 'reduce' | 'remove'
+}
+
+/** A registry pair no process family groups, and why. */
+export type ProcessPairNotGrouped = { holder: string; uuidAttribute: string; reason: string }
+
+/** The action per process family and class: kept as written, or dropped in its family's shape. */
+export type ProcessReferencePolicy = Readonly<
+	Record<ProcessReferenceFamily, Readonly<Record<ReferenceClass, 'keep' | 'drop'>>>
+>
+
+/** A holder of a process family, its pair, and the uuid it names. */
+export type ProcessHolder = {
+	record: Core.AnyRawRecord
+	family: ProcessReferenceFamily
+	pair: ReferencePair
+	uuid: string
+}
+
+/** A process family and its registry pair, as the holder tag reads them. */
+export type ProcessFamilyPair = { family: ProcessReferenceFamily; pair: ReferencePair }

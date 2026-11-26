@@ -11,3 +11,6 @@ export const NO_LEVEL_LANDED: StructureLanding = { levels: [], redirects: [] }
 
 /** The tags of the roots a copy is made of: what it holds is the copy, what applies to it outside them a satellite. */
 export const COPY_ROOT_TAGS: ReadonlySet<string> = new Set(Object.values(COPY_ROOT_TAG_BY_VERB))
+
+/** The id of a group keeping a copy's references, before its family: `outside-references:source-signal`. */
+export const COPY_REFERENCE_GROUP_PREFIX = 'outside-references:'

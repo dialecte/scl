@@ -24,7 +24,6 @@ const testCases: Record<string, TestCase> = {
 			subNetworkSettings: 'source',
 			placement: 'template-levels',
 			composedFunctions: 'missing',
-			outsideReferences: 'leave-out',
 		},
 	},
 	'template: the instances matched by their lineage': {
@@ -42,7 +41,6 @@ const testCases: Record<string, TestCase> = {
 			subNetworkSettings: 'project',
 			placement: 'template-levels',
 			composedFunctions: 'missing',
-			outsideReferences: 'leave-out',
 		},
 	},
 	'fork: the previous revision matched by the uuids both share, kept, on what it places too, its names followed':
@@ -61,10 +59,9 @@ const testCases: Record<string, TestCase> = {
 				subNetworkSettings: 'source',
 				placement: 'template-levels',
 				composedFunctions: 'missing',
-				outsideReferences: 'leave-out',
 			},
 		},
-	'copy: inside one document, fresh uuids and the lineage as copied, landed by the levels its content sits on, every function it composes, its outside references as written':
+	'copy: inside one document, fresh uuids and the lineage as copied, landed by the levels its content sits on, every function it composes, no policy of its own for the references leaving it':
 		{
 			params: { scenario: 'copy' },
 			expected: {
@@ -80,7 +77,6 @@ const testCases: Record<string, TestCase> = {
 				subNetworkSettings: 'source',
 				placement: 'source-levels',
 				composedFunctions: 'all',
-				outsideReferences: 'keep',
 			},
 		},
 	'no scenario asked: template': {
@@ -103,7 +99,6 @@ const testCases: Record<string, TestCase> = {
 				subNetworkSettings: 'source',
 				placement: 'template-levels',
 				composedFunctions: 'missing',
-				outsideReferences: 'leave-out',
 			},
 		},
 	'placed afresh within a template update: the template identity, matched to no instance, its references its own':

@@ -1,4 +1,5 @@
 import { listCopyRefusals } from './list-copy-refusals'
+import { describeReferenceGroups, planCopyReferences } from './plan-copy-references'
 import { planCopyUnbinds } from './plan-copy-unbinds'
 import { readCopyTrees } from './read-copy-trees'
 
@@ -87,7 +88,9 @@ export async function describeCopy(
 		copiesOf.set(placed.id, { tagName: root.tagName, id: root.id, copyOf: true })
 		placedBefore.set(landing.id ?? '', [...beside, placed])
 	}
-	return { unbinds, refusals, keysTaken }
+	// the references the copy carries out of what it copies, one group per family naming what the document holds
+	const plan = await planCopyReferences({ roots: rootRefs, query, dropped: new Set() })
+	return { unbinds, refusals, keysTaken, referenceGroups: describeReferenceGroups({ plan }) }
 }
 
 /** Where the report lands the content of each level row, by the row's source record id: the element it maps onto. */

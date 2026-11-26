@@ -73,11 +73,6 @@ export type ScenarioPolicy = {
 	 * others), or every one it composes (`all`: a copy composes copies, never the originals).
 	 */
 	composedFunctions: 'missing' | 'all'
-	/**
-	 * What becomes of a reference the placement carries naming what it neither places nor lands on: left out and told of
-	 * (`leave-out`), or kept as written (`keep`: inside one document the element it names is there).
-	 */
-	outsideReferences: 'leave-out' | 'keep'
 }
 
 /**

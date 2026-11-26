@@ -280,6 +280,20 @@ export type DecisionGroup = {
 	 * the review types others.
 	 */
 	keyTaken?: KeyTaken
+	/**
+	 * `'references'`: the group keeps the references a copy carries out of what it copies, of one family (`references`):
+	 * skipped, each is dropped as its `effect` says; its holders are written whatever the decision.
+	 */
+	kind?: 'references'
+	/** The references a `kind: 'references'` group decides: each holder, what it names, and what a skip does to it. */
+	references?: OutsideReference[]
+}
+
+/** A reference a copy carries out of what it copies: kept, or — skipped — its link cleared or its holder not written. */
+export type OutsideReference = {
+	holder: ReportedElement
+	target: ReportedElement
+	effect: 'cleared' | 'deleted'
 }
 
 /**
