@@ -175,18 +175,25 @@ export async function reportAsd(
 	const composedFunctionRefs = firstPlacement
 		? await findComposedFunctionRefs(sourceQuery, applicationRef)
 		: []
+	// a copy lands the content of each level its functions sit on in the source; the application stays where the consumer
+	// pasted it
+	const bySourceLevels = policy.placement === 'source-levels'
 	const placement =
-		firstPlacement && params.resolvePlacement && params.anchor
+		firstPlacement && params.anchor && (params.resolvePlacement || bySourceLevels)
 			? await resolvePrimaryPlacement(query, {
 					sourceQuery,
-					primaryRefs: [applicationRef, ...composedFunctionRefs],
+					primaryRefs: bySourceLevels
+						? composedFunctionRefs
+						: [applicationRef, ...composedFunctionRefs],
 					anchor: params.anchor,
 					decisionMappings,
+					levels: bySourceLevels ? 'source' : 'template',
 				})
 			: { levels: [] }
 	const deepestLevel = placement.levels.at(-1)
 	const anchor =
-		(deepestLevel &&
+		(!bySourceLevels &&
+			deepestLevel &&
 			findLanding({ placementLevels: placement.levels, levelId: deepestLevel.sourceRef.id })) ||
 		params.anchor
 
@@ -214,7 +221,8 @@ export async function reportAsd(
 				applicationRef,
 				composedFunctionRefs,
 				anchor,
-				placementLevels: placement.levels,
+				// a copy lands no level of its source: the references to one name it where it is
+				placementLevels: bySourceLevels ? [] : placement.levels,
 				placedFunctionRefs: shared?.placed,
 				stoodOn: shared?.taken,
 				matchKey,
