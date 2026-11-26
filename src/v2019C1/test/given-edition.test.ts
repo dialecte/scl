@@ -1,14 +1,10 @@
 import { createSclTestProject } from './hydrated-test'
-import {
-	ALL_XMLNS_NAMESPACES,
-	XMLNS_SCL_6_100_NAMESPACE,
-	XMLNS_SCL_NAMESPACE,
-} from './scl-xmlns.constants'
+import { ALL_XMLNS_NAMESPACES, XMLNS_SCL_NAMESPACE } from './scl-xmlns.constants'
 
 import { describe, expect, it } from 'vitest'
 
 /** A root declaring the namespaces only: no version, as a first-edition file's root. */
-const FIRST_EDITION_ROOT = `${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE}`
+const FIRST_EDITION_ROOT = XMLNS_SCL_NAMESPACE
 
 type EditionCase = {
 	sourceXml: string

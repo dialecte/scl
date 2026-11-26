@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<Header id="switch_controller_in_use" uuid="00000000-0000-4000-8000-000000000700" version="0" revision="1" toolID="twin" fileType="FSD">
 		<History>
 			<Hitem version="0" revision="1" when="2026-08-26T12:00:00" who="twin" what="first revision"/>

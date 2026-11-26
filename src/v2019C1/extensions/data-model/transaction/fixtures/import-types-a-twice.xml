@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- A malformed target: two DOTypes of id A, both holding the content of the source's B. -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-t" version="2007" revision="C" release="5">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="scl-t" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
     <Header id="target" dev:db-id="header-t"/>
     <DataTypeTemplates dev:db-id="dtt-t">
         <DOType id="A" cdc="DPC" dev:db-id="t-dot-a1"><DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="t-da-a1"/></DOType>

@@ -1,8 +1,10 @@
+import { ROOT_OPT_IN_NEEDS } from './given-edition.constants'
+
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	AssertGivenEditionsParams,
-	EditionOneRootReasonParams,
+	RootOptInReasonParams,
 	RootVersionParams,
 } from './given-edition.types'
 
@@ -16,10 +18,7 @@ import type {
  */
 export async function assertGivenEditions(params: AssertGivenEditionsParams): Promise<void> {
 	const { source, target, label, editionOneRoot } = params
-	if (editionOneRoot !== undefined && editionOneRoot.trim() === '')
-		throw new Error(
-			`${label}: editionOneRoot needs the reason a given document is a first-edition file`,
-		)
+	assertRootOptInReason({ name: 'editionOneRoot', reason: editionOneRoot, label })
 	const sourceVersion = await readRootVersion({ document: source })
 	const targetVersion = await readRootVersion({ document: target })
 	const withoutVersion = [
@@ -46,11 +45,13 @@ async function readRootVersion(params: RootVersionParams): Promise<string | unde
 	return readAttribute({ record: root, name: 'version', defaults: 'none' }) ?? ''
 }
 
-/** Refuse an `editionOneRoot` opt-in that gives no reason, before the suite runs when a runner checks its cases. */
-export function assertEditionOneRootReason(params: EditionOneRootReasonParams): void {
-	const { editionOneRoot, label } = params
-	if (editionOneRoot === undefined || editionOneRoot.trim() !== '') return
-	throw new Error(
-		`${label}: editionOneRoot needs the reason a given document is a first-edition file`,
-	)
+/**
+ * Refuse a root opt-in of a case (`editionOneRoot`, `noExtensionVersion`) set without a reason; before the suite runs
+ * when a runner checks its cases. A reason only, unlike `assertAllowInvalidFixtureReason`, which also checks the
+ * violations an output opt-out lists.
+ */
+export function assertRootOptInReason(params: RootOptInReasonParams): void {
+	const { name, reason, label } = params
+	if (reason === undefined || reason.trim() !== '') return
+	throw new Error(`${label}: ${name} needs ${ROOT_OPT_IN_NEEDS[name]}`)
 }

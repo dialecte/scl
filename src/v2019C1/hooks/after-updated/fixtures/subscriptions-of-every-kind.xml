@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- P1 subscribes to P2 through ExtRefs of every kind: by the uuid of a logical node and of a control block on one ExtRef, by a logical node only, by a control block only, twice the same, by names only, by a uuid naming nothing, by its own IED (`@`). P2 lists P1 as a subscriber by uuid and by text only, reports to P1 by uuid and by names only; an LNode is bound to P2's breaker and another names P2 by names only. -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<Header id="project"/>
 	<Substation dev:db-id="substation" name="S1">
 		<Function dev:db-id="function" name="F1">

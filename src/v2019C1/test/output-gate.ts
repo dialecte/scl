@@ -9,7 +9,8 @@ import {
 	refusedUuidOf,
 } from './assert-scl-output'
 import { GIVEN_DOCUMENT_CHECKS, SCL_OUTPUT_CHECK } from './assert-scl-output.constants'
-import { assertEditionOneRootReason, assertGivenEditions } from './given-edition'
+import { assertGivenEditions, assertRootOptInReason } from './given-edition'
+import { assertGivenExtensionVersions, givenXmlOf } from './given-extension-version'
 
 import { XmlAssertionError } from '@dialecte/core/test'
 
@@ -52,6 +53,11 @@ export function withOutputGate<GenericTestCase extends OutputGateTestCase, Gener
 		const { testCase, project, source, target } = actParams
 		const label = caseNames.get(testCase) ?? 'test case'
 
+		assertGivenExtensionVersions({
+			given: givenXmlOf({ sourceXml: testCase.sourceXml, targetXml: testCase.targetXml }),
+			label,
+			noExtensionVersion: testCase.noExtensionVersion,
+		})
 		await assertGivenEditions({
 			source,
 			target,
@@ -108,7 +114,20 @@ export function assertOutputGateTestCases(params: {
 		}),
 		...refusalOf({
 			check: function checkEditionOneRoot() {
-				assertEditionOneRootReason({ editionOneRoot: testCase.editionOneRoot, label: name })
+				assertRootOptInReason({
+					name: 'editionOneRoot',
+					reason: testCase.editionOneRoot,
+					label: name,
+				})
+			},
+		}),
+		...refusalOf({
+			check: function checkNoExtensionVersion() {
+				assertRootOptInReason({
+					name: 'noExtensionVersion',
+					reason: testCase.noExtensionVersion,
+					label: name,
+				})
 			},
 		}),
 	])

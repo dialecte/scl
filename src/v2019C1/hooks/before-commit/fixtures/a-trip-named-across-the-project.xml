@@ -4,7 +4,7 @@
      ExtRef by its uuid, one by its report's uuid, and one names CTRL/PTRC1 by names only (nothing there yet); its report
      has PTRC1 as client and its GOOSE names PTRC1 as subscriber. The bay's function binds an LNode to PTRC1 and one to
      CSWI1 (its DOS mapped to PTRC1's Tr, its SourceRef reading PTRC1's input Trip by address). -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
     <Substation name="S1" dev:db-id="s1">
         <VoltageLevel name="VL1" dev:db-id="vl1">
             <Bay name="B1" dev:db-id="b1">

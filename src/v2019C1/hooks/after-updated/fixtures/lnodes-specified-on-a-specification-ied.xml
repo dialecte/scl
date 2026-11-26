@@ -6,7 +6,7 @@
      - lnode-real-unmatched: bound to R1, specified on S1 with a logical node S1 does not hold;
      - lnode-unassigned: on no IED, specified on S1 with a logical node S1 does not hold;
      - lnode-specified-on-r1: on no IED, its specified naming names R1. -->
-<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root">
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="root" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
 	<Substation name="S1" dev:db-id="substation">
 		<Function name="F1" dev:db-id="function">
 			<LNode iedName="None" lnClass="PTOC" lnInst="1" uuid="lnode-free-uuid" dev:db-id="lnode-free">

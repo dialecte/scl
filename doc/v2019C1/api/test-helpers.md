@@ -303,12 +303,14 @@ During `act`, `crypto.randomUUID` is replaced with a counter mock — IDs for ne
 
 ## Namespace constants
 
-| Constant                     | Value                                                                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `XMLNS_SCL_NAMESPACE`        | `xmlns="http://www.iec.ch/61850/2003/SCL"`                                                                       |
-| `XMLNS_SCL_6_100_NAMESPACE`  | `xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100"`                                                 |
-| `ALL_XMLNS_NAMESPACES`       | Both SCL namespaces + dev namespace + xsi, and the current SCL edition `version="2007" revision="C" release="5"` |
-| `CUSTOM_RECORD_ID_ATTRIBUTE` | `dev:db-id="..."` — attribute string for use in XML fixtures                                                     |
+| Constant                     | Value                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `XMLNS_SCL_NAMESPACE`        | `xmlns="http://www.iec.ch/61850/2003/SCL"`                                                   |
+| `XMLNS_SCL_6_100_NAMESPACE`  | `xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100"`                             |
+| `CURRENT_SCL_EDITION`        | `version="2007" revision="C" release="5"`                                                    |
+| `CURRENT_6_100_VERSION`      | `eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1"`    |
+| `ALL_XMLNS_NAMESPACES`       | Both SCL namespaces + dev namespace + xsi, `CURRENT_SCL_EDITION` and `CURRENT_6_100_VERSION` |
+| `CUSTOM_RECORD_ID_ATTRIBUTE` | `dev:db-id="..."` — attribute string for use in XML fixtures                                 |
 
 ```ts
 const xml = `<SCL ${ALL_XMLNS_NAMESPACES}><Substation name="S1" ${CUSTOM_RECORD_ID_ATTRIBUTE}="s1"/></SCL>`
@@ -316,9 +318,15 @@ const xml = `<SCL ${ALL_XMLNS_NAMESPACES}><Substation name="S1" ${CUSTOM_RECORD_
 
 Every given document's root states its SCL edition: a root stating no version is a first-edition (2003) file, refused by
 `runSclTestCases`, `createSclTestProject` and `openSclDocument` unless the case (or the call) sets `editionOneRoot` with
-the reason it is one on purpose. Build such a root from `XMLNS_SCL_NAMESPACE` and `XMLNS_SCL_6_100_NAMESPACE`, never by
-removing the edition from `ALL_XMLNS_NAMESPACES`. An opt-in without a reason, or on documents that all state their
-version, is refused.
+the reason it is one on purpose. Build such a root from `XMLNS_SCL_NAMESPACE` (a first-edition file carries no
+eIEC61850-6-100 content), never by removing the edition from `ALL_XMLNS_NAMESPACES`. An opt-in without a reason, or on
+documents that all state their version, is refused.
+
+Every given document carrying the eIEC61850-6-100 namespace (declared on its root or below it) states the extension's
+version on its root, `CURRENT_6_100_VERSION`, the release paired with the SCL edition 2007 C 5. One that does not is
+refused the same way unless the case (or the call) sets `noExtensionVersion` with the reason; an opt-out without a
+reason, or on documents that all state it, is refused. A written document holding eIEC61850-6-100 content states the
+version on its root whether its root held it or not.
 
 XPath queries against SCL documents must use the `default:` prefix for all element names (SCL uses a default namespace). Attributes don't need a prefix unless qualified (e.g. `dev:db-id`).
 

@@ -1,14 +1,14 @@
 import { createSclTestProject } from './hydrated-test'
 import { openSclDocument } from './open-scl-document'
 import { assertOutputGateTestCases, withOutputGate } from './output-gate'
-import { XMLNS_SCL_6_100_NAMESPACE, XMLNS_SCL_NAMESPACE } from './scl-xmlns.constants'
+import { XMLNS_SCL_NAMESPACE } from './scl-xmlns.constants'
 
 import { describe, expect, it } from 'vitest'
 
 import type { OutputGateTestCase } from './output-gate.types'
 
 /** A document whose root states no version: a first-edition file. */
-const FIRST_EDITION_XML = /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} ${XMLNS_SCL_6_100_NAMESPACE}><Header id="h"/></SCL>`
+const FIRST_EDITION_XML = /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE}><Header id="h"/></SCL>`
 
 const OPT_IN = 'a first-edition device file'
 

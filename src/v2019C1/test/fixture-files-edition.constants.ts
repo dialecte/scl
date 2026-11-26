@@ -22,3 +22,12 @@ export const SCL_ROOT_START_TAG = /<SCL\b[^>]*>/
 
 /** A `version` attribute of the SCL root itself, not one of a prefixed namespace (`eIEC61850-6-100:version`). */
 export const SCL_ROOT_VERSION_ATTRIBUTE = /\sversion="/
+
+/**
+ * The fixture files whose root carries the eIEC61850-6-100 namespace without stating its version on purpose, each with
+ * why.
+ */
+export const EXTENSION_VERSIONLESS_FIXTURE_FILES: Readonly<Record<string, string>> = {
+	'./fixtures/written-extension-version/an-lnode-named-by-the-extension-its-root-without-the-extension-version.xml':
+		'the root lacks the extension version the write is to state',
+}
