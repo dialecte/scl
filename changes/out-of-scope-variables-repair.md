@@ -1,4 +1,0 @@
-### Added
-
-- `query.cleanUp.findOutOfScopeVariables()` lists every stored behaviour variable (`InputVar`, `OutputVar`) whose uuid names an element out of its behaviour's reach, the state the commit refuses for what a transaction writes, with its counterpart in reach: the one element of that tag there sharing the target's template lineage (`templateUuid`).
-- `tx.cleanUp.repairOutOfScopeVariables()` gives each listed variable its counterpart's uuid (its local path then written), or clears its reference (uuid, path, data names; the variable kept), and answers `{ rescoped, cleared, left }`: a variable holding both its reference groups is left as it is, its groups the caller's to settle first. Projects written before the commit refused such variables copy, instantiate and update again once repaired. Types `OutOfScopeVariable`, `RepairedVariables`.
