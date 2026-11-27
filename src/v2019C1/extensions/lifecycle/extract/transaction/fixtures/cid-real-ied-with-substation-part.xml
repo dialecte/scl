@@ -5,7 +5,7 @@
 		<VoltageLevel name="V1">
 			<Bay name="B1">
 				<Function name="F1">
-					<LNode iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" uuid="80000000-0000-4000-8000-0000000000a1">
+					<LNode iedName="Selected" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000002" uuid="80000000-0000-4000-8000-0000000000a1" dev:db-id="lnode-selected">
 						<Private type="eIEC61850-6-100">
 							<eIEC61850-6-100:LNodeInputs>
 								<eIEC61850-6-100:SourceRef input="Block" service="GOOSE" pDO="Ind" sourceLNodeUuid="80000000-0000-4000-8000-0000000000b1" sourceDoName="Ind" dev:db-id="source-ref-other"/>
@@ -13,7 +13,7 @@
 							<eIEC61850-6-100:DOS name="Op" mappedLnUuid="50000000-0000-4000-8000-000000000003" mappedDoName="Ind"/>
 						</Private>
 					</LNode>
-					<LNode iedName="Other" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000012" uuid="80000000-0000-4000-8000-0000000000b1"/>
+					<LNode iedName="Other" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" lnUuid="50000000-0000-4000-8000-000000000012" uuid="80000000-0000-4000-8000-0000000000b1" dev:db-id="lnode-other"/>
 				</Function>
 			</Bay>
 		</VoltageLevel>

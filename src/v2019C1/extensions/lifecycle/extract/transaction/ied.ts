@@ -15,9 +15,12 @@ import type * as Core from '@dialecte/core'
  * - `'CID'`: a real IED for its configuration tool: the IED as the project holds it, its own communication and the data types
  *   it needs; its inputs and outputs bound to an IED the file does not hold reduced to the only form a system tool may
  *   write (an input without internal address removed, the others and every output keeping their internal address without
- *   a source); receivers and report clients by `clientRefs`; the source unchanged.
+ *   a source); receivers and report clients by `clientRefs`; the source unchanged;
+ * - `'IID'`: a real IED for its configuration tool to change and hand back: the IED alone as the project holds it, every
+ *   binding kept as it is and those to an IED the file does not hold listed, its own communication with its addresses, the
+ *   data types it needs, its owner written as the project when it holds none; the source unchanged.
  *
- * @intent export an IED into an ISD or a CID, write a CID for one IED, extract a real IED for its configuration tool, export the
+ * @intent export an IED into an ISD, export an IED into a CID, export an IED into an IID, write a CID for one IED, write an IID for one IED, extract a real IED for its configuration tool, export the
  * communication part of one IED
  */
 export async function ied(
@@ -28,11 +31,12 @@ export async function ied(
 		case 'ISD':
 			return extractIsd(tx, params)
 		case 'CID':
+		case 'IID':
 			return extractRealIed(tx, params)
 		default:
 			throwDialecteError(SCL_ERRORS.OPTION_NOT_AVAILABLE, {
 				meta: { option: 'fileType', value: String((params as { fileType?: unknown }).fileType) },
-				detail: 'extract.ied: an ISD or a CID is written',
+				detail: 'extract.ied: an ISD, a CID or an IID is written',
 			})
 	}
 }

@@ -125,6 +125,7 @@ export type {
 	IedExtractBase,
 	IedExtractParams,
 	IedExtractResult,
+	IidExtractParams,
 	InteractingIeds,
 	IsdExtractParams,
 } from './extract/transaction/ied.types'

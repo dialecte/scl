@@ -20,8 +20,29 @@ export const INTERACTING_IEDS = ['none', 'publishers'] as const
 /** What a CID does with the receivers and report clients naming an IED absent from the file (see `ClientRefs`). */
 export const CLIENT_REFS = ['keep', 'cleanAbsent'] as const
 
-/** The files a real IED's export writes, by type: the extension of the name it suggests. */
-export const REAL_IED_EXPORT_FILES = { CID: { extension: '.cid' } } as const
+/** The options only a CID takes: given to another file type, refused rather than ignored. */
+export const CID_ONLY_OPTIONS = ['interactingIeds', 'clientRefs'] as const
+
+/**
+ * The files a real IED's export writes, by type: the extension of the name it suggests, what its first history item says,
+ * whether the IED's owner is written as the project it comes from when the IED holds none (an IID goes back to the project,
+ * which recognises its own IEDs by it), and whether the LNodes the IED implements are listed when its substation part is
+ * not written (an IID's configuration tool may not remove a logical node they are bound to).
+ */
+export const REAL_IED_EXPORT_FILES = {
+	CID: {
+		extension: '.cid',
+		initialization: 'CID initialization',
+		ownerFromProject: false,
+		listsBoundLNodes: false,
+	},
+	IID: {
+		extension: '.iid',
+		initialization: 'IID initialization',
+		ownerFromProject: true,
+		listsBoundLNodes: true,
+	},
+} as const
 
 /** The extension of the name an ISD export suggests. */
 export const ISD_FILE_EXTENSION = '.isd'
@@ -37,7 +58,7 @@ export const CID_PROCESS_OPTIONS = {
 	keepMappings: true,
 } as const
 
-/** The senders of a CID holding no other IED (`interactingIeds: 'none'`): none. */
+/** The senders of a file holding no other IED (an IID, a CID with `interactingIeds: 'none'`): none. */
 export const NO_SENDERS: CidSenders = {
 	roots: [],
 	senders: [],

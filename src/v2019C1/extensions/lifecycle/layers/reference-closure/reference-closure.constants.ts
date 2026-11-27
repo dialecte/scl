@@ -136,6 +136,16 @@ export const SSD_REFERENCE_POLICY: ReferencePolicy = {
 	supervision: { inside: 'keep', present: 'keep-listed', absent: 'keep-listed' },
 }
 
+/**
+ * A file of one real IED going back to its project: every reference written as the project holds it, those to what the
+ * file does not hold listed (its bindings, receivers and clients name the project's IEDs, which the project keeps).
+ */
+export const IID_REFERENCE_POLICY: ReferencePolicy = {
+	...CID_KEEP,
+	input: { inside: 'keep', present: 'keep-listed', absent: 'keep-listed' },
+	output: { inside: 'keep', present: 'keep-listed', absent: 'keep-listed' },
+}
+
 /** The kinds of process reference a copy reads. */
 export const PROCESS_REFERENCE_FAMILY_NAMES = [
 	'source-signal',
