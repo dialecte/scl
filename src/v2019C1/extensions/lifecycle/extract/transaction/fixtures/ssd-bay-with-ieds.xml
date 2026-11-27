@@ -1,0 +1,102 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<!-- Bay Q01 (the scope): function PROT holds LNodes bound to S-IED S1, real IED R1 and S-IED HMI; breaker QA1 holds LNodes bound to S1 (with its data mapped) and R1. Bay Q02 holds an LNode bound to HMI, so HMI is shared. Other is bound to nothing. S1 has an input from R1 and one from Other, a report client and a GOOSE receiver HMI. StationBus holds the access points of S1, R1 and HMI with addresses; ProcessBus holds only Other's. -->
+	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Substation name="S1" uuid="a0000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="E1" uuid="a0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="a0000000-0000-4000-8000-000000000003" dev:db-id="q01">
+				<ConductingEquipment name="QA1" type="CBR" uuid="a0000000-0000-4000-8000-000000000004">
+					<LNode iedName="S1" ldInst="LD1" prefix="" lnClass="XCBR" lnInst="1" lnType="XCBR_Type" lnUuid="c0000000-0000-4000-8000-000000000003" dev:db-id="lnode-frame-s1">
+						<Private type="eIEC61850-6-100"><eIEC61850-6-100:DOS name="Pos" mappedLnUuid="c0000000-0000-4000-8000-000000000003" mappedDoName="Pos" dev:db-id="dos-frame-s1"/></Private>
+					</LNode>
+					<LNode iedName="R1" ldInst="LD1" prefix="" lnClass="XCBR" lnInst="1" lnType="XCBR_Type" lnUuid="d0000000-0000-4000-8000-000000000003" dev:db-id="lnode-frame-r1"/>
+				</ConductingEquipment>
+				<Function name="PROT" uuid="a0000000-0000-4000-8000-000000000005">
+					<LNode iedName="S1" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" lnUuid="c0000000-0000-4000-8000-000000000002" dev:db-id="lnode-s1"/>
+					<LNode iedName="R1" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" lnUuid="d0000000-0000-4000-8000-000000000002" dev:db-id="lnode-r1"/>
+					<LNode iedName="HMI" ldInst="LD1" prefix="" lnClass="IHMI" lnInst="1" lnType="IHMI_Type" lnUuid="e0000000-0000-4000-8000-000000000002" dev:db-id="lnode-hmi"/>
+				</Function>
+			</Bay>
+			<Bay name="Q02" uuid="a0000000-0000-4000-8000-000000000006">
+				<Function name="OTHER" uuid="a0000000-0000-4000-8000-000000000007">
+					<LNode iedName="HMI" ldInst="LD1" prefix="" lnClass="IHMI" lnInst="2" lnType="IHMI_Type" lnUuid="e0000000-0000-4000-8000-000000000003" dev:db-id="lnode-hmi-q02"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" dev:db-id="station-bus">
+			<ConnectedAP iedName="S1" apName="AP1" apUuid="c0000000-0000-4000-8000-000000000010" dev:db-id="cap-s1">
+				<Address dev:db-id="address-s1"><P type="IP">10.0.0.1</P></Address>
+				<GSE ldInst="LD1" cbName="G1" cbUuid="c0000000-0000-4000-8000-000000000020" dev:db-id="gse-s1">
+					<Address dev:db-id="gse-address-s1"><P type="MAC-Address">01-0C-CD-01-00-01</P><P type="APPID">0001</P></Address>
+				</GSE>
+			</ConnectedAP>
+			<ConnectedAP iedName="R1" apName="AP1" apUuid="d0000000-0000-4000-8000-000000000010" dev:db-id="cap-r1">
+				<Address><P type="IP">10.0.0.2</P></Address>
+			</ConnectedAP>
+			<ConnectedAP iedName="HMI" apName="AP1" apUuid="e0000000-0000-4000-8000-000000000010" dev:db-id="cap-hmi">
+				<Address><P type="IP">10.0.0.3</P></Address>
+			</ConnectedAP>
+		</SubNetwork>
+		<SubNetwork name="ProcessBus" type="8-MMS" dev:db-id="process-bus">
+			<ConnectedAP iedName="Other" apName="AP1" apUuid="f0000000-0000-4000-8000-000000000010" dev:db-id="cap-other"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="S1" uuid="c0000000-0000-4000-8000-000000000001" dev:db-id="ied-s1">
+		<AccessPoint name="AP1" uuid="c0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+				<LDevice inst="LD1" uuid="c0000000-0000-4000-8000-000000000011">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="c0000000-0000-4000-8000-000000000012">
+						<DataSet name="OutSet"><FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/></DataSet>
+						<ReportControl name="Rpt" datSet="OutSet" confRev="1" uuid="c0000000-0000-4000-8000-000000000021">
+							<RptEnabled max="1">
+								<ClientLN iedName="HMI" apRef="AP1" ldInst="LD1" prefix="" lnClass="IHMI" lnInst="1" lnUuid="e0000000-0000-4000-8000-000000000002" dev:db-id="clientln-hmi"/>
+							</RptEnabled>
+						</ReportControl>
+						<GSEControl name="G1" datSet="OutSet" appID="S1App" confRev="1" uuid="c0000000-0000-4000-8000-000000000020">
+							<IEDName apRef="AP1" apUuid="e0000000-0000-4000-8000-000000000010" dev:db-id="iedname-hmi">HMI</IEDName>
+						</GSEControl>
+					</LN0>
+					<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_Type" uuid="c0000000-0000-4000-8000-000000000002">
+						<Inputs>
+							<ExtRef desc="trip from R1" iedName="R1" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" lnUuid="d0000000-0000-4000-8000-000000000002" dev:db-id="extref-r1"/>
+							<ExtRef desc="trip from Other" iedName="Other" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" lnUuid="f0000000-0000-4000-8000-000000000002" dev:db-id="extref-other"/>
+						</Inputs>
+					</LN>
+					<LN lnClass="XCBR" inst="1" prefix="" lnType="XCBR_Type" uuid="c0000000-0000-4000-8000-000000000003"/>
+				</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="R1" uuid="d0000000-0000-4000-8000-000000000001" templateUuid="d1000000-0000-4000-8000-000000000001" dev:db-id="ied-r1">
+		<AccessPoint name="AP1" uuid="d0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+				<LDevice inst="LD1" uuid="d0000000-0000-4000-8000-000000000011" templateUuid="d1000000-0000-4000-8000-000000000011">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="d0000000-0000-4000-8000-000000000012"/>
+					<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_Type" uuid="d0000000-0000-4000-8000-000000000002" templateUuid="d1000000-0000-4000-8000-000000000002"/>
+					<LN lnClass="XCBR" inst="1" prefix="" lnType="XCBR_Type" uuid="d0000000-0000-4000-8000-000000000003"/>
+				</LDevice></Server></AccessPoint>
+		<IEDSourceFiles><SclFileReference fileType="ICD" fileName="r1.icd" fileUuid="10000000-0000-4000-8000-000000000002" version="1" revision="A"/></IEDSourceFiles>
+	</IED>
+	<IED name="HMI" uuid="e0000000-0000-4000-8000-000000000001" dev:db-id="ied-hmi">
+		<AccessPoint name="AP1" uuid="e0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+				<LDevice inst="LD1" uuid="e0000000-0000-4000-8000-000000000011">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="e0000000-0000-4000-8000-000000000012"/>
+					<LN lnClass="IHMI" inst="1" prefix="" lnType="IHMI_Type" uuid="e0000000-0000-4000-8000-000000000002"/>
+					<LN lnClass="IHMI" inst="2" prefix="" lnType="IHMI_Type" uuid="e0000000-0000-4000-8000-000000000003"/>
+				</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="Other" uuid="f0000000-0000-4000-8000-000000000001" dev:db-id="ied-other">
+		<AccessPoint name="AP1" uuid="f0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+				<LDevice inst="LD1" uuid="f0000000-0000-4000-8000-000000000011">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="f0000000-0000-4000-8000-000000000012"/>
+					<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_Type" uuid="f0000000-0000-4000-8000-000000000002"/>
+				</LDevice></Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Beh" type="ENS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="ACT_Type"/></LNodeType>
+		<LNodeType id="XCBR_Type" lnClass="XCBR"><DO name="Pos" type="DPC_Type"/></LNodeType>
+		<LNodeType id="IHMI_Type" lnClass="IHMI"><DO name="Beh" type="ENS_Type"/></LNodeType>
+		<DOType id="ENS_Type" cdc="ENS"><DA name="stVal" bType="Enum" type="Beh_Kind" fc="ST"/></DOType>
+		<DOType id="ACT_Type" cdc="ACT"><DA name="general" bType="BOOLEAN" fc="ST"/></DOType>
+		<DOType id="DPC_Type" cdc="DPC"><DA name="stVal" bType="Dbpos" fc="ST"/></DOType>
+		<EnumType id="Beh_Kind"><EnumVal ord="1">on</EnumVal></EnumType>
+	</DataTypeTemplates>
+</SCL>

@@ -91,7 +91,8 @@ export async function ensureTopologyFrame(
 	// target receives what that element lacks — what it holds is left as it is (`contribute`). A
 	// context level is the target's own structure and is left untouched. Their references name what
 	// the frame places.
-	const scope = await resolveContributionScope(sourceQuery, { roots: [scopeRef], leftOut })
+	const unitScope = await resolveContributionScope(sourceQuery, { roots: [scopeRef], leftOut })
+	const scope = new Set([...unitScope, ...(params.implementationUuids ?? [])])
 	for (const { sourceRef } of levels) {
 		if (!createdIds.has(sourceRef.id) && !mappedUnitIds.has(sourceRef.id)) continue
 		const target = frameIndex.get(sourceRef.id)

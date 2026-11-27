@@ -1,0 +1,74 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<!-- Bay Q01, breaker QA1: an LNode bound to IED S whose specified input TripIn is implemented by S's ExtRef, an LNode bound to IED O whose input BlockIn is implemented by O's ExtRef. S has an input from O naming O's GOOSE OG, an output to O, a sampled value control SV1 with its address and minimum SCD files; O has a GOOSE OG. -->
+	<Header id="Project" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Substation name="S1" uuid="a0000000-0000-4000-8000-000000000001">
+		<VoltageLevel name="E1" uuid="a0000000-0000-4000-8000-000000000002">
+			<Bay name="Q01" uuid="a0000000-0000-4000-8000-000000000003" dev:db-id="q01">
+				<ConductingEquipment name="QA1" type="CBR" uuid="a0000000-0000-4000-8000-000000000005">
+					<LNode iedName="S" ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" lnType="PTOC_Type" lnUuid="c0000000-0000-4000-8000-000000000002" uuid="a0000000-0000-4000-8000-000000000010" dev:db-id="lnode-s">
+						<eIEC61850-6-100:LNodeInputs><eIEC61850-6-100:SourceRef input="TripIn" extRefUuid="c0000000-0000-4000-8000-000000000030" uuid="a0000000-0000-4000-8000-000000000011" dev:db-id="sourceref-carried"/></eIEC61850-6-100:LNodeInputs>
+					</LNode>
+					<LNode iedName="O" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" lnType="GGIO_Type" lnUuid="b0000000-0000-4000-8000-000000000002" uuid="a0000000-0000-4000-8000-000000000012" dev:db-id="lnode-o">
+						<eIEC61850-6-100:LNodeInputs><eIEC61850-6-100:SourceRef input="BlockIn" extRefUuid="b0000000-0000-4000-8000-000000000030" uuid="a0000000-0000-4000-8000-000000000013" dev:db-id="sourceref-not-carried"/></eIEC61850-6-100:LNodeInputs>
+					</LNode>
+				</ConductingEquipment>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<Communication>
+		<SubNetwork name="ProcessBus" type="9-2LE" dev:db-id="process-bus">
+			<ConnectedAP iedName="S" apName="AP1" apUuid="c0000000-0000-4000-8000-000000000010" dev:db-id="cap-s">
+				<Address><P type="IP">10.0.1.1</P></Address>
+				<SMV ldInst="LD1" cbName="SV1" cbUuid="c0000000-0000-4000-8000-000000000021" dev:db-id="smv-s">
+					<Address><P type="MAC-Address">01-0C-CD-04-00-01</P><P type="APPID">4001</P></Address>
+				</SMV>
+			</ConnectedAP>
+			<ConnectedAP iedName="O" apName="AP1" apUuid="b0000000-0000-4000-8000-000000000010" dev:db-id="cap-o"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="S" uuid="c0000000-0000-4000-8000-000000000001" dev:db-id="ied-s">
+		<AccessPoint name="AP1" uuid="c0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+			<LDevice inst="LD1" uuid="c0000000-0000-4000-8000-000000000011">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="c0000000-0000-4000-8000-000000000012">
+					<DataSet name="SvSet"><FCDA ldInst="LD1" prefix="" lnClass="PTOC" lnInst="1" doName="Op" fc="ST"/></DataSet>
+					<SampledValueControl name="SV1" smvID="SV1ID" smpRate="80" nofASDU="1" datSet="SvSet" confRev="1" uuid="c0000000-0000-4000-8000-000000000021"><SmvOpts/></SampledValueControl>
+				</LN0>
+				<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_Type" uuid="c0000000-0000-4000-8000-000000000002">
+					<Inputs>
+						<ExtRef desc="trip from O" iedName="O" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" daName="stVal" serviceType="GOOSE" srcLDInst="LD1" srcPrefix="" srcLNClass="LLN0" srcCBName="OG" uuid="c0000000-0000-4000-8000-000000000030" dev:db-id="extref-from-o"/>
+					</Inputs>
+					<Outputs>
+						<ExtCtrl desc="open O" iedName="O" ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" lnUuid="b0000000-0000-4000-8000-000000000002" dev:db-id="extctrl-to-o"/>
+					</Outputs>
+				</LN>
+			</LDevice>
+		</Server></AccessPoint>
+		<MinRequestedSCDFiles>
+			<SclFileReference fileType="SCD" fileName="Project" fileUuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+		</MinRequestedSCDFiles>
+	</IED>
+	<IED name="O" uuid="b0000000-0000-4000-8000-000000000001" dev:db-id="ied-o">
+		<AccessPoint name="AP1" uuid="b0000000-0000-4000-8000-000000000010"><Server><Authentication/>
+			<LDevice inst="LD1" uuid="b0000000-0000-4000-8000-000000000011">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type" uuid="b0000000-0000-4000-8000-000000000012">
+					<DataSet name="OSet"><FCDA ldInst="LD1" prefix="" lnClass="GGIO" lnInst="1" doName="Ind" fc="ST"/></DataSet>
+					<GSEControl name="OG" datSet="OSet" appID="OApp" confRev="1" uuid="b0000000-0000-4000-8000-000000000021"/>
+				</LN0>
+				<LN lnClass="GGIO" inst="1" prefix="" lnType="GGIO_Type" uuid="b0000000-0000-4000-8000-000000000002">
+					<Inputs>
+						<ExtRef desc="block in" intAddr="BlockIn" pDO="Ind" uuid="b0000000-0000-4000-8000-000000000030" dev:db-id="extref-of-o"/>
+					</Inputs>
+				</LN>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Beh" type="ENS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="ACT_Type"/></LNodeType>
+		<LNodeType id="GGIO_Type" lnClass="GGIO"><DO name="Ind" type="SPS_Type"/></LNodeType>
+		<DOType id="ENS_Type" cdc="ENS"><DA name="stVal" bType="Enum" type="Beh_Kind" fc="ST"/></DOType>
+		<DOType id="ACT_Type" cdc="ACT"><DA name="general" bType="BOOLEAN" fc="ST"/></DOType>
+		<DOType id="SPS_Type" cdc="SPS"><DA name="stVal" bType="BOOLEAN" fc="ST"/></DOType>
+		<EnumType id="Beh_Kind"><EnumVal ord="1">on</EnumVal></EnumType>
+	</DataTypeTemplates>
+</SCL>
