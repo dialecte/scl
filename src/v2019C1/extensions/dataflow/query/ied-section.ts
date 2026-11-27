@@ -20,6 +20,7 @@ import { readAttribute } from '@/v2019C1/helpers'
 import type { ControlBlockNode, IedNode, IedSection } from './ied-section.types'
 import type { SectionNode } from './section-node.types'
 import type { Scl, Config } from '@/v2019C1/config'
+import type { CollectedWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -32,6 +33,82 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 	const collected = await collectWithAncestry(query, {
 		select: IED_SECTION_SELECT,
 	})
+	return iedSectionOf({ collected })
+}
+
+/** The IED section before staged operations: original records replace their writes, deleted records return. */
+export async function readIedSectionBefore(params: {
+	query: Core.Query<Config>
+	operations: ReadonlyArray<Scl.Operation>
+}): Promise<IedSection> {
+	const { query, operations } = params
+	const current = await collectWithAncestry(query, {
+		select: IED_SECTION_SELECT,
+	})
+	const created = new Set(
+		operations.flatMap((operation) =>
+			operation.status === 'created' ? [operation.newRecord.id] : [],
+		),
+	)
+	const records = new Map(
+		current.records
+			.filter((record) => !created.has(record.id))
+			.map((record) => [record.id, record]),
+	)
+	const original = new Map<string, Core.AnyRawRecord>()
+	for (const operation of operations) {
+		const before = operation.status === 'created' ? undefined : operation.oldRecord
+		if (before && !created.has(before.id) && !original.has(before.id))
+			original.set(before.id, before)
+	}
+	for (const [id, record] of original) records.set(id, record)
+	return collectedIedSection({ records: [...records.values()] })
+}
+
+/** The IED section after staged operations: the last write of each record is kept and deleted records leave. */
+export async function readIedSectionAfter(params: {
+	query: Core.Query<Config>
+	operations: ReadonlyArray<Scl.Operation>
+}): Promise<IedSection> {
+	const { query, operations } = params
+	const current = await collectWithAncestry(query, {
+		select: IED_SECTION_SELECT,
+	})
+	const records = new Map(current.records.map((record) => [record.id, record]))
+	for (const operation of operations) {
+		if (operation.status === 'deleted') {
+			records.delete(operation.oldRecord.id)
+			continue
+		}
+		records.set(operation.newRecord.id, operation.newRecord)
+	}
+	return collectedIedSection({ records: [...records.values()] })
+}
+
+function collectedIedSection(params: { records: readonly Core.AnyRawRecord[] }): IedSection {
+	const ordered = recordsInDocumentOrder(params)
+	const byId = new Map(ordered.map((record) => [record.id, record]))
+	return iedSectionOf({
+		collected: {
+			records: ordered,
+			ancestryOf(id) {
+				const ancestry = []
+				let parent = byId.get(id)?.parent
+				while (parent) {
+					const record = byId.get(parent.id)
+					if (!record) break
+					ancestry.unshift(record)
+					parent = record.parent
+				}
+				return ancestry
+			},
+		},
+	})
+}
+
+/** Index the collected IED records once for every dataflow lookup. */
+function iedSectionOf(params: { collected: CollectedWithAncestry }): IedSection {
+	const { collected } = params
 	const extRefs: IedNode<'ExtRef'>[] = []
 	const logicalNodes: IedNode<'LN' | 'LN0'>[] = []
 	const implementations = new Map<string, IedNode<'ExtRef' | 'ExtCtrl'>>()
@@ -131,6 +208,29 @@ export async function readIedSection(query: Core.Query<Config>): Promise<IedSect
 		controlBlocksByUuid,
 		controlBlocksByAddress,
 	}
+}
+
+/** A pre-commit operation view in parent-before-child document order. */
+function recordsInDocumentOrder(params: {
+	records: readonly Core.AnyRawRecord[]
+}): Core.AnyRawRecord[] {
+	const byId = new Map(params.records.map((record) => [record.id, record]))
+	const visited = new Set<string>()
+	const ordered: Core.AnyRawRecord[] = []
+	function visit(record: Core.AnyRawRecord): void {
+		if (visited.has(record.id)) return
+		visited.add(record.id)
+		ordered.push(record)
+		for (const child of record.children) {
+			const found = byId.get(child.id)
+			if (found) visit(found)
+		}
+	}
+	for (const record of params.records) {
+		if (!record.parent || !byId.has(record.parent.id)) visit(record)
+	}
+	for (const record of params.records) visit(record)
+	return ordered
 }
 
 /** Indexes an ExtRef / ExtCtrl by its uuid and by its path, the elements of one path kept in document order. */

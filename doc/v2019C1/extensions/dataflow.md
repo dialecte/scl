@@ -257,6 +257,8 @@ transaction:
   instance number of the clients after it); the last clients go.
 - **The supervision.** Once the subscriber's `ExtRef`s no longer name a GOOSE or sampled value control block, the
   `setSrcRef` value naming it in the subscriber's LGOS / LSVS is cleared (its `Val` removed); the logical node stays.
+  The same bookkeeping runs at commit for inputs ended or control blocks deleted by any transaction, not only for
+  `unsubscribe`. Bookkeeping already staged by the verb or the delete cascade is not written twice.
 - **Engineering rights.** An IED whose `engRight` is `fix` is never written: when it holds a given `ExtRef`, the call is refused with `DATAFLOW_UNSUBSCRIBE_REFUSED` (`meta: { reason: 'eng-right-fix', ied }`) and
   nothing is written; when it is the publisher, its registrations are kept, listed with `eng-right-fix`.
 - **Publisher data.** The default `cleanup: 'subscriptions'` leaves data sets, entries and control blocks alone.

@@ -1,5 +1,5 @@
 import { readExtRefsByControlBlock } from './ext-refs-by-control-block'
-import { readIedSection } from './ied-section'
+import { readIedSection, readIedSectionAfter, readIedSectionBefore } from './ied-section'
 import { readProcessSection } from './process-section'
 import { readDataTypes } from './read-data-types'
 import { readUnusedDataSection } from './read-unused-data-section'
@@ -13,13 +13,19 @@ import type { IedNode, IedSection } from './ied-section.types'
 import type { ProcessSection } from './process-section.types'
 import type { SupervisionIndex } from './supervisions.types'
 import type { UnusedDataSection } from './unused-data-section.types'
-import type { Config } from '@/v2019C1/config'
+import type { Config, Scl } from '@/v2019C1/config'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { MappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes.types'
 import type * as Core from '@dialecte/core'
 
 /** A context whose facts are read on first use and kept for the rest of the call. */
-export function createDataflowContext(query: Core.Query<Config>): DataflowContext {
+export function createDataflowContext(
+	query: Core.Query<Config>,
+	params: {
+		operations?: ReadonlyArray<Scl.Operation>
+		snapshot?: 'before' | 'after'
+	} = {},
+): DataflowContext {
 	let processSection: Promise<ProcessSection> | undefined
 	let iedSection: Promise<IedSection> | undefined
 	let extRefsByControlBlock: Promise<ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>> | undefined
@@ -36,7 +42,11 @@ export function createDataflowContext(query: Core.Query<Config>): DataflowContex
 			return processSection
 		},
 		iedSection() {
-			iedSection ??= readIedSection(query)
+			iedSection ??= params.operations
+				? params.snapshot === 'after'
+					? readIedSectionAfter({ query, operations: params.operations })
+					: readIedSectionBefore({ query, operations: params.operations })
+				: readIedSection(query)
 			return iedSection
 		},
 		unusedDataSection() {
