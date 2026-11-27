@@ -197,7 +197,7 @@ describe('tx.lifecycle.applyMove - the commit preview the same as in the report'
 type Source = SclTest.ActParams<SclTest.BaseXmlTestCase>['source']
 
 /** What a preview says the commit does beside the edits: its count of staged operations left out. */
-function sideEffectsOf(preview: CommitPrune): Omit<CommitPrune, 'stagedCount'> {
+function sideEffectsOf(preview: CommitPrune): Omit<CommitPrune, 'stagedCount' | 'normalised'> {
 	const { containers, types, moves, released, refusals } = preview
 	return { containers, types, moves, released, refusals }
 }

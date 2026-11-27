@@ -6,6 +6,7 @@ import type { ReleasedLNodeBinding } from './release-deleted-logical-nodes.types
 import type { UuidReferenceRefusalReason } from './uuid-references.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { SCL_ERRORS } from '@/v2019C1/errors'
+import type { NormalisedReferenceGroups } from '@/v2019C1/hooks/shared/stray-lnode-uuid.types'
 import type * as Core from '@dialecte/core'
 
 /** The name of a step of the commit. */
@@ -17,6 +18,7 @@ export type CommitStepName =
 	| 'pathReferences'
 	| 'moves'
 	| 'releasedLNodes'
+	| 'repeatedLNodeUuids'
 	| 'uuidReferences'
 	| 'emptiedContainers'
 	| 'unusedTypes'
@@ -37,6 +39,8 @@ export type CommitState = {
 	moveRemovals?: readonly MoveRemoval[]
 	/** The LNodes the commit released from a logical node the transaction deleted. */
 	released?: readonly ReleasedLNodeBinding[]
+	/** The behaviour variables the commit wrote without the `lnodeUuid` that only repeated the LNode of their input or output. */
+	normalised?: readonly NormalisedReferenceGroups[]
 }
 
 /** What the commit's steps read as they run, in order: a step may add to `state` what a later step reads. */
@@ -89,6 +93,7 @@ export type PlannedCommit = {
 	containers: PrunedContainer[]
 	moveRemovals: MoveRemoval[]
 	released: ReleasedLNodeBinding[]
+	normalised: NormalisedReferenceGroups[]
 	/** Every refusal the steps listed in collect mode, in run order; empty otherwise. */
 	refusals: CommitRefusal[]
 	/** The records the transaction's moves carry, each moved element included, from the move step's one read. */

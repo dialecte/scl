@@ -37,6 +37,7 @@ describe('planCommit - the commit runs its steps in one order', () => {
 			'pathReferences true',
 			'moves true',
 			'releasedLNodes true',
+			'repeatedLNodeUuids true',
 			'uuidReferences true',
 			'emptiedContainers true',
 			'unusedTypes true',

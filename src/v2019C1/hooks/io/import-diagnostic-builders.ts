@@ -12,6 +12,7 @@ import type {
 	ExclusiveReferenceGroupsDiagnostic,
 	IncoherentPathNamesDiagnostic,
 	IncoherentReferenceDiagnostic,
+	RedundantLNodeUuidDiagnostic,
 	UnresolvedReferenceDiagnostic,
 	UnsupportedXPathDiagnostic,
 	UnwrittenReferencePathDiagnostic,
@@ -48,6 +49,14 @@ export function unwrittenReferencePathDiagnostic(params: {
 	meta: UnwrittenReferencePathDiagnostic['meta']
 }): UnwrittenReferencePathDiagnostic {
 	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'unwritten-reference-path', params)
+}
+
+/** A behaviour variable repeating in `lnodeUuid` the LNode of its input or output, kept as read. */
+export function redundantLNodeUuidDiagnostic(params: {
+	ref: DiagnosticRef
+	meta: RedundantLNodeUuidDiagnostic['meta']
+}): RedundantLNodeUuidDiagnostic {
+	return createDiagnostic(SCL_IMPORT_DIAGNOSTICS, 'redundant-lnode-uuid', params)
 }
 
 /** A reference whose path and uuid name two different elements, with the elements involved. */
