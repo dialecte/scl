@@ -137,6 +137,13 @@ export type ProcessHolder = {
 /** A process family and its registry pair, as the holder tag reads them. */
 export type ProcessFamilyPair = { family: ProcessReferenceFamily; pair: ReferencePair }
 
+/** What one decision of a cut adds to its plan: the records it leaves out, the attribute edits, what it says. */
+export type PlanContribution = {
+	leaveOut: readonly string[]
+	edits: readonly RecordEdit[]
+	warnings: readonly ExtractWarning[]
+}
+
 /** What a reference kept by its names loses: the record and its family. */
 export type ClearedSourceReferencesParams = {
 	record: Core.AnyRawRecord

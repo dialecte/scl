@@ -8,8 +8,8 @@ import type * as Core from '@dialecte/core'
 
 /**
  * Why `extract.ied` refuses each file type for an IED, `undefined` when it writes it: an ISD is written for a specification
- * IED only, a CID for a real IED with a network address (one of its connections holds an `Address`). One rule for the export
- * and for the options a tool reads.
+ * IED only, a CID for a real IED with a network address (one of its connections holds an `Address`), an IID for any real IED
+ * (its addresses are optional). One rule for the export and for the options a tool reads.
  */
 export async function readIedExportRefusals(
 	query: Core.Query<Config>,
@@ -26,9 +26,13 @@ export async function readIedExportRefusals(
 	const implemented = classifications.some(function isSelectedImplemented(classification) {
 		return classification.ied.id === iedRef.id && classification.kind === 'implemented'
 	})
-	if (!implemented) return { CID: { key: 'IED_NOT_IMPLEMENTED', meta } }
-	if (!fileTypes.includes('CID')) return { ISD: { key: 'IED_NOT_SPECIFICATION', meta } }
-	const connected = await holdsAnAddress(query, { iedRef, iedName })
+	if (!implemented) {
+		const notImplemented: IedExportRefusal = { key: 'IED_NOT_IMPLEMENTED', meta }
+		return { CID: notImplemented, IID: notImplemented }
+	}
+	const connected = fileTypes.includes('CID')
+		? await holdsAnAddress(query, { iedRef, iedName })
+		: true
 	return {
 		ISD: { key: 'IED_NOT_SPECIFICATION', meta },
 		...(connected ? {} : { CID: { key: 'IED_NOT_CONNECTED', meta } }),

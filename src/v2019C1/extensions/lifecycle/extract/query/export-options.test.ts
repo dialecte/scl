@@ -17,7 +17,8 @@ const selectedIedRef = { tagName: 'IED', id: 'selected-ied' } as const
 
 describe('query.lifecycle.exportOptions - the files an IED can be exported as', () => {
 	const testCases: SclTest.TestCases<TestCase> = {
-		'real IED with an address -> CID offered, ISD refused as for an implemented IED': {
+		// Selected is a real IED whose connection holds an address
+		'real IED with an address -> CID and IID offered, ISD refused as for an implemented IED': {
 			sourceXml: RealIedConnectedXml,
 			expected: [
 				{
@@ -26,9 +27,11 @@ describe('query.lifecycle.exportOptions - the files an IED can be exported as', 
 					refusal: { key: 'IED_NOT_SPECIFICATION', meta: { ied: selectedIedRef } },
 				},
 				{ fileType: 'CID', offered: true },
+				{ fileType: 'IID', offered: true },
 			],
 		},
-		'real IED whose connection holds no address -> CID refused as not connected': {
+		// Selected is a real IED whose only connection holds no address
+		'real IED whose connection holds no address -> CID refused as not connected, IID offered': {
 			sourceXml: RealIedConnectionWithoutAddressXml,
 			expected: [
 				{
@@ -41,14 +44,21 @@ describe('query.lifecycle.exportOptions - the files an IED can be exported as', 
 					offered: false,
 					refusal: { key: 'IED_NOT_CONNECTED', meta: { ied: selectedIedRef } },
 				},
+				{ fileType: 'IID', offered: true },
 			],
 		},
-		'specification IED -> ISD offered, CID refused as not a real IED': {
+		// Selected is a specification IED
+		'specification IED -> ISD offered, CID and IID refused as not a real IED': {
 			sourceXml: SpecificationIedConnectedXml,
 			expected: [
 				{ fileType: 'ISD', offered: true },
 				{
 					fileType: 'CID',
+					offered: false,
+					refusal: { key: 'IED_NOT_IMPLEMENTED', meta: { ied: selectedIedRef } },
+				},
+				{
+					fileType: 'IID',
 					offered: false,
 					refusal: { key: 'IED_NOT_IMPLEMENTED', meta: { ied: selectedIedRef } },
 				},

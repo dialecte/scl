@@ -37,8 +37,14 @@ export type IedExtractBase = {
 	as?: FileStart
 }
 
-/** Parameters of `extract.ied`, by the type of the file written: an ISD of a specification IED, or a CID of a real IED. */
-export type IedExtractParams = IsdExtractParams | CidExtractParams
+/**
+ * Parameters of `extract.ied`, by the type of the file written: an ISD of a specification IED, a CID or an IID of a real
+ * IED.
+ */
+export type IedExtractParams = IsdExtractParams | CidExtractParams | IidExtractParams
+
+/** Parameters of `extract.ied` writing the file of one real IED: a CID or an IID. */
+export type RealIedExtractParams = CidExtractParams | IidExtractParams
 
 /**
  * Which IEDs a CID holds besides the selected one: none (`'none'`), or the IEDs its inputs are bound to, each with only the
@@ -65,6 +71,20 @@ export type CidExtractParams = IedExtractBase & {
 	/**
 	 * The substation part related to the IED: the frames holding the LNodes it implements, names and identifiers as in the
 	 * project. Off by default: a CID needs none.
+	 */
+	includeSubstation?: boolean
+}
+
+/**
+ * Parameters of `extract.ied` writing the IID of one real IED: the IED alone, as the project holds it, for its configuration
+ * tool to change and hand back.
+ */
+export type IidExtractParams = IedExtractBase & {
+	/** Initializes an IID Header with a fresh file UUID and initial history. */
+	fileType: 'IID'
+	/**
+	 * The substation part related to the IED: the frames holding the LNodes it implements, names and identifiers as in the
+	 * project. Off by default: the LNodes it implements are then listed.
 	 */
 	includeSubstation?: boolean
 }
@@ -119,7 +139,9 @@ export type RealIedExport = {
 	linked: LinkedSectionReading
 	/** The IED's own lists of minimum project files in the source, written back exactly. */
 	minimumScdFiles: readonly Scl.Ref<'MinRequestedSCDFiles'>[]
-	/** The IEDs sending to the IED, each cut to what it sends (`interactingIeds: 'publishers'`). */
+	/** The owner written on the IED: the project's Header id for an IID whose IED holds none; nothing otherwise. */
+	owner: string | undefined
+	/** The IEDs sending to the IED, each cut to what it sends (a CID with `interactingIeds: 'publishers'`). */
 	senders: readonly CidSender[]
 	/** What the Communication written leaves out: other IEDs' connections but the senders', cut to what they send. */
 	communicationLeaveOut: ReadonlySet<string>

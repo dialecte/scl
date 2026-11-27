@@ -1,0 +1,32 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" dev:db-id="source-root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<!-- Bay B1 / F1 holds one LNode assigned to no IED; Selected, a real IED (ICD source), implements no LNode -->
+	<Header id="ProjectSource" fileType="SCD" uuid="10000000-0000-4000-8000-000000000001" version="1" revision="A"/>
+	<Substation name="S1">
+		<VoltageLevel name="V1">
+			<Bay name="B1">
+				<Function name="F1">
+					<LNode iedName="None" lnClass="PTOC" lnInst="1" uuid="80000000-0000-4000-8000-0000000000c1" dev:db-id="lnode-unassigned"/>
+				</Function>
+			</Bay>
+		</VoltageLevel>
+	</Substation>
+	<IED name="Selected" uuid="20000000-0000-4000-8000-000000000001" dev:db-id="selected-ied">
+		<AccessPoint name="AP1" uuid="30000000-0000-4000-8000-000000000001">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD1">
+					<LN0 lnClass="LLN0" inst="" lnType="LLN0_Type"/>
+					<LN lnClass="PTOC" inst="1" lnType="PTOC_Type" uuid="50000000-0000-4000-8000-000000000002"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+		<IEDSourceFiles>
+			<SclFileReference fileType="ICD" fileName="vendor" fileUuid="10000000-0000-4000-8000-000000000003" version="1" revision="0"/>
+		</IEDSourceFiles>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_Type" lnClass="LLN0"><DO name="Status" type="SPS_Type"/></LNodeType>
+		<LNodeType id="PTOC_Type" lnClass="PTOC"><DO name="Op" type="SPS_Type"/></LNodeType>
+		<DOType id="SPS_Type" cdc="SPS"><DA name="stVal" bType="BOOLEAN" fc="ST"/></DOType>
+	</DataTypeTemplates>
+</SCL>

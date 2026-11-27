@@ -27,7 +27,6 @@ import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sectio
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction/deep'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction/write-provenance'
 
-import type { ExtractWarning } from './extract.types'
 import type { IedExport, IedExtractResult, IsdExtractParams } from './ied.types'
 import type { TemplateIdentityParams } from './template-identity.types'
 import type { Config, Scl } from '@/v2019C1/config'

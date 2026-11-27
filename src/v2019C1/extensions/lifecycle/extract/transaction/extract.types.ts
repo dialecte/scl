@@ -76,6 +76,19 @@ export type ExtractWarning =
 			attributes: string[]
 	  }
 	| {
+			/** An input or output bound to an IED the file does not hold: written with its whole binding, as the project holds it. */
+			code: 'input-bound-outside'
+			source: Scl.Ref<'ExtRef' | 'ExtCtrl'>
+			/** The IED it names, when it names one by name rather than by uuid only. */
+			iedName?: string
+	  }
+	| {
+			/** The LNodes of the substation part the IED implements, the file not holding that part: its tool keeps their logical nodes. */
+			code: 'bound-lnodes-not-carried'
+			ied: Scl.Ref<'IED'>
+			lnodes: Scl.Ref<'LNode'>[]
+	  }
+	| {
 			/** A receiver, report client, association or key distribution entry naming an IED the file does not hold: kept. */
 			code: 'ied-reference-dangling'
 			source: Scl.Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>

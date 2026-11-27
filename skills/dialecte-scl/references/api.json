@@ -614,13 +614,15 @@
 			"root": "q",
 			"otherRoutes": [],
 			"signature": "(params: { iedRef: Scl.Ref<'IED'>; }) => Promise<IedExportOption[]>",
-			"summary": "Query extension: the file types an IED can be exported as by `extract.ied`, in a fixed order (ISD, CID), each offered or refused with the key and data of the error the export would throw: an ISD for a specification IED only, a CID for a real IED whose connections hold a network address. A tool shows the entries from it and never re-derives the rule. Refused as the export is for an IED the document does not hold (`ELEMENT_NOT_FOUND`) or one without a name.",
+			"summary": "Query extension: the file types an IED can be exported as by `extract.ied`, in a fixed order (ISD, CID, IID), each offered or refused with the key and data of the error the export would throw: an ISD for a specification IED only, a CID for a real IED whose connections hold a network address, an IID for any real IED. A tool shows the entries from it and never re-derives the rule. Refused as the export is for an IED the document does not hold (`ELEMENT_NOT_FOUND`) or one without a name.",
 			"intents": [
 				"which exports an IED offers",
-				"can this IED be exported as a CID or an ISD",
+				"can this IED be exported as a CID",
+				"can this IED be exported as an IID",
+				"can this IED be exported as an ISD",
 				"why is the CID export refused"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/query/export-options.ts:17"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/query/export-options.ts:18"
 		},
 		{
 			"path": "doc.query.lifecycle.report",
@@ -1251,14 +1253,17 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: IedExtractParams) => Promise<IedExtractResult>",
-			"summary": "Export one IED into an empty target, by the type of the file written (`fileType`): - `'ISD'`: a specification IED with the process part it implements (see `extractIsd`); - `'CID'`: a real IED for its configuration tool: the IED as the project holds it, its own communication and the data types it needs; its inputs and outputs bound to an IED the file does not hold reduced to the only form a system tool may write (an input without internal address removed, the others and every output keeping their internal address without a source); receivers and report clients by `clientRefs`; the source unchanged.",
+			"summary": "Export one IED into an empty target, by the type of the file written (`fileType`): - `'ISD'`: a specification IED with the process part it implements (see `extractIsd`); - `'CID'`: a real IED for its configuration tool: the IED as the project holds it, its own communication and the data types it needs; its inputs and outputs bound to an IED the file does not hold reduced to the only form a system tool may write (an input without internal address removed, the others and every output keeping their internal address without a source); receivers and report clients by `clientRefs`; the source unchanged; - `'IID'`: a real IED for its configuration tool to change and hand back: the IED alone as the project holds it, every binding kept as it is and those to an IED the file does not hold listed, its own communication with its addresses, the data types it needs, its owner written as the project when it holds none; the source unchanged.",
 			"intents": [
-				"export an IED into an ISD or a CID",
+				"export an IED into an ISD",
+				"export an IED into a CID",
+				"export an IED into an IID",
 				"write a CID for one IED",
+				"write an IID for one IED",
 				"extract a real IED for its configuration tool",
 				"export the communication part of one IED"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:23"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/extract/transaction/ied.ts:26"
 		},
 		{
 			"path": "tx.lifecycle.extract.ssd",

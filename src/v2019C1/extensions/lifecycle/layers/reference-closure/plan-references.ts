@@ -23,6 +23,7 @@ import { readAttribute, readAttributes } from '@/v2019C1/helpers'
 import type {
 	ClassifiedReference,
 	ClearedSourceReferencesParams,
+	PlanContribution,
 	ClosureRoot,
 	PlanReferencesParams,
 	ReferenceAction,
@@ -35,8 +36,6 @@ import type {
 	Landing,
 } from './reference-closure.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**
@@ -508,89 +507,124 @@ function composePlan(params: {
 	rootRecords: readonly { records: HolderRecords }[]
 }): ReferencePlan {
 	const { decisions, rootRecords } = params
-	const leaveOut = new Set<string>()
-	const edits: RecordEdit[] = []
-	const warnings: ExtractWarning[] = []
-	for (const decision of decisions) {
-		const { record, family } = decision
-		// an input or output naming its source by uuid only has no names to keep: it is reduced instead
-		const action =
-			decision.action === 'keep-names' && decision.iedName === undefined
-				? 'reduce'
-				: decision.action
-		const ref = { tagName: record.tagName, id: record.id }
-		const iedName = decision.iedName ?? ''
-		if (action === 'keep') continue
-		if (family === 'supervision') {
-			warnings.push({
-				code: 'supervision-source-absent',
-				source: ref as Scl.Ref<'LN'>,
-				reference: decision.reference ?? '',
-			})
-			continue
-		}
-		if (family === 'input' || family === 'output') {
-			const hasInternalAddress = Boolean(
-				readAttribute({ record, name: INTERNAL_ADDRESS, defaults: 'none' }),
-			)
-			if (
-				action === 'remove' ||
-				(action === 'reduce' && family === 'input' && !hasInternalAddress)
-			) {
-				leaveOut.add(record.id)
-				warnings.push({
-					code: 'input-removed',
-					source: ref as Scl.Ref<'ExtRef'>,
-					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
-				})
-				continue
-			}
-			if (action === 'keep-names') {
-				edits.push({
-					ref: ref as Scl.Ref<Scl.ElementsOf>,
-					attributes: clearedSourceReferences({ record, family }),
-				})
-				warnings.push({
-					code: 'external-input',
-					source: ref as Scl.Ref<'ExtRef' | 'ExtCtrl'>,
-					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
-				})
-				continue
-			}
-			if (action === 'reduce') {
-				const reduction = reduceBinding({ record, family })
-				edits.push({ ref: ref as Scl.Ref<Scl.ElementsOf>, attributes: reduction.cleared })
-				warnings.push({
-					code: 'input-unbound',
-					source: ref as Scl.Ref<'ExtRef' | 'ExtCtrl'>,
-					...(decision.iedName === undefined ? {} : { iedName: decision.iedName }),
-					attributes: Object.keys(reduction.cleared),
-				})
-				if (reduction.missing.length > 0) {
-					warnings.push({
-						code: 'input-incomplete',
-						source: ref as Scl.Ref<'ExtRef'>,
-						missing: reduction.missing,
-					})
-				}
-			}
-			continue
-		}
-		const named = ref as Scl.Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>
-		if (action === 'remove') {
-			leaveOut.add(record.id)
-			warnings.push({ code: 'ied-reference-left-out', source: named, iedName })
-		} else {
-			warnings.push({ code: 'ied-reference-dangling', source: named, iedName })
-		}
-	}
+	const contributions = decisions.map(contributionOf)
+	const leaveOut = new Set(contributions.flatMap((contribution) => contribution.leaveOut))
 	const emptied = rootRecords.flatMap(({ records }) => emptiedWrappers({ records, leaveOut }))
 	return {
 		references: decisions.map(withoutRecord),
 		leaveOut: new Set([...leaveOut, ...emptied]),
-		edits,
-		warnings,
+		edits: contributions.flatMap((contribution) => contribution.edits),
+		warnings: contributions.flatMap((contribution) => contribution.warnings),
 	}
+}
+
+/** What one decision adds to the plan: by its family, what its holder loses, the edits it makes, what it says. */
+function contributionOf(decision: Decision & { reference?: string }): PlanContribution {
+	const { record, family } = decision
+	// an input or output naming its source by uuid only has no names to keep: it is reduced instead
+	const action =
+		decision.action === 'keep-names' && decision.iedName === undefined ? 'reduce' : decision.action
+	if (action === 'keep') return { leaveOut: [], edits: [], warnings: [] }
+	if (family === 'supervision') {
+		return {
+			leaveOut: [],
+			edits: [],
+			warnings: [
+				{
+					code: 'supervision-source-absent',
+					source: { tagName: 'LN', id: record.id },
+					reference: decision.reference ?? '',
+				},
+			],
+		}
+	}
+	if (family === 'input' || family === 'output') {
+		return bindingContribution({ decision, family, action })
+	}
+	return namedContribution({ decision, action })
+}
+
+/**
+ * An input or output naming what the file does not hold: left out (an input without internal address reduced, or
+ * removed), written with its signal names only (`keep-names`), written as it is and listed (`keep-listed`), or written
+ * without its source (`reduce`).
+ */
+function bindingContribution(params: {
+	decision: Decision
+	family: 'input' | 'output'
+	action: ReferenceAction
+}): PlanContribution {
+	const { decision, family, action } = params
+	const { record } = decision
+	const ref = { tagName: record.tagName, id: record.id } as Scl.Ref<'ExtRef' | 'ExtCtrl'>
+	const named = decision.iedName === undefined ? {} : { iedName: decision.iedName }
+	const hasInternalAddress = Boolean(
+		readAttribute({ record, name: INTERNAL_ADDRESS, defaults: 'none' }),
+	)
+	if (action === 'remove' || (action === 'reduce' && family === 'input' && !hasInternalAddress)) {
+		return {
+			leaveOut: [record.id],
+			edits: [],
+			warnings: [{ code: 'input-removed', source: ref as Scl.Ref<'ExtRef'>, ...named }],
+		}
+	}
+	if (action === 'keep-names') {
+		return {
+			leaveOut: [],
+			edits: [{ ref, attributes: clearedSourceReferences({ record, family }) }],
+			warnings: [{ code: 'external-input', source: ref, ...named }],
+		}
+	}
+	if (action === 'keep-listed') {
+		return {
+			leaveOut: [],
+			edits: [],
+			warnings: [{ code: 'input-bound-outside', source: ref, ...named }],
+		}
+	}
+	const reduction = reduceBinding({ record, family })
+	return {
+		leaveOut: [],
+		edits: [{ ref, attributes: reduction.cleared }],
+		warnings: [
+			{ code: 'input-unbound', source: ref, ...named, attributes: Object.keys(reduction.cleared) },
+			...(reduction.missing.length > 0
+				? [
+						{
+							code: 'input-incomplete' as const,
+							source: ref as Scl.Ref<'ExtRef'>,
+							missing: reduction.missing,
+						},
+					]
+				: []),
+		],
+	}
+}
+
+/** A receiver, report client, association or key distribution entry naming an IED: left out and said, or kept and said. */
+function namedContribution(params: {
+	decision: Decision
+	action: ReferenceAction
+}): PlanContribution {
+	const { decision, action } = params
+	const { record } = decision
+	const source = { tagName: record.tagName, id: record.id } as Scl.Ref<
+		'IEDName' | 'ClientLN' | 'Association' | 'KDC'
+	>
+	const iedName = decision.iedName ?? ''
+	return action === 'remove'
+		? {
+				leaveOut: [record.id],
+				edits: [],
+				warnings: [
+					{
+						code: 'ied-reference-left-out',
+						source: source as Scl.Ref<'IEDName' | 'ClientLN'>,
+						iedName,
+					},
+				],
+			}
+		: { leaveOut: [], edits: [], warnings: [{ code: 'ied-reference-dangling', source, iedName }] }
 }
 
 /**

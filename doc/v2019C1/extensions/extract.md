@@ -143,7 +143,7 @@ Returns the file type written and the warnings gathered while extracting (`Extra
 
 ### `ied`
 
-Extracts one `IED` into a new document, by the type of the file (`fileType`): a specification IED into an ISD (the IED with the data types it uses, its connections, and the part of the specification it implements), or a real IED into a CID ([below](#cid-of-a-real-ied)). Which types an IED can be exported as, and why not: [`exportOptions`](#exportoptions).
+Extracts one `IED` into a new document, by the type of the file (`fileType`): a specification IED into an ISD (the IED with the data types it uses, its connections, and the part of the specification it implements), or a real IED into a CID ([below](#cid-of-a-real-ied)) or an IID ([below](#iid-of-a-real-ied)). Which types an IED can be exported as, and why not: [`exportOptions`](#exportoptions).
 
 ```ts
 tx.lifecycle.extract.ied(params: {
@@ -252,7 +252,7 @@ tx.lifecycle.extract.ied(params: {
 
 Steps:
 
-1. Refuse before anything is written, in this order: an omitted or unknown `interactingIeds`, an unknown `clientRefs`, then an `includeSubstation` that is not a boolean (`OPTION_NOT_AVAILABLE`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); an IED none of whose connections holds an `Address` (`IED_NOT_CONNECTED`, `SCL2016`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source (the `provenanceQuery` document when given) registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); `as: 'revision'` (`OPTION_NOT_AVAILABLE`). A `fileType` other than `'ISD'` or `'CID'` is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'fileType', value }`).
+1. Refuse before anything is written, in this order: an omitted or unknown `interactingIeds`, an unknown `clientRefs`, then an `includeSubstation` that is not a boolean (`OPTION_NOT_AVAILABLE`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); an IED none of whose connections holds an `Address` (`IED_NOT_CONNECTED`, `SCL2016`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source (the `provenanceQuery` document when given) registered with an extension other than `.ssd`, `.scd`, `.xml` or none (`OPTION_NOT_AVAILABLE`, `meta: { option: 'sourceExtension', value }`); `as: 'revision'` (`OPTION_NOT_AVAILABLE`). A `fileType` other than `'ISD'`, `'CID'` or `'IID'` is refused with `OPTION_NOT_AVAILABLE` (`meta: { option: 'fileType', value }`).
 2. Write the CID history header (`fileType: 'CID'`, a uuid of its own) and record the project in the `Header` (its file name, version, revision and type, as for an ISD).
 3. Write the IED as the project holds it: its name, uuids, manufacturer, values, control blocks, data sets, supervision logical nodes, vendor content, and its `IEDSourceFiles` and `MinRequestedSCDFiles` exactly as the source holds them; the data types its logical nodes use, no other.
 4. Write the `Communication` holding its connections (addresses, GSE, SMV, physical connections) and their subnetworks, no connection of another IED.
@@ -287,14 +287,56 @@ Returns `fileName` (`<IED>.cid`) and the warnings:
 { code: 'data-set-member-unresolved', source: Ref<'FCDA'> }
 ```
 
+#### IID of a real IED
+
+An IID is the file a real IED's configuration tool changes and hands back to the project: the IED alone, as the project holds it, its own communication and the data types it needs. The IED's name and every uuid are written as the project holds them, so the file names the same IED when it comes back.
+
+```ts
+tx.lifecycle.extract.ied(params: {
+  sourceQuery: Scl.Query
+  provenanceQuery?: Scl.Query        // the document recorded as its source; default sourceQuery
+  iedRef: Scl.Ref<'IED'>
+  fileType: 'IID'
+  includeSubstation?: boolean           // default false
+  tool: string
+  who: string
+  nameStructure?: string
+  as?: 'new' | 'revision'           // default 'new'; 'revision' is refused
+}): Promise<{ warnings: ExtractWarning[]; fileName: string }>
+```
+
+Steps:
+
+1. Refuse before anything is written, in this order: an option only a CID takes (`interactingIeds`, `clientRefs`) or an `includeSubstation` that is not a boolean (`OPTION_NOT_AVAILABLE`, `meta: { option, value }`); an IED the source does not hold (`ELEMENT_NOT_FOUND`) or one without a name (`ASSERTION_FAILED`); a specification IED (`IED_NOT_IMPLEMENTED`, `SCL2015`); a target already holding an `IED`, a `Substation`, a `Line` or a `Process` (`EXTRACTION_TARGET_NOT_EMPTY`); a source with an extension other than `.ssd`, `.scd`, `.xml` or none, and `as: 'revision'` (`OPTION_NOT_AVAILABLE`), as for a CID. An IED with no address is written: an IID's addresses are optional.
+2. Write the IID history header (`fileType: 'IID'`, a uuid of its own) and record the project in the `Header`, as for a CID.
+3. Write the IED as the project holds it, as for a CID, with its `IEDSourceFiles` and `MinRequestedSCDFiles` exactly as the source holds them (the minimum project files the IED needs, which the file carries back unchanged). An IED holding no `owner` gets the `Header` `id` of the project recorded as its source (the `provenanceQuery` document when given) as its owner (left absent, it would read as the IID's own); an IED owned by another project keeps its owner.
+4. Write the `Communication` holding its own connections with their addresses, GSE, SMV and physical connections, as for a CID; none when the IED has no connection.
+5. Keep every reference as the project holds it, and tell those naming an IED the file does not hold:
+   - an `ExtRef` or `ExtCtrl` bound to such an IED keeps its whole binding, names and uuids (`input-bound-outside`): the project keeps its dataflow, the tool may only add internal addresses;
+   - `IEDName`, `ClientLN`, `Association` and `KDC` naming such an IED: kept (`ied-reference-dangling`);
+   - an `LGOS` or `LSVS` whose reference names a control block the file does not hold: kept (`supervision-source-absent`);
+   - no other IED is written.
+
+With `includeSubstation: true` the file holds the substation part related to the IED, as for a CID. Without it, the LNodes the IED implements are told in one warning (`bound-lnodes-not-carried`): the tool keeps the logical nodes they are bound to.
+
+Returns `fileName` (`<IED>.iid`) and the warnings:
+
+```ts
+{ code: 'input-bound-outside', source: Ref<'ExtRef' | 'ExtCtrl'>, iedName?: string }
+{ code: 'ied-reference-dangling', source: Ref<'IEDName' | 'ClientLN' | 'Association' | 'KDC'>, iedName: string }
+{ code: 'supervision-source-absent', source: Ref<'LN'>, reference: string }
+{ code: 'bound-lnodes-not-carried', ied: Ref<'IED'>, lnodes: Ref<'LNode'>[] }
+{ code: 'process-reference-cut', ... }  // with includeSubstation, as for a CID
+```
+
 #### `exportOptions`
 
 ```ts
 query.lifecycle.exportOptions(params: { iedRef: Scl.Ref<'IED'> }): Promise<IedExportOption[]>
-// IedExportOption = { fileType: 'ISD' | 'CID', offered: true } | { fileType, offered: false, refusal: { key, meta: { ied } } }
+// IedExportOption = { fileType: 'ISD' | 'CID' | 'IID', offered: true } | { fileType, offered: false, refusal: { key, meta: { ied } } }
 ```
 
-The file types `extract.ied` writes for the IED, ISD then CID, each offered or refused with the key and data of the error the export would throw (`IED_NOT_SPECIFICATION` for an ISD of a real IED, `IED_NOT_IMPLEMENTED` or `IED_NOT_CONNECTED` for a CID): a menu shows the entries from it without deriving the rule again. An IED the document does not hold is refused as by the export (`ELEMENT_NOT_FOUND`).
+The file types `extract.ied` writes for the IED, ISD, CID then IID, each offered or refused with the key and data of the error the export would throw (`IED_NOT_SPECIFICATION` for an ISD of a real IED, `IED_NOT_IMPLEMENTED` or `IED_NOT_CONNECTED` for a CID, `IED_NOT_IMPLEMENTED` for an IID): a menu shows the entries from it without deriving the rule again. An IED the document does not hold is refused as by the export (`ELEMENT_NOT_FOUND`).
 
 ### Options
 
