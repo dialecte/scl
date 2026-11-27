@@ -110,6 +110,17 @@ export type UnwrittenReferencePathDiagnostic = Diagnostic<'unwritten-reference-p
 }
 
 /**
+ * A behaviour variable naming its input or output (`kept`, its uuid attribute) that also holds the uuid of the LNode
+ * holding that input or output (`lnodeUuid`), with no data object: `ref` is the variable. Kept as read.
+ */
+export type RedundantLNodeUuidDiagnostic = Diagnostic<'redundant-lnode-uuid'> & {
+	meta: {
+		lnodeUuid: string
+		kept: string
+	}
+}
+
+/**
  * A behaviour variable holding attributes of both its reference groups (its data, and its input or output): `ref` is
  * the variable, `attributes` the reference attributes it holds, in the registry's order.
  */
@@ -149,6 +160,7 @@ export type SclImportDiagnostic =
 	| IncoherentReferenceDiagnostic
 	| DataPathNotSplitDiagnostic
 	| ExclusiveReferenceGroupsDiagnostic
+	| RedundantLNodeUuidDiagnostic
 	| UnwrittenReferencePathDiagnostic
 	| IncoherentPathNamesDiagnostic
 	| DerivedSpecificationNamingDiagnostic

@@ -66,6 +66,16 @@ export const SCL_IMPORT_DIAGNOSTICS = {
 			message: 'The path of a reference cannot be written from the element its uuid names',
 		},
 		/**
+		 * A behaviour variable (`InputVar`, `OutputVar`) naming its input or output also holds, in `lnodeUuid`, the uuid of
+		 * the LNode holding that input or output, with no data object: it repeats what its input or output names. Kept as
+		 * read; the commit drops it when the variable is written.
+		 */
+		'redundant-lnode-uuid': {
+			severity: 'information',
+			family: 'reference',
+			message: 'A behaviour variable repeats in lnodeUuid the LNode of its input or output',
+		},
+		/**
 		 * A behaviour variable (`InputVar`, `OutputVar`) names data and a signal at once: the two reference groups are never
 		 * set together. It is kept as read.
 		 */

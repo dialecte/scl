@@ -37,12 +37,14 @@ import {
 	unresolvedReferenceDiagnostic,
 	unsupportedXPathDiagnostic,
 	unwrittenReferencePathDiagnostic,
+	redundantLNodeUuidDiagnostic,
 } from '@/v2019C1/hooks/io/import-diagnostic-builders'
 import { createSpecNamingImport } from '@/v2019C1/hooks/io/lnode-spec-naming-import'
 import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
 import { unwrittenPathReason } from '@/v2019C1/hooks/io/unwritten-path-reason'
 import { exclusiveGroupsHeld } from '@/v2019C1/hooks/shared/exclusive-groups'
+import { strayLNodeUuidOf } from '@/v2019C1/hooks/shared/stray-lnode-uuid'
 
 import type {
 	AttributeChanges,
@@ -53,11 +55,11 @@ import type {
 	PendingResolution,
 	SclImportSession,
 	SclImportSessionOptions,
+	ExclusiveGroupsHeld,
 } from './io-hooks.types'
 import type {
 	DataPathNotSplitDiagnostic,
 	DiagnosticAttributeRef,
-	ExclusiveReferenceGroupsDiagnostic,
 	SclImportDiagnostic,
 	UnsupportedXPathDiagnostic,
 	UnwrittenReferencePathDiagnostic,
@@ -130,7 +132,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 	const pendingResolutions: PendingResolution[] = []
 	const pendingPathFills: PendingPathFill[] = []
 	const xpathDiagnostics: UnsupportedXPathDiagnostic[] = []
-	const exclusiveDiagnostics: ExclusiveReferenceGroupsDiagnostic[] = []
+	const heldBoth: ExclusiveGroupsHeld[] = []
 	const ownPathElements: CollectedElement[] = []
 	const mappedDataImport = createMappedDataImport()
 	const specNamingImport = createSpecNamingImport()
@@ -166,12 +168,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 		// both groups of an element naming its target by one of them: reported, each group still read as written
 		const bothGroups = exclusiveGroupsHeld({ record, pairs })
 		if (bothGroups) {
-			exclusiveDiagnostics.push(
-				exclusiveReferenceGroupsDiagnostic({
-					ref: { tagName: record.tagName, id: record.id },
-					meta: { attributes: bothGroups },
-				}),
-			)
+			heldBoth.push({ record, attributes: bothGroups, stray: strayLNodeUuidOf({ record }) })
 		}
 		for (const pair of pairs) {
 			collectReference({ record, ancestry, pair })
@@ -255,7 +252,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 	): Promise<AfterImportResult<SclImportDiagnostic>> {
 		const progress = createImportStepProgress({ context })
 		const updates: RecordPatch[] = []
-		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics, ...exclusiveDiagnostics]
+		const diagnostics: SclImportDiagnostic[] = [...xpathDiagnostics]
 
 		const specNaming = await progress.run({
 			step: 'spec-naming',
@@ -271,6 +268,7 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 			visit: pathIndex.build,
 		})
 		const { index } = pathIndex
+		const fills = judgeBothGroups({ heldBoth, index, targets, pendingPathFills, diagnostics })
 		const dataTypes = await progress.run({ step: 'data-types', run: dataTypeIndex.build })
 
 		function keep(outcome: { update?: RecordPatch; diagnostics: SclImportDiagnostic[] }): void {
@@ -280,8 +278,8 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 
 		await progress.each({
 			step: 'path-fills',
-			items: pendingPathFills,
-			total: pendingPathFills.length,
+			items: fills,
+			total: fills.length,
 			visit: function fillOne(fill) {
 				keep(fillPath({ fill, index, specNamings }))
 			},
@@ -329,6 +327,64 @@ export function createSclImportSessionWith(options: SclImportSessionOptions): Sc
 function appendAll<Item>(params: { into: Item[]; items: readonly Item[] }): void {
 	const { into, items } = params
 	for (const item of items) into.push(item)
+}
+
+/** The path fills left to run: those of a uuid attribute whose path the import leaves unwritten taken out. */
+function fillsLeft(params: {
+	fills: readonly PendingPathFill[]
+	unwritten: ReadonlyMap<string, readonly string[]>
+}): PendingPathFill[] {
+	const { fills, unwritten } = params
+	return fills.filter((fill) => !unwritten.get(fill.recordId)?.includes(fill.pair.attribute.uuid))
+}
+
+/**
+ * What the import says of each element holding both its reference groups, in the order it read them: a behaviour
+ * variable whose data group is only an `lnodeUuid` repeating the LNode that holds its input or output
+ * (`strayLNodeUuidOf`, that LNode read from the file's path index) is reported `redundant-lnode-uuid`, the path of
+ * that data group left unwritten (its fill taken out of the path fills it answers); every other
+ * one `exclusive-reference-groups`, each appended to `diagnostics`. Each is kept as read; the commit drops a repeated
+ * `lnodeUuid` when it writes one.
+ */
+function judgeBothGroups(params: {
+	heldBoth: readonly ExclusiveGroupsHeld[]
+	index: ImportPathIndex
+	targets: readonly CollectedTarget[]
+	/** The path fills the import collected. */
+	pendingPathFills: readonly PendingPathFill[]
+	/** The diagnostics of the file, each appended in turn. */
+	diagnostics: SclImportDiagnostic[]
+}): PendingPathFill[] {
+	const { heldBoth, index, targets, pendingPathFills, diagnostics } = params
+	const unwritten = new Map<string, string[]>()
+	if (heldBoth.length === 0) return [...pendingPathFills]
+	const uuidOfRecord = new Map(targets.map(({ record, uuid }) => [record.id, uuid]))
+	const judged = heldBoth.map(function judgedOne({
+		record,
+		attributes,
+		stray,
+	}): SclImportDiagnostic {
+		const found = stray ? index.targetsByUuid.get(stray.targetUuid) : undefined
+		// the element the kept reference names, of a tag it may name, as the commit looks it up
+		const target =
+			found && (stray?.kept.target as readonly string[] | undefined)?.includes(found.tagName)
+				? found
+				: undefined
+		const lnode = target?.path.segments.findLast((segment) => segment.ref.tagName === 'LNode')
+		if (stray && lnode && uuidOfRecord.get(lnode.ref.id ?? '') === stray.lnodeUuid) {
+			unwritten.set(record.id, stray.removed)
+			return redundantLNodeUuidDiagnostic({
+				ref: { tagName: record.tagName, id: record.id },
+				meta: { lnodeUuid: stray.lnodeUuid, kept: stray.kept.attribute.uuid },
+			})
+		}
+		return exclusiveReferenceGroupsDiagnostic({
+			ref: { tagName: record.tagName, id: record.id },
+			meta: { attributes },
+		})
+	})
+	appendAll({ into: diagnostics, items: judged })
+	return fillsLeft({ fills: pendingPathFills, unwritten })
 }
 
 /**

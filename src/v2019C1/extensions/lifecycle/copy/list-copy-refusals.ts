@@ -14,6 +14,7 @@ import {
 	toCommitRefusal,
 } from '@/v2019C1/hooks/before-commit/uuid-references'
 import { findTargetsByUuid } from '@/v2019C1/hooks/shared/find-targets-by-uuid'
+import { readRepeatedLNodes, strayLNodeUuidOf } from '@/v2019C1/hooks/shared/stray-lnode-uuid'
 
 import type { CopiedRecord, CopyWrite, ListCopyRefusalsParams } from './copy.types'
 import type { Config, Scl } from '@/v2019C1/config'
@@ -25,8 +26,9 @@ import type { AnyRawRecord, AnyTreeRecord } from '@dialecte/core'
 
 /**
  * The refusals the commit of a copy would raise, listed before it is written: each incoherent uuid reference the copy
- * creates (two exclusive groups held together, data missing beside its uuid — the commit's own read-free checks, its
- * unbind plan applied first: a pair it clears is no refusal), then each behaviour variable naming an element the copy
+ * creates (two exclusive groups held together, data missing beside its uuid — the commit's own checks, its unbind plan
+ * applied first: a pair it clears is no refusal; a variable whose lnodeUuid only repeats the LNode of its input or
+ * output is none either, its commit drops that lnodeUuid), then each behaviour variable naming an element the copy
  * does not carry that is out of its reach where the copy lands (one held inside a copied root reaches no further than
  * the copy; one of a satellite, as far as the level the satellite lands on). Each names the source element. The
  * targets, the level of each satellite and the paths are read once each, whatever the copy carries.
@@ -48,11 +50,25 @@ export async function listCopyRefusals(params: ListCopyRefusalsParams): Promise<
 			root: tree,
 		}))
 	})
+	// a variable repeating in lnodeUuid the LNode of its input or output: its commit drops that lnodeUuid, refuses nothing
+	const strays = copied.flatMap(({ record }) => {
+		if (groupsTogetherOf({ change: { before: undefined, after: record } }).length === 0) return []
+		const stray = strayLNodeUuidOf({ record })
+		return stray ? [stray] : []
+	})
+	const repeated = await readRepeatedLNodes(query, { candidates: strays })
+	const droppedBy = new Map(
+		strays.flatMap((stray, index) => (repeated[index] ? [[stray.record.id, stray] as const] : [])),
+	)
 	const bound = copied.map(({ record }) =>
-		boundPairsOf({ change: { before: undefined, after: record } }),
+		boundPairsOf({ change: { before: undefined, after: record } }).filter(
+			(pair) => !droppedBy.get(record.id)?.removed.includes(pair.pair.attribute.uuid),
+		),
 	)
 	const incoherent = copied.flatMap(({ record }, index) => [
-		...groupsTogetherOf({ change: { before: undefined, after: record } }),
+		...(droppedBy.has(record.id)
+			? []
+			: groupsTogetherOf({ change: { before: undefined, after: record } })),
 		...bound[index].flatMap((pair) => dataMissingOf({ bound: pair })),
 	])
 	const refusals = incoherent.map(toCommitRefusal)

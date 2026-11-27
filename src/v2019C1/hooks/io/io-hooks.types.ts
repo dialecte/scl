@@ -2,6 +2,7 @@ import type { IncoherentPathName } from '@/v2019C1/errors/import-diagnostics.typ
 import type { SclImportDiagnostic } from '@/v2019C1/errors/import-diagnostics.types'
 import type { ReferencePair } from '@/v2019C1/extensions/reference'
 import type { ElementPath } from '@/v2019C1/extensions/reference/query/build'
+import type { StrayLNodeUuid } from '@/v2019C1/hooks/shared/stray-lnode-uuid.types'
 import type {
 	AfterImportContext,
 	AfterImportResult,
@@ -134,4 +135,11 @@ export type ImportPathIndexBuilder = {
 	units(): Iterable<ImportPathIndexUnit>
 	/** Build one unit */
 	build(unit: ImportPathIndexUnit): void
+}
+
+/** An element holding both its reference groups, the attributes it holds, and its repeated `lnodeUuid` when it has one. */
+export type ExclusiveGroupsHeld = {
+	record: AnyRawRecord
+	attributes: string[]
+	stray: StrayLNodeUuid | undefined
 }

@@ -13,14 +13,18 @@ import {
 } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
 import { writeTupleNamesAtCommit } from './tuple-names'
+import { foldChanges } from './tuple-reference-changes'
 import { writeTupleReferencesAtCommit } from './tuple-references'
-import { planUuidReferencesAtCommit } from './uuid-references'
+import { groupsTogetherOf, planUuidReferencesAtCommit } from './uuid-references'
 
 import { throwDialecteError } from '@dialecte/core'
+import { toRef } from '@dialecte/core/helpers'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
 import { readAttribute } from '@/v2019C1/helpers'
 import { ensureLNodeSpecNaming, hasAttributeChange } from '@/v2019C1/hooks/shared'
+import { updatedOperation, withAttributeValues } from '@/v2019C1/hooks/shared/record-ops'
+import { readRepeatedLNodes, strayLNodeUuidOf } from '@/v2019C1/hooks/shared/stray-lnode-uuid'
 
 import type { CommitStepParams, CommitStepResult } from './commit-plan.types'
 import type { LeftChild } from './left-children.types'
@@ -177,6 +181,53 @@ export async function releasedLNodes({
 	return {
 		operations: released,
 		state: { released: releasedLNodeBindings({ operations: released }) },
+	}
+}
+
+/**
+ * A behaviour variable the transaction writes holding both its reference groups, its data group only an `lnodeUuid`
+ * repeating the LNode that holds the input or output it names ({@link strayLNodeUuidOf}, {@link readRepeatedLNodes}):
+ * that `lnodeUuid`, and a `dataName` naming that LNode alone, dropped, instead of `uuidReferences` refusing both groups.
+ * Each variable so written is kept in the state (`normalised`), so the commit's preview says what it dropped. Nothing is
+ * read unless a written variable holds both groups in that shape. A near miss (the `lnodeUuid` of another LNode, a data
+ * object) is left to `uuidReferences`, which refuses it.
+ */
+export async function repeatedLNodeUuids({
+	plan,
+	writes,
+}: CommitStepParams): Promise<CommitStepResult> {
+	const { operations, query } = plan
+	const candidates = [...foldChanges({ operations, pending: writes.pending }).values()].flatMap(
+		function strayOf(change) {
+			if (writes.gone.has(change.after.id) || groupsTogetherOf({ change }).length === 0) return []
+			const stray = strayLNodeUuidOf({ record: change.after })
+			return stray ? [stray] : []
+		},
+	)
+	if (candidates.length === 0) return { operations: [] }
+	const lnodes = await readRepeatedLNodes(query, { candidates })
+	const normalised = candidates.flatMap((candidate, index) => {
+		const lnode = lnodes[index]
+		return lnode ? [{ candidate, lnode }] : []
+	})
+	return {
+		operations: normalised.map(({ candidate }) =>
+			updatedOperation(
+				candidate.record as Scl.RawRecord<Scl.ElementsOf>,
+				withAttributeValues(
+					candidate.record.attributes,
+					candidate.removed.map((name) => ({ name, value: undefined })),
+				),
+			),
+		),
+		state: {
+			normalised: normalised.map(({ candidate, lnode }) => ({
+				element: toRef(candidate.record) as Scl.Ref<Scl.ElementsOf>,
+				removed: candidate.removed,
+				kept: candidate.kept.attribute.uuid,
+				lnode: toRef(lnode) as Scl.Ref<Scl.ElementsOf>,
+			})),
+		},
 	}
 }
 
