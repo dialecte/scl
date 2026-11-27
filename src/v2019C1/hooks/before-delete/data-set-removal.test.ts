@@ -17,7 +17,7 @@ describe('a data set that goes, by what removes it: its report and its log lose 
 				sourceXml: dataSetReportedAndLogged,
 				deleted: { tagName: 'LN', id: 'xcbr7' },
 				expectedQueries: [
-					'//default:ReportControl[@name="RC"][@confRev="4"]',
+					'//default:ReportControl[@name="RC"][@confRev="10003"]',
 					'//default:LogControl[@name="LC"][@logName="L1"]',
 				],
 				unexpectedQueries: ['//default:DataSet', '//default:*[@datSet]'],
@@ -27,7 +27,7 @@ describe('a data set that goes, by what removes it: its report and its log lose 
 			sourceXml: dataSetReportedAndLogged,
 			deleted: { tagName: 'DataSet', id: 'ds7' },
 			expectedQueries: [
-				'//default:ReportControl[@name="RC"][@confRev="4"]',
+				'//default:ReportControl[@name="RC"][@confRev="10003"]',
 				'//default:LogControl[@name="LC"][@logName="L1"]',
 			],
 			unexpectedQueries: ['//default:DataSet', '//default:*[@datSet]'],

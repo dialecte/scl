@@ -5,7 +5,7 @@ import { expect } from 'vitest'
 import { runSclTestCases } from '@/v2019C1/test'
 
 import type { KeptRegistrationReason } from '../../query/plan-subscription-bookkeeping.types'
-import type { UnsubscribeResult } from '../unsubscribe.types'
+import type { KeptCleanupReason, UnsubscribeResult } from '../unsubscribe.types'
 import type { SclTest } from '@/v2019C1/test'
 
 /** An unsubscribe result with every element named by its `dev:db-id`. */
@@ -15,13 +15,21 @@ export type UnsubscribeResultIds = {
 	unlinked: string[]
 	registrations: { element: string; effect: 'deleted' | 'cleared' }[]
 	supervisions: string[]
-	kept: { element: string; why: KeptRegistrationReason }[]
+	kept: {
+		element: string
+		why: KeptRegistrationReason | KeptCleanupReason
+	}[]
+	fcdas: string[]
+	dataSets: string[]
+	controlBlocks: string[]
+	confRevs: { controlBlock: string; from: string; to: string }[]
 }
 
 /** The ExtRefs ended, by id, and what the result lists (any part left out is expected empty). */
 export type UnsubscribeTestCase = SclTest.BaseXmlTestCase & {
 	extRefs: string[]
 	withCompanions?: boolean
+	cleanup?: 'subscriptions' | 'unused-data'
 	result: Partial<UnsubscribeResultIds>
 }
 
@@ -32,6 +40,10 @@ const NOTHING: UnsubscribeResultIds = {
 	registrations: [],
 	supervisions: [],
 	kept: [],
+	fcdas: [],
+	dataSets: [],
+	controlBlocks: [],
+	confRevs: [],
 }
 
 /** Ends the subscriptions of each case in a transaction; the document by its queries. */
@@ -45,6 +57,7 @@ export function runUnsubscribeCases(params: {
 				unsubscribe(tx, {
 					extRefs: testCase.extRefs.map((id) => ({ tagName: 'ExtRef', id })),
 					...(testCase.withCompanions === false && { withCompanions: false }),
+					...(testCase.cleanup && { cleanup: testCase.cleanup }),
 				}),
 			)
 			await expect(ended.then(idsOf)).resolves.toEqual({ ...NOTHING, ...testCase.result })
@@ -67,5 +80,13 @@ function idsOf(result: UnsubscribeResult): UnsubscribeResultIds {
 		})),
 		supervisions: result.supervisions.map(idOf),
 		kept: result.kept.map((entry) => ({ element: idOf(entry.element), why: entry.why })),
+		fcdas: result.fcdas.map(idOf),
+		dataSets: result.dataSets.map(idOf),
+		controlBlocks: result.controlBlocks.map(idOf),
+		confRevs: result.confRevs.map((change) => ({
+			controlBlock: idOf(change.controlBlock),
+			from: change.from,
+			to: change.to,
+		})),
 	}
 }

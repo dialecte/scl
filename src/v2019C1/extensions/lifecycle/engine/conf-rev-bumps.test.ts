@@ -81,7 +81,7 @@ describe('the configuration revisions a data set change raises, as the report li
 			{
 				sourceXml: templateRaisingRc1Xml,
 				targetXml: instanceAtRevisionOneXml,
-				bumps: ['rc1-t 1 -> 2 if skipped'],
+				bumps: ['rc1-t 1 -> 10001 if skipped'],
 				notRaised: [],
 			},
 		'RC1 of the instance at the limit of its counter → not raised, listed': {
@@ -163,7 +163,7 @@ describe('the configuration revisions a data set change raises, as the report li
 					</SCL>
 				`,
 				targetXml: instanceAtRevisionOneXml,
-				bumps: ['rc1-t 1 -> 2'],
+				bumps: ['rc1-t 1 -> 10001'],
 				notRaised: [],
 			},
 	}
@@ -214,7 +214,7 @@ describe('reconcile of the configuration revision of a block the template raises
 			blockDecision: 'skip',
 			expectedQueries: [
 				'//default:DataSet[@name="DS1"]/default:FCDA[1][@doName="Pos"]',
-				'//default:ReportControl[@name="RC1"][@confRev="2"]',
+				'//default:ReportControl[@name="RC1"][@confRev="10001"]',
 			],
 		},
 	}

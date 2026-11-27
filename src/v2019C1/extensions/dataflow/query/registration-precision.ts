@@ -10,6 +10,7 @@ import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-t
 import { tuplePairApplies } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-pair-applies'
 import { tupleRoleValue } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-role-value'
 import { tupleTargetKind } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-target-kind'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { Registration } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
@@ -61,7 +62,7 @@ async function namesSubscriber(params: {
 }): Promise<boolean> {
 	const { context, pair, names, registration, subscriber } = params
 	const { record, ancestry } = registration
-	const uuid = await context.query.any.getAttribute(record, { name: pair.attribute.uuid })
+	const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
 	if (uuid) return subscriber === undefined || uuidNamesSubscriber({ uuid, names, subscriber })
 
 	if (names === 'ap') {
@@ -111,16 +112,18 @@ async function namesAccessPointLogicalNode(params: {
 	registration: IedNode<'IEDName' | 'ClientLN'>
 	subscriber: Subscriber
 }): Promise<boolean> {
-	const { context, pair, registration, subscriber } = params
+	const { pair, registration, subscriber } = params
 	const { record, ancestry } = registration
 	const { accessPointLogicalNode } = subscriber
 	const lnClass = tupleRoleValue({ record, pair, role: 'lnClass' })
 	if (!accessPointLogicalNode || !lnClass) return false
 	return (
 		iedNameOf({ role: pair.tuple.ied, record, ancestry }) === subscriber.ied &&
-		(await context.query.any.getAttribute(record, {
+		readAttribute({
+			record,
 			name: REGISTRATION_ACCESS_POINT_ATTRIBUTE,
-		})) === accessPointLogicalNode.accessPoint &&
+			defaults: 'none',
+		}) === accessPointLogicalNode.accessPoint &&
 		logicalNodeName({
 			prefix: tupleRoleValue({ record, pair, role: 'prefix' }),
 			lnClass,

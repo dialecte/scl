@@ -40,7 +40,7 @@ describe('tx.cleanUp.commitPrune - committed, the document holds what it listed'
 		'the only entry of DS1 deleted, previewed, committed → DS1 gone, GC1 without its data set and revised':
 			{
 				sourceXml: twoGooseDataSetsXml,
-				expectedQueries: ['//default:GSEControl[@name="GC1"][not(@datSet)][@confRev="2"]'],
+				expectedQueries: ['//default:GSEControl[@name="GC1"][not(@datSet)][@confRev="10001"]'],
 				unexpectedQueries: ['//default:DataSet[@name="DS1"]'],
 			},
 	}

@@ -6,6 +6,8 @@ import { readElementLinks } from './read-element-links'
 import { resolveControlBlock } from './resolve-control-block'
 import { resolveRegistration } from './resolve-registration'
 
+import { readAttributes } from '@/v2019C1/helpers'
+
 import type { ExtCtrlState, ExtRefState, Supervision } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
 import type { ElementDescription } from './describe-element.types'
@@ -26,7 +28,7 @@ export async function describeElement<GenericElement extends 'ExtRef' | 'ExtCtrl
 			? await resolveControlBlock({ extRef: element as IedNode<'ExtRef'>, context })
 			: undefined
 	const [attributes, supervision] = await Promise.all([
-		context.query.any.getAttributes(element.record),
+		Promise.resolve(readAttributes({ record: element.record, defaults: 'none' })),
 		controlBlock && supervisionOfElement({ controlBlock, element, context }),
 	])
 	const links = await readElementLinks({

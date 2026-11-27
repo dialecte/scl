@@ -1,0 +1,80 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<IED name="P-fixed" dev:db-id="ied-fixed">
+		<Services><ConfDataSet max="1" modify="true"/><GSESettings cbName="Fix" datSet="Conf"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-fixed" dev:db-id="ds-fixed"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-fixed"/></DataSet>
+				<GSEControl name="g-fixed" appID="fixed" confRev="1" datSet="DS-fixed" dev:db-id="cb-fixed"><IEDName apRef="AP1" dev:db-id="registration-fixed">S</IEDName></GSEControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="P-blocked" dev:db-id="ied-blocked">
+		<Services><ConfDataSet max="1" modify="false"/><GSESettings cbName="Conf" datSet="Conf"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-blocked" dev:db-id="ds-blocked"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-blocked"/></DataSet>
+				<GSEControl name="g-blocked" appID="blocked" confRev="1" datSet="DS-blocked" dev:db-id="cb-blocked"><IEDName apRef="AP1" dev:db-id="registration-blocked">S</IEDName></GSEControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="P-right" engRight="fix" dev:db-id="ied-right">
+		<Services><ConfDataSet max="1" modify="true"/><GSESettings cbName="Conf" datSet="Conf"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-right" dev:db-id="ds-right"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-right"/></DataSet>
+				<GSEControl name="g-right" appID="right" confRev="1" datSet="DS-right" dev:db-id="cb-right"><IEDName apRef="AP1" dev:db-id="registration-right">S</IEDName></GSEControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="P-sv" dev:db-id="ied-sv">
+		<Services><ConfDataSet max="1" modify="true"/><SMVSettings cbName="Conf" datSet="Conf"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-sv" dev:db-id="ds-sv"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-sv"/></DataSet>
+				<SampledValueControl name="sv" smvID="sv" smpRate="10" nofASDU="1" confRev="1" datSet="DS-sv" dev:db-id="cb-sv"><IEDName apRef="AP1" dev:db-id="registration-sv">S</IEDName></SampledValueControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="P-report" dev:db-id="ied-report">
+		<Services><ConfDataSet max="1" modify="true"/><ReportSettings cbName="Conf" datSet="Conf"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-report" dev:db-id="ds-report"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-report"/></DataSet>
+				<ReportControl name="report" rptID="report" confRev="1" datSet="DS-report" dev:db-id="cb-report"><RptEnabled max="2"><ClientLN iedName="S" apRef="AP1" ldInst="LD0" prefix="" lnClass="GGIO" lnInst="1" dev:db-id="registration-report"/><ClientLN iedName="T" apRef="AP1" ldInst="LD0" prefix="" lnClass="IHMI" lnInst="1" dev:db-id="registration-report-pure"/></RptEnabled></ReportControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="P-data-set-fixed" dev:db-id="ied-data-set-fixed">
+		<Services><ConfDataSet max="1" modify="true"/><GSESettings cbName="Fix" datSet="Fix"/></Services>
+		<AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+			<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+				<DataSet name="DS-data-set-fixed" dev:db-id="ds-data-set-fixed"><FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-data-set-fixed"/></DataSet>
+				<GSEControl name="g-data-set-fixed" appID="data-set-fixed" confRev="1" datSet="DS-data-set-fixed" dev:db-id="cb-data-set-fixed"><IEDName apRef="AP1" dev:db-id="registration-data-set-fixed">S</IEDName></GSEControl>
+			</LN0>
+			<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T"/>
+		</LDevice></Server></AccessPoint>
+	</IED>
+	<IED name="S" dev:db-id="ied-s"><AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+		<LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+		<LN lnClass="GGIO" inst="1" prefix="" lnType="GGIO_T"><Inputs>
+			<ExtRef intAddr="fixed" iedName="P-fixed" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-fixed" dev:db-id="ext-fixed"/>
+			<ExtRef intAddr="blocked" iedName="P-blocked" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-blocked" dev:db-id="ext-blocked"/>
+			<ExtRef intAddr="right" iedName="P-right" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-right" dev:db-id="ext-right"/>
+			<ExtRef intAddr="sv" iedName="P-sv" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="SMV" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="sv" dev:db-id="ext-sv"/>
+			<ExtRef intAddr="report" iedName="P-report" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="Report" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="report" dev:db-id="ext-report"/>
+			<ExtRef intAddr="data-set-fixed" iedName="P-data-set-fixed" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-data-set-fixed" dev:db-id="ext-data-set-fixed"/>
+		</Inputs></LN>
+	</LDevice></Server></AccessPoint></IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_T" lnClass="LLN0"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="PTOC_T" lnClass="PTOC"><DO name="Op" type="ACT_T"/></LNodeType>
+		<LNodeType id="GGIO_T" lnClass="GGIO"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+		<DOType id="ACT_T" cdc="ACT"><DA name="general" fc="ST" bType="BOOLEAN"/></DOType>
+	</DataTypeTemplates>
+</SCL>

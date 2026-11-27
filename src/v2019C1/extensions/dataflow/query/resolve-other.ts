@@ -2,6 +2,7 @@ import { LNODE_TYPE_ATTRIBUTE } from '@/v2019C1/extensions/data-model/query/data
 import { splitDataPath } from '@/v2019C1/extensions/data-model/query/split-data-path'
 import { RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
 import { parseReferencePath } from '@/v2019C1/extensions/reference/query/resolve/parse-path'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { SignalPairs, SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
@@ -69,7 +70,11 @@ async function dataOfPath(params: {
 }): Promise<{ doName?: string; daName?: string; dataPath?: string }> {
 	const { qualifier, lnode, pairs, context } = params
 	if (!qualifier) return {}
-	const lnType = await context.query.any.getAttribute(lnode.record, { name: LNODE_TYPE_ATTRIBUTE })
+	const lnType = readAttribute({
+		record: lnode.record,
+		name: LNODE_TYPE_ATTRIBUTE,
+		defaults: 'none',
+	})
 	const types = lnType ? await context.dataTypes() : undefined
 	const split =
 		lnType && types

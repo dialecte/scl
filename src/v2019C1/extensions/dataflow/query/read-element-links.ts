@@ -1,5 +1,6 @@
 import { TUPLE_REFERENCE_PAIRS } from '@/v2019C1/constants/reference-pairs'
 import { tupleTargetKind } from '@/v2019C1/extensions/reference/query/ied-tuple/tuple-target-kind'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
@@ -23,7 +24,11 @@ export async function readElementLinks(params: {
 		const attribute = pair.attribute.uuid
 		switch (tupleTargetKind(pair.tuple)) {
 			case 'ln': {
-				const uuid = await context.query.any.getAttribute(element.record, { name: attribute })
+				const uuid = readAttribute({
+					record: element.record,
+					name: attribute,
+					defaults: 'none',
+				})
 				links.push({ attribute, found: lnsByUuid.has(uuid) })
 				break
 			}

@@ -228,7 +228,10 @@ Unlinks a signal from the element implementing it: its uuid (`extRefUuid` / `ext
 
 ```ts
 const ended = await doc.transaction((tx) =>
-	tx.dataflow.unsubscribe({ extRefs: [{ tagName: 'ExtRef', id }] }),
+	tx.dataflow.unsubscribe({
+		extRefs: [{ tagName: 'ExtRef', id }],
+		cleanup: 'unused-data',
+	}),
 )
 // UnsubscribeResult
 ```
@@ -256,18 +259,29 @@ transaction:
   `setSrcRef` value naming it in the subscriber's LGOS / LSVS is cleared (its `Val` removed); the logical node stays.
 - **Engineering rights.** An IED whose `engRight` is `fix` is never written: when it holds a given `ExtRef`, the call is refused with `DATAFLOW_UNSUBSCRIBE_REFUSED` (`meta: { reason: 'eng-right-fix', ied }`) and
   nothing is written; when it is the publisher, its registrations are kept, listed with `eng-right-fix`.
+- **Publisher data.** The default `cleanup: 'subscriptions'` leaves data sets, entries and control blocks alone.
+  `unused-data` removes `FCDA`s no remaining subscriber of a sending control block reads, then data sets made empty, then
+  control blocks left with no registration, bound `ExtRef` or data set. Data-set modification uses `ConfDataSet`; block
+  deletion uses `GSESettings`, `SMVSettings` or `ReportSettings`. A fixed, non-modifiable, engineering-right-restricted
+  or still-used element stays and is listed in `kept`. Deleting a GOOSE or sampled-value block also removes its
+  communication entry through the normal delete cascade.
+- **Configuration revision.** Every surviving report, GOOSE or sampled-value control block whose data-set structure or
+  reference changes rises once by 10,000. Invalid counters and counters that would overflow stay unchanged.
 
-| Field           | Content                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------- |
-| `unbound`       | the `ExtRef`s kept, their binding cleared                                                         |
-| `removed`       | the `ExtRef`s removed (no internal address)                                                       |
-| `unlinked`      | the `SourceRef`s no longer linked                                                                 |
-| `registrations` | each `IEDName` / `ClientLN` removed (`deleted`) or cleared to its IED (`cleared`, `attributes`)   |
-| `supervisions`  | the `setSrcRef` `DAI`s whose value was cleared                                                    |
-| `kept`          | each registration kept, with `why`: `indexed-position`, `buffered-preconfigured`, `eng-right-fix` |
+| Field           | Content                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------- |
+| `unbound`       | the `ExtRef`s kept, their binding cleared                                                       |
+| `removed`       | the `ExtRef`s removed (no internal address)                                                     |
+| `unlinked`      | the `SourceRef`s no longer linked                                                               |
+| `registrations` | each `IEDName` / `ClientLN` removed (`deleted`) or cleared to its IED (`cleared`, `attributes`) |
+| `supervisions`  | the `setSrcRef` `DAI`s whose value was cleared                                                  |
+| `kept`          | kept registrations and publisher data, with their registration or cleanup reason                |
+| `fcdas`         | the data-set entries removed by `unused-data` cleanup                                           |
+| `dataSets`      | the empty data sets removed by `unused-data` cleanup                                            |
+| `controlBlocks` | the unused control blocks removed by `unused-data` cleanup                                      |
+| `confRevs`      | each changed control block's revision, as `{ controlBlock, from, to }`                          |
 
-A reference that is not an input of an IED is refused with `ELEMENT_NOT_FOUND`. The data the control block sends (its
-data set and entries) and its configuration revision are not touched.
+A reference that is not an input of an IED is refused with `ELEMENT_NOT_FOUND`.
 
 A `ClientLN` kept for its position is not removed by a later unsubscribe that leaves it last. Only the first
 supervision (in document order) naming the control block in the subscriber is cleared.
@@ -290,4 +304,5 @@ Exported from `@dialecte/scl/v2019C1`; the runtime extension object is not.
 | `CompanionsOfParams`                                                  | the parameters of `companionsOf`                                                   |
 | `UnsubscribeParams`, `UnsubscribeResult`                              | the parameters and result of `unsubscribe`                                         |
 | `RegistrationOperation`, `KeptRegistration`, `KeptRegistrationReason` | a registration removed or cleared, and one kept with why                           |
+| `KeptCleanup`, `KeptCleanupReason`                                    | publisher data kept by cleanup, with why                                           |
 | `UnsubscribeRefusalMeta`                                              | the `meta` of `DATAFLOW_UNSUBSCRIBE_REFUSED`                                       |

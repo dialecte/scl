@@ -11,6 +11,7 @@ import { resolveOther } from './resolve-other'
 import { invariant } from '@dialecte/core/utils'
 
 import { PAIRS_BY_REF, RESOLUTION_TYPE } from '@/v2019C1/extensions/reference/constants'
+import { readAttributes } from '@/v2019C1/helpers'
 
 import type { SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
@@ -36,7 +37,7 @@ export async function describeSignal(params: {
 		detail: `the <${ref.tagName}> "${ref.id}" is not held by an LNode of the process section`,
 	})
 	// the signal's attributes, read from the record the section holds
-	const attributes = await context.query.any.getAttributes(signal.record)
+	const attributes = readAttributes({ record: signal.record, defaults: 'none' })
 	const other = await resolveOther({
 		pairs: SIGNAL_PAIRS[ref.tagName].specification,
 		attributes,

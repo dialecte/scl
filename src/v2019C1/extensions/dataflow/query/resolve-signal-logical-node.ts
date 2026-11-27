@@ -4,6 +4,7 @@ import {
 } from '../constants/ext-ref-state.constants'
 
 import { referrerTupleAddress } from '@/v2019C1/extensions/reference/query/ied-tuple/referrer-tuple-address'
+import { readAttribute } from '@/v2019C1/helpers'
 
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
@@ -22,7 +23,7 @@ export async function resolveSignalLogicalNode(params: {
 	const iedSection = await context.iedSection()
 	const pair = record.tagName === 'ExtRef' ? EXT_REF_LOGICAL_NODE_PAIR : EXT_CTRL_LOGICAL_NODE_PAIR
 
-	const uuid = await context.query.any.getAttribute(record, { name: pair.attribute.uuid })
+	const uuid = readAttribute({ record, name: pair.attribute.uuid, defaults: 'none' })
 	if (uuid) return iedSection.lnsByUuid.get(uuid)
 
 	const address = referrerTupleAddress({ pair, record, ancestry })

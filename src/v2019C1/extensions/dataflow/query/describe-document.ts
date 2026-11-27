@@ -4,6 +4,8 @@ import { describeSignal } from './describe-signal'
 import { extRefDataflowKey } from './ext-ref-dataflow-key'
 import { implementationOnlyLNodes, readLNodesByLogicalNode } from './implementation-only-lnodes'
 
+import { readAttribute } from '@/v2019C1/helpers'
+
 import type { Dataflow, ImplementationOnlyDataflow, SpecifiedDataflow } from '../dataflow.types'
 import type { DataflowContext } from './dataflow-context.types'
 import type { IedNode } from './ied-section.types'
@@ -107,9 +109,9 @@ async function namesControlBlock(params: {
 	extRef: IedNode<'ExtRef'>
 	context: DataflowContext
 }): Promise<boolean> {
-	const { extRef, context } = params
+	const { extRef } = params
 	for (const name of EXT_REF_CONTROL_BLOCK.names) {
-		if (await context.query.any.getAttribute(extRef.record, { name })) return true
+		if (readAttribute({ record: extRef.record, name, defaults: 'none' })) return true
 	}
 	return false
 }

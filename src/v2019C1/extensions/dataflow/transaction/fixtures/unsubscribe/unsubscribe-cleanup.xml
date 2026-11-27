@@ -1,0 +1,60 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:dev="http://dialecte.dev/XML/DEV" dev:db-id="root" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<Communication>
+		<SubNetwork name="N" type="8-MMS">
+			<ConnectedAP iedName="P" apName="AP1">
+				<Address><P type="IP">10.0.0.1</P></Address>
+				<GSE ldInst="LD0" cbName="g-shared" dev:db-id="gse-shared"/>
+				<GSE ldInst="LD0" cbName="g-unused" dev:db-id="gse-unused"/>
+			</ConnectedAP>
+		</SubNetwork>
+	</Communication>
+	<IED name="P" dev:db-id="ied-p">
+		<Services>
+			<ConfDataSet max="4" maxAttributes="8" modify="true"/>
+			<GSESettings cbName="Conf" datSet="Conf"/>
+		</Services>
+		<AccessPoint name="AP1"><Server><Authentication/>
+			<LDevice inst="LD0">
+				<LN0 lnClass="LLN0" inst="" lnType="LLN0_T">
+					<DataSet name="DS-shared" dev:db-id="ds-shared">
+						<FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-shared-general"/>
+						<FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="q" fc="ST" dev:db-id="fcda-shared-q"/>
+					</DataSet>
+					<DataSet name="DS-unused" dev:db-id="ds-unused">
+						<FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" fc="ST" dev:db-id="fcda-unused-general"/>
+						<FCDA ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="q" fc="ST" dev:db-id="fcda-unused-q"/>
+					</DataSet>
+					<GSEControl name="g-shared" appID="shared" confRev="7" datSet="DS-shared" dev:db-id="cb-shared">
+						<IEDName apRef="AP1" dev:db-id="registration-shared-s">S</IEDName>
+						<IEDName apRef="AP1" dev:db-id="registration-shared-t">T</IEDName>
+					</GSEControl>
+					<GSEControl name="g-unused" appID="unused" confRev="1" datSet="DS-unused" dev:db-id="cb-unused">
+						<IEDName apRef="AP1" dev:db-id="registration-unused-s">S</IEDName>
+					</GSEControl>
+				</LN0>
+				<LN lnClass="PTOC" inst="1" prefix="" lnType="PTOC_T" uuid="a5000000-0000-4000-8000-000000000001"/>
+			</LDevice>
+		</Server></AccessPoint>
+	</IED>
+	<IED name="S" dev:db-id="ied-s"><AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+		<LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+		<LN lnClass="GGIO" inst="1" prefix="" lnType="GGIO_T"><Inputs>
+			<ExtRef intAddr="shared-general" pDO="Op" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-shared" dev:db-id="ext-shared-general"/>
+			<ExtRef intAddr="unused-general" pDO="Op" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="general" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-unused" dev:db-id="ext-unused-general"/>
+			<ExtRef intAddr="unused-q" pDO="Op" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" daName="q" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-unused" dev:db-id="ext-unused-q"/>
+		</Inputs></LN>
+	</LDevice></Server></AccessPoint></IED>
+	<IED name="T" dev:db-id="ied-t"><AccessPoint name="AP1"><Server><Authentication/><LDevice inst="LD0">
+		<LN0 lnClass="LLN0" inst="" lnType="LLN0_T"/>
+		<LN lnClass="GGIO" inst="1" prefix="" lnType="GGIO_T"><Inputs>
+			<ExtRef intAddr="shared-do" pDO="Op" iedName="P" ldInst="LD0" prefix="" lnClass="PTOC" lnInst="1" doName="Op" serviceType="GOOSE" srcLDInst="LD0" srcLNClass="LLN0" srcCBName="g-shared" dev:db-id="ext-shared-do"/>
+		</Inputs></LN>
+	</LDevice></Server></AccessPoint></IED>
+	<DataTypeTemplates>
+		<LNodeType id="LLN0_T" lnClass="LLN0"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<LNodeType id="PTOC_T" lnClass="PTOC"><DO name="Op" type="ACT_T"/></LNodeType>
+		<LNodeType id="GGIO_T" lnClass="GGIO"><DO name="Beh" type="ENS_T"/></LNodeType>
+		<DOType id="ENS_T" cdc="ENS"><DA name="stVal" fc="ST" bType="INT32"/></DOType>
+		<DOType id="ACT_T" cdc="ACT"><DA name="general" fc="ST" bType="BOOLEAN"/><DA name="q" fc="ST" bType="Quality"/></DOType>
+	</DataTypeTemplates>
+</SCL>
