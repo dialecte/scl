@@ -1060,7 +1060,7 @@
 				"clean up LNode bindings after an IED or LN is deleted",
 				"clear dangling data mappings and signal implementations"
 			],
-			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:46",
+			"declaredAt": "src/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.ts:39",
 			"example": "await tx.cleanUp.resetLNode()"
 		},
 		{
