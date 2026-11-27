@@ -1,0 +1,3 @@
+### Added
+
+- **A report can leave no change a default.** `query.lifecycle.report` takes `decisionPolicy` (type `DecisionPolicy`): `'default'` (when absent) keeps today's behaviour; `'every-change'` makes every group wait for an explicit decision (`requiresDecision: 'no-default'`, a group already waiting keeps its reason, suggested `skip`), and the report needs decisions even for a first placement. The report records the policy it ran (`report.decisionPolicy`); `tx.lifecycle.apply` enforces the report's, refusing decisions that do not name every group with `DECISION_REQUIRED` (`meta: { groupIds }`), nothing written.

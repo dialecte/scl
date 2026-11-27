@@ -10,7 +10,7 @@ import { resolveDefinition } from '@dialecte/core/utils'
 import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
 import { editableAttributes } from '@/v2019C1/extensions/lifecycle/constraints'
 import { assertCopyFits, describeCopy } from '@/v2019C1/extensions/lifecycle/copy'
-import { acceptedCollisions } from '@/v2019C1/extensions/lifecycle/engine'
+import { acceptedCollisions, withDecisionPolicy } from '@/v2019C1/extensions/lifecycle/engine'
 import { allGroups } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { readDiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy'
 import { resolvePlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages'
@@ -46,7 +46,8 @@ import type * as Core from '@dialecte/core'
  * Dispatches on `verb` to the per-layer report and returns a {@link DiffReport} (one
  * {@link ReportInstance} per instance). `report.needsDecisions` tells the consumer the
  * track: `false` = fast (apply headless), `true` = full (resolve decisions first). The
- * consumer never picks the track — dialecte decides it here.
+ * consumer never picks the track — dialecte decides it here; `decisionPolicy: 'every-change'` leaves no change a
+ * default (see `DecisionPolicy`), a first placement on the full track too.
  *
  * Tags each decision group with its primary's editable attributes (schema-derived)
  * so the UI renders inputs straight from the report without re-deriving them.
@@ -167,7 +168,8 @@ export async function report(
 	if (decisionMappings)
 		assertMappingsCoherent({ reportMappings: report.mappings, decisionMappings })
 
-	return report
+	// how its changes are decided, once every group is listed: the report says which policy it ran
+	return withDecisionPolicy({ report, decisionPolicy: target.decisionPolicy })
 }
 
 /**

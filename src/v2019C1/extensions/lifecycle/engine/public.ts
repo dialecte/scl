@@ -22,3 +22,4 @@ export type {
 	ReportTargetField,
 	ReportWarning,
 } from './diff.types'
+export type { DecisionPolicy } from './decision-policy.types'
