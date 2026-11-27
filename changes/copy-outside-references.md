@@ -1,3 +1,0 @@
-### Added
-
-- A copy's report (`scenario: 'copy'`) lists, per family, the references the copy carries naming an element of the document outside what it copies: one `DecisionGroup` each, `kind: 'references'`, id `outside-references:<family>` (`source-signal`, `control-signal`, `function-reference`, `terminal-node`), kept by default, depending on nothing, its rows in `references: OutsideReference[]` (`holder`, `target`, `effect: 'cleared' | 'deleted'`). `apply` writes each family as decided: kept as written, or — skipped — a `SourceRef` / `ControlRef` with its link removed and its expected data filled, a `FunctionRef` or a `Terminal` not written. `DecisionGroup.kind`, `DecisionGroup.references` and the type `OutsideReference` are additions to the public types.

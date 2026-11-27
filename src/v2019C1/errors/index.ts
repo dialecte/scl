@@ -14,6 +14,7 @@ export type {
 	IncoherentPathNamesDiagnostic,
 	IncoherentReferenceDiagnostic,
 	IncoherentReferenceRelated,
+	RedundantLNodeUuidDiagnostic,
 	SclImportDiagnostic,
 	SclImportDiagnosticCode,
 	UnresolvedReferenceDiagnostic,

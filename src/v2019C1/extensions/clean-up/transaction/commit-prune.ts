@@ -53,6 +53,7 @@ export async function commitPrune(
 		moves: planned.moveRemovals,
 		released: planned.released,
 		refusals: planned.refusals,
+		normalised: planned.normalised,
 	}
 }
 

@@ -1,9 +1,9 @@
 import { SPECIFIED_IED_NAME_ATTRIBUTE } from '@/v2019C1/constants/lnode-spec-naming'
-import { IMPLEMENTATION_PAIRS_BY_REF } from '@/v2019C1/extensions/clean-up/transaction/orphan-lnode-bindings.constants'
 import {
 	isAssignedToIed,
 	unassignedNaming,
 } from '@/v2019C1/extensions/data-model/naming/lnode-naming'
+import { IMPLEMENTATION_PAIRS_BY_REF } from '@/v2019C1/extensions/dataflow/constants/implementation-targets.constants'
 import { readAttributes } from '@/v2019C1/helpers'
 
 import type { CopyUnbind, CopyWrite, PlanCopyUnbindsParams } from './copy.types'

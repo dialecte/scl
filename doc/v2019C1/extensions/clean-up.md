@@ -82,7 +82,7 @@ if (preview && preview.containers.length > 0 && !(await confirmed(preview))) pre
 else await prepared.commit()
 ```
 
-`tx.cleanUp.commitPrune(options?: { collect?: boolean })` returns `{ stagedCount, containers, types, moves, released, refusals }`:
+`tx.cleanUp.commitPrune(options?: { collect?: boolean })` returns `{ stagedCount, containers, types, moves, released, refusals, normalised }`:
 
 - `containers`: each container the commit removes, in document order:
   - `element`, `identity` (`name`, `uuid`, `type` where its tag has them), `parent` (with its `name`);
@@ -113,6 +113,12 @@ else await prepared.commit()
   them, each with the `key`, `code`, `meta` and `detail` the commit throws it with: each move the commit does not
   follow (`MOVE_NOT_FOLLOWED`, `SCL4003`; one per move and cause, however many records it holds) and each incoherent
   uuid reference the transaction writes (`REFERENCE_INCOHERENT`, `SCL4004`). Empty without `collect`.
+- `normalised`: each behaviour variable (`InputVar`, `OutputVar`) the transaction writes holding its input or output
+  and, as its data group, only an `lnodeUuid` repeating the LNode that holds that input or output (the shape a tool
+  writes): the commit drops that `lnodeUuid`, and a `dataName` naming that LNode alone, instead of refusing both
+  groups. Each with the `element`, the attributes `removed`, the uuid attribute of the reference it keeps (`kept`) and
+  the `lnode` that reference reaches, which the dropped `lnodeUuid` named. A near miss (the `lnodeUuid` of another
+  LNode, a data object beside it) is refused (`groups-together`).
 - `stagedCount`: the number of staged operations the preview read.
 
 Together they name every record the commit removes beyond the transaction's own edits, each once: a record a

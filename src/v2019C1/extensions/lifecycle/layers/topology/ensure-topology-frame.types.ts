@@ -23,6 +23,12 @@ export type EnsureTopologyFrameParams = {
 	leftOut?: ReadonlySet<string>
 	/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
 	matchKey?: MatchKey
+	/**
+	 * Uuids outside the scope that what the frame writes may name: the source's logical nodes, inputs and outputs, so an
+	 * LNode of a level or of its equipment keeps its binding, its data and its specified inputs and outputs (the clean-up
+	 * releases or clears those the file does not hold).
+	 */
+	implementationUuids?: ReadonlySet<string>
 }
 
 export type EnsureTopologyFrameResult = {

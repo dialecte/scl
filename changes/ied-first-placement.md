@@ -1,6 +1,6 @@
 ### Added
 
-- `collisions: 'number' | 'refuse'` on an IED's report, apply and `instantiate.ied`: with `refuse`, a first placement whose IED name another IED of the project holds waits for a name (`requiresDecision: 'name-taken'`, `needsName: { taken, proposal }`, the proposal being the name numbering would write) and the apply refuses a taken name with the new `IED_NAME_TAKEN` (`SCL2017`, `meta: { name }`), nothing written.
+- `collisions: 'number' | 'refuse'` on an IED's report, apply and `instantiate.ied`: with `refuse`, a first placement whose IED name another IED of the project holds waits for a name (`requiresDecision: 'name-taken'`, `needsName: { taken, proposal }`, the proposal being the name numbering would write) and the apply refuses a taken name with the new `IED_NAME_TAKEN` (`SCL2018`, `meta: { name }`), nothing written.
 - The report of a first placement from a file that is not an ISD and holds a process part (a `Substation`, `Process` or `Line`) warns `process-section-not-placed` (`{ fileType, lnodes }`): that part is never placed.
 - An IED placed from an ICD of a previous edition (before 2007 C 5; a root stating no version is a 2003 file) that states no original edition takes the edition of its file (`originalSclVersion`, `originalSclRevision`, `originalSclRelease` from the file's root; a 2003 file the version only).
 - An IED placed from an ICD records the ICD in its `IEDSourceFiles` whatever the scenario, a fork included.

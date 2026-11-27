@@ -7,6 +7,7 @@ import type {
 } from '@/v2019C1/hooks/before-commit/prune-emptied-containers.types'
 import type { ReleasedLNodeBinding } from '@/v2019C1/hooks/before-commit/release-deleted-logical-nodes.types'
 import type { NamedIdentity } from '@/v2019C1/hooks/shared/element-identity.types'
+import type { NormalisedReferenceGroups } from '@/v2019C1/hooks/shared/stray-lnode-uuid.types'
 
 /** An element by its tag and record id. */
 export type CommitPrunedElement = { tagName: Scl.ElementsOf; id: string }
@@ -58,6 +59,8 @@ export type CommitPrune = {
 	 * listed with `{ collect: true }` (the commit then refuses with the first), empty otherwise.
 	 */
 	refusals: CommitRefusal[]
+	/** Each behaviour variable the commit writes without the `lnodeUuid` that only repeated the LNode of its input or output. */
+	normalised: NormalisedReferenceGroups[]
 }
 
 /** How the preview reads a transaction the commit refuses. */

@@ -19,7 +19,10 @@ import type * as Core from '@dialecte/core'
  * path then written by the hooks from it (`rescoped`); one without has its reference cleared, its uuid, path and data
  * names, the variable kept, as the orphan rules clear a behaviour variable (`cleared`). A variable holding both its
  * reference groups (data and input or output) is left as it is (`left`): its groups are the caller's to settle first (the
- * commit refuses a rescope of it, `groups-together`). Answers each in the query's order. For projects
+ * commit refuses a rescope of it, `groups-together`). That holds for one whose `lnodeUuid` only repeats the LNode of its
+ * input or output too: it is listed only when that LNode is out of reach, so its input or output is as well, and a
+ * rescope gives it the `lnodeUuid` of another LNode, which the commit refuses as any near miss; written untouched, the
+ * commit drops that `lnodeUuid` on its own (`repeatedLNodeUuids`). Answers each in the query's order. For projects
  * written before the commit refused such variables: once repaired, they copy, instantiate and update again.
  *
  * Perf: the query's reads, then one update per variable repaired; nothing written when nothing is listed.
@@ -46,7 +49,10 @@ export async function repairOutOfScopeVariables(
 	return repaired
 }
 
-/** Whether a variable holds attributes of both its reference groups. */
+/**
+ * Whether a variable holds attributes of both its reference groups, one repeating in `lnodeUuid` the LNode of its input
+ * or output included (see `repairOutOfScopeVariables`: a rescope of it is refused all the same).
+ */
 function holdsBothGroups(entry: ListedVariable): boolean {
 	const pairs = PATH_PAIRS_BY_TAG.get(entry.record.tagName) ?? []
 	return exclusiveGroupsHeld({ record: entry.record, pairs }) !== undefined

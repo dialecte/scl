@@ -73,6 +73,12 @@ export async function cloneTopologyContent(
 		leftOut?: ReadonlySet<string>
 		/** The key a project element carries a source element's uuid in, to find what it lands on. Default `templateUuid`. */
 		matchKey?: MatchKey
+		/**
+		 * Uuids outside the scope that what the frame writes may name: the source's logical nodes, inputs and outputs, so an
+		 * LNode of a level or of its equipment keeps its binding, its data and its specified inputs and outputs (the clean-up
+		 * releases or clears those the file does not hold).
+		 */
+		implementationUuids?: ReadonlySet<string>
 	},
 ): Promise<CloneTopologyContentResult> {
 	const { sourceQuery, scopeRef, targetParent, omit, decisionMappings, placementLevels } = params
@@ -120,6 +126,7 @@ export async function cloneTopologyContent(
 		placementLevels,
 		leftOut,
 		matchKey: params.matchKey,
+		implementationUuids: params.implementationUuids,
 	})
 	const { frameIndex } = frame
 	// what the unit places beyond its subtree, and what the references of the applications' roles, and of what they

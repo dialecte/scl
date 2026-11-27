@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-27
+
+`extract.ssd` carries the IEDs of its scope with their communication, as an SSD or an SCD, and writes the data types of the LNodes its levels and equipment hold; a copy lists, per family, the references it carries that leave what it copies, kept by default and droppable; a behaviour variable repeating in `lnodeUuid` the LNode of its own input or output no longer blocks a copy, an instantiate or a merge. scl runs on `@dialecte/core` 0.17.0.
+
+Breaking: `extract.ssd` now writes, by default, every IED the scope's LNodes are tied to, and those LNodes keep their bindings; its `sections-not-carried` warning is removed. See Changed and Removed.
+
+### Added
+
+- A copy's report (`scenario: 'copy'`) lists, per family, the references the copy carries naming an element of the document outside what it copies: one `DecisionGroup` each, `kind: 'references'`, id `outside-references:<family>` (`source-signal`, `control-signal`, `function-reference`, `terminal-node`), kept by default, depending on nothing, its rows in `references: OutsideReference[]` (`holder`, `target`, `effect: 'cleared' | 'deleted'`). `apply` writes each family as decided: kept as written, or — skipped — a `SourceRef` / `ControlRef` with its link removed and its expected data filled, a `FunctionRef` or a `Terminal` not written. `DecisionGroup.kind`, `DecisionGroup.references` and the type `OutsideReference` are additions to the public types.
+- `extract.ssd` carries the IEDs the scope's LNodes are tied to, with their communication. `ieds` chooses them: a rule by kind and assignment (`{ specification, implemented, shared: 'carry' | 'leave-out' }`) or an explicit list; the default `ALL_BOUND_IEDS` carries every one, `TEMPLATE_IED_SELECTION` only the specification IEDs the scope alone uses. A carried IED keeps its source files, its minimum SCD files and its lineage (a real IED stays real). An LNode bound to it keeps its binding, its data and the inputs and outputs implementing its specified ones; one bound to an IED not carried is released. A list naming an IED tied to no LNode of the scope is refused (`EXTRACT_IED_NOT_BOUND`, `SCL2017`).
+- `extract.ssd` takes `fileType: 'SSD' | 'SCD' | 'by-content'` (default `'SSD'`; `'by-content'` writes an SCD when a real IED is carried) and returns the file type written.
+- `extract.ssd` takes `addresses: 'drop' | 'keep'`: by default an SSD leaves the `Address` of each carried connection, GSE and SMV out (`address-not-carried`) and an SCD keeps them; an SCD written without them is told incomplete (`scd-incomplete`).
+- An input or output of a carried IED naming an IED not carried keeps its signal names and loses their uuids and the control block it names (`external-input`); one naming it by uuid only is reduced. A receiver or report client naming such an IED is left out.
+- New warnings: `ied-not-carried`, `external-input`, `address-not-carried`, `scd-incomplete`.
+- Import diagnostic `redundant-lnode-uuid` (information): a behaviour variable repeating in `lnodeUuid` the LNode of its own input or output is kept as read on import, no `dataName` written from that `lnodeUuid`, instead of the `exclusive-reference-groups` warning. Type `RedundantLNodeUuidDiagnostic`; `CommitPrune.normalised`, type `NormalisedReferenceGroups`.
+
+### Changed
+
+- `extract.ssd` no longer drops the IEDs and the Communication of the source: by default every IED the scope's LNodes are tied to is written, real ones included, and their LNodes keep their bindings (before, every bound LNode was released). Pass `ieds: TEMPLATE_IED_SELECTION`, or a list, to carry fewer.
+- `extract.ssd` writes the data types of the LNodes held by a level or an equipment, as for those a function holds.
+
+### Removed
+
+- The `sections-not-carried` warning of `extract.ssd`.
+
+### Fixed
+
+- **A behaviour variable repeating in `lnodeUuid` the LNode of its input or output no longer blocks a copy, an instantiate or a merge.** An `InputVar` / `OutputVar` naming its input or output (`inputName` / `inputUuid`, `outputName` / `outputUuid`) and holding, as its data group, only the `lnodeUuid` of the LNode holding that input or output (the shape some tools write) was refused at the commit (`REFERENCE_INCOHERENT`, `groups-together`). The commit now drops that `lnodeUuid`, and a `dataName` naming that LNode alone, and refuses nothing; `commitPrune` lists each such variable in its new `normalised` field, with the LNode the dropped attribute named. The copy report lists no refusal for it. Any other variable holding both groups is still refused.
+
 ## [0.29.0] - 2026-11-26
 
 `extract.ied` writes the CID of a real IED, with the IEDs it receives from; a Function or an Application is copied inside one document; a move is reported and applied for a merge review; `dataflow.unsubscribe` ends subscriptions; `boundIeds` lists the IEDs an SSD scope binds; the commit preview collects every refusal; an IED built from a template ISD takes only its shell; apply and extract report one forward-only progress plan; a vendor `Private` is read as an ordinary element. scl runs on `@dialecte/core` 0.17.0.

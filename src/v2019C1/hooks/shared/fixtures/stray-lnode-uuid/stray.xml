@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- S1/VL1: B1 holds F1, whose behaviour FB reads GAPC2's Trip input by its name and uuid, and holds the uuid of GAPC2, the
+     LNode holding that input, beside them (no data object): the shape written by a tool; FB also reads XCBR1's position by
+     its uuid and data names alone (its path written on import). F1 also holds XCBR1. B2 holds nothing. -->
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:dev="http://dialecte.dev/XML/DEV" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" release="5" revision="C" version="2007" dev:db-id="project" eIEC61850-6-100:release="1" eIEC61850-6-100:revision="C" eIEC61850-6-100:version="2019">
+    <Substation name="S1" dev:db-id="s1">
+        <VoltageLevel name="VL1" dev:db-id="vl1">
+            <Bay name="B1" dev:db-id="b1">
+                <Function name="F1" uuid="fn-f1" dev:db-id="f1">
+                    <Private type="eIEC61850-6-100" dev:db-id="f1-private">
+                        <eIEC61850-6-100:BehaviorDescription name="FB" uuid="fb" dev:db-id="fb">
+                            <eIEC61850-6-100:InputVar varName="trip" inputName="GAPC2.Trip" inputUuid="sr-trip" lnodeUuid="ln-gapc" dev:db-id="fb-trip"/>
+                            <eIEC61850-6-100:InputVar varName="pos" lnodeUuid="ln-xcbr" doName="Pos" daName="stVal" dev:db-id="fb-pos"/>
+                        </eIEC61850-6-100:BehaviorDescription>
+                    </Private>
+                    <LNode iedName="None" lnClass="GAPC" lnInst="2" lnType="GAPC_T" uuid="ln-gapc" dev:db-id="gapc2">
+                        <Private type="eIEC61850-6-100" dev:db-id="gapc2-private">
+                            <eIEC61850-6-100:LNodeInputs dev:db-id="gapc2-inputs">
+                                <eIEC61850-6-100:SourceRef input="Trip" uuid="sr-trip" dev:db-id="sr-trip"/>
+                            </eIEC61850-6-100:LNodeInputs>
+                        </Private>
+                    </LNode>
+                    <LNode iedName="None" lnClass="XCBR" lnInst="1" lnType="XCBR_T" uuid="ln-xcbr" dev:db-id="xcbr1"/>
+                </Function>
+            </Bay>
+            <Bay name="B2" dev:db-id="b2"/>
+        </VoltageLevel>
+    </Substation>
+    <DataTypeTemplates dev:db-id="dtt">
+        <LNodeType id="GAPC_T" lnClass="GAPC" dev:db-id="gapc-type"><DO name="Op" type="ACT_T" dev:db-id="gapc-op"/></LNodeType>
+        <LNodeType id="XCBR_T" lnClass="XCBR" dev:db-id="xcbr-type"><DO name="Pos" type="DPC_T" dev:db-id="xcbr-pos"/></LNodeType>
+        <DOType id="ACT_T" cdc="ACT" dev:db-id="act"><DA name="general" bType="BOOLEAN" fc="ST" dev:db-id="act-general"/></DOType>
+        <DOType id="DPC_T" cdc="DPC" dev:db-id="dpc"><DA name="stVal" bType="Dbpos" fc="ST" dev:db-id="dpc-st"/></DOType>
+    </DataTypeTemplates>
+</SCL>

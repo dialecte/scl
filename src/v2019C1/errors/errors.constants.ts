@@ -232,12 +232,17 @@ export const SCL_ERRORS = defineErrors({
 		code: 'SCL2016',
 		message: 'The selected IED has no network address',
 	},
+	/** An SSD extract's IED list names an IED no LNode of the scope is tied to. `meta: { ied }` */
+	EXTRACT_IED_NOT_BOUND: {
+		code: 'SCL2017',
+		message: 'The IED is not tied to an LNode the extract writes',
+	},
 	/**
 	 * A first placement of an IED with `collisions: 'refuse'` under a name another IED of the project holds: the name
 	 * the consumer chose, or the file's when it chose none. Nothing is written. `meta: { name }`.
 	 */
 	IED_NAME_TAKEN: {
-		code: 'SCL2017',
+		code: 'SCL2018',
 		message: 'Another IED of the project holds this name',
 	},
 	/**

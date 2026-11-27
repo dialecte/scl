@@ -40,7 +40,8 @@ export type ReferenceClass = (typeof REFERENCE_CLASSES)[number]
 export type ReferenceFamily = (typeof REFERENCE_FAMILIES)[number]
 
 /**
- * What is done with a reference: written as it is (`'keep'`), written and listed (`'keep-listed'`), reduced to the only form a
+ * What is done with a reference: written as it is (`'keep'`), written and listed (`'keep-listed'`), an input or output
+ * written with its source names and without their uuids, and listed (`'keep-names'`), reduced to the only form a
  * system tool may write (`'reduce'`: an input without internal address left out, any other input or output written without
  * its source), or its holder left out (`'remove'`: never an input with an internal address, never an output).
  */
@@ -135,3 +136,9 @@ export type ProcessHolder = {
 
 /** A process family and its registry pair, as the holder tag reads them. */
 export type ProcessFamilyPair = { family: ProcessReferenceFamily; pair: ReferencePair }
+
+/** What a reference kept by its names loses: the record and its family. */
+export type ClearedSourceReferencesParams = {
+	record: Core.AnyRawRecord
+	family: 'input' | 'output'
+}
