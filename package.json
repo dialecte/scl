@@ -53,7 +53,7 @@
 		"type-check": "tsc -p tsconfig.build.json --noEmit",
 		"type-check:test": "tsc -p tsconfig.vitest.json --noEmit",
 		"type-check:node": "tsc -p tsconfig.node.json --noEmit",
-		"lint:check": "oxlint",
+		"lint:check": "oxlint --deny-warnings",
 		"lint:fix": "oxlint . --fix -D correctness --ignore-path .gitignore",
 		"format:check": "oxfmt --check",
 		"format:fix": "oxfmt",
@@ -69,7 +69,8 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dialecte/core": "0.17.0"
+		"@dialecte/core": "0.17.0",
+		"sax": "^1.4.3"
 	},
 	"devDependencies": {
 		"@dialecte/cli": "0.13.0",
@@ -77,6 +78,7 @@
 		"@stryker-mutator/vitest-runner": "10.0.0",
 		"@tsconfig/node24": "^24.0.4",
 		"@types/node": "^24.12.4",
+		"@types/sax": "1.2.7",
 		"@typescript/native": "npm:typescript@^7.0.2",
 		"@vitest/browser-playwright": "^4.1.10",
 		"husky": "^9.1.7",

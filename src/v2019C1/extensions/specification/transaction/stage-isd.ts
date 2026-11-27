@@ -18,7 +18,6 @@ import { cloneIedProcess } from '@/v2019C1/extensions/lifecycle/layers/ied/clone
 import { TEMPLATE_ISD_IED_NAME } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-placement.constants'
 import { indexProcessSection } from '@/v2019C1/extensions/lifecycle/layers/ied/index-process-section'
 import { planProcessFrames } from '@/v2019C1/extensions/lifecycle/layers/ied/plan-process-frames'
-import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction/deep'
 import { readAttributes } from '@/v2019C1/helpers'
 
 import type { StageIsdParams, StageIsdResult, StageRefusalReason } from './stage-isd.types'

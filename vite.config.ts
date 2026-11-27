@@ -33,7 +33,7 @@ export default defineConfig({
 			formats: ['es'],
 		},
 		rollupOptions: {
-			external: [/^@dialecte\/core/, 'dexie', 'libxml2-wasm', /^vitest/],
+			external: [/^@dialecte\/core/, 'dexie', 'libxml2-wasm', 'sax', /^vitest/],
 		},
 	},
 })

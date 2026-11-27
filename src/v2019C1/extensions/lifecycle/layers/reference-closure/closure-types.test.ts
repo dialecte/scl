@@ -7,7 +7,6 @@ import { describe, expect } from 'vitest'
 
 import { runSclTestCases } from '@/v2019C1/test'
 
-import type { Scl } from '@/v2019C1/config'
 import type { SclTest } from '@/v2019C1/test'
 
 type TestCase = SclTest.BaseXmlTestCase & {

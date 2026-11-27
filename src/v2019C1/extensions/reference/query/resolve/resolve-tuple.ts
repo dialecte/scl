@@ -7,7 +7,12 @@ import { targetTagsOf } from '@/v2019C1/extensions/reference/query/ied-tuple/tar
 import { readAttribute } from '@/v2019C1/helpers'
 import { resolveTupleUuid } from '@/v2019C1/hooks/shared/tuple-reference-resolve'
 
-import type { ResolvedTuplePair, TupleReferenceDraft, TupleToResolve } from './resolve-tuple.types'
+import type {
+	ResolvedTuplePair,
+	ResolveTuplesParams,
+	TupleReferenceDraft,
+	TupleToResolve,
+} from './resolve-tuple.types'
 import type { Scl, Config } from '@/v2019C1/config'
 import type { TupleReferencePair } from '@/v2019C1/constants'
 import type { TupleTargetIndex } from '@/v2019C1/extensions/reference/query/ied-tuple/ied-tuple.types'
@@ -46,7 +51,7 @@ export async function resolveTuple(
  */
 export async function resolveTuples(
 	query: Core.Query<Config> | Core.Transaction<Config>,
-	params: { references: readonly TupleToResolve[] },
+	params: ResolveTuplesParams,
 ): Promise<ResolvedTuplePair[][]> {
 	const asked = params.references.map(({ reference, parent }) => ({
 		reference,

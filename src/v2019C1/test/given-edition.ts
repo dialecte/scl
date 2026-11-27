@@ -1,30 +1,39 @@
-import { ROOT_OPT_IN_NEEDS } from './given-edition.constants'
+import { ROOT_OPT_IN_NEEDS, SCL_EDITION_ATTRIBUTES } from './given-edition.constants'
 
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type {
 	AssertGivenEditionsParams,
+	MissingSclEditionParams,
+	RootEdition,
+	RootEditionParams,
 	RootOptInReasonParams,
-	RootVersionParams,
+	SclEditionAttribute,
 } from './given-edition.types'
 
 /**
- * Refuse a case whose given document states no SCL version on its root (a first-edition file) unless the case says it
- * is one on purpose (`editionOneRoot`, with the reason); refuse the opt-in without a reason, or when every given
- * document states its version. Every current file states `version="2007" revision="C" release="5"`, as
- * `ALL_XMLNS_NAMESPACES` does. One read of each document's root.
+ * Refuse a case whose given document states its SCL version without its revision and release, always; refuse one whose
+ * root states no SCL version (a first-edition file) unless the case says it is one on purpose (`editionOneRoot`, with
+ * the reason); refuse the opt-in without a reason, or when every given document states its version. Every current
+ * file states `version="2007" revision="C" release="5"`, as `ALL_XMLNS_NAMESPACES` does. One read of each document's
+ * root.
  *
- * @intent check that a test fixture states its SCL edition, refuse a fixture root without version, allow a first-edition fixture on purpose
+ * @intent check that a test fixture states its SCL edition, refuse a fixture root without version or with its version only, allow a first-edition fixture on purpose
  */
 export async function assertGivenEditions(params: AssertGivenEditionsParams): Promise<void> {
 	const { source, target, label, editionOneRoot } = params
 	assertRootOptInReason({ name: 'editionOneRoot', reason: editionOneRoot, label })
-	const sourceVersion = await readRootVersion({ document: source })
-	const targetVersion = await readRootVersion({ document: target })
-	const withoutVersion = [
-		...(sourceVersion === '' ? ['source'] : []),
-		...(targetVersion === '' ? ['target'] : []),
-	]
+	const editions = [
+		await readRootEdition({ role: 'source', document: source }),
+		await readRootEdition({ role: 'target', document: target }),
+	].filter((edition): edition is RootEdition => edition !== undefined)
+	const partial = editions.find((edition) => edition.version !== '' && edition.missing.length > 0)
+	if (partial) {
+		throw new Error(
+			`${label}: the ${partial.role} document states SCL version ${partial.version} but not its ${partial.missing.join(' and ')} on its root: a current file states version="2007" revision="C" release="5" (ALL_XMLNS_NAMESPACES does)`,
+		)
+	}
+	const withoutVersion = editions.filter((edition) => edition.version === '')
 	if (editionOneRoot !== undefined) {
 		if (withoutVersion.length > 0) return
 		throw new Error(
@@ -34,15 +43,36 @@ export async function assertGivenEditions(params: AssertGivenEditionsParams): Pr
 	const [first] = withoutVersion
 	if (!first) return
 	throw new Error(
-		`${label}: the ${first} document states no SCL version on its root: a current file states version="2007" revision="C" release="5" (ALL_XMLNS_NAMESPACES does); a first-edition file on purpose sets editionOneRoot with the reason`,
+		`${label}: the ${first.role} document states no SCL version on its root: a current file states version="2007" revision="C" release="5" (ALL_XMLNS_NAMESPACES does); a first-edition file on purpose sets editionOneRoot with the reason`,
 	)
 }
 
-/** The version a document's root states as written: `''` when it states none, `undefined` for no document. */
-async function readRootVersion(params: RootVersionParams): Promise<string | undefined> {
-	if (!params.document) return undefined
-	const root = await params.document.query.getRoot()
-	return readAttribute({ record: root, name: 'version', defaults: 'none' }) ?? ''
+/**
+ * The edition attributes an `SCL` root lacks, in their order: `[]` when it states its edition whole, `version` among
+ * them for a first-edition file.
+ *
+ * @intent tell which of version, revision and release an SCL root lacks
+ */
+export function missingSclEditionAttributes(
+	params: MissingSclEditionParams,
+): SclEditionAttribute[] {
+	return SCL_EDITION_ATTRIBUTES.filter((name) => !params.states(name))
+}
+
+/** A document's root as its edition reads, `undefined` for no document. */
+async function readRootEdition(params: RootEditionParams): Promise<RootEdition | undefined> {
+	const { role, document } = params
+	if (!document) return undefined
+	const root = await document.query.getRoot()
+	// as written, `''` when absent: an attribute written empty states nothing either
+	function stated(name: SclEditionAttribute): string {
+		return readAttribute({ record: root, name, defaults: 'none' }) ?? ''
+	}
+	return {
+		role,
+		version: stated('version'),
+		missing: missingSclEditionAttributes({ states: (name) => stated(name) !== '' }),
+	}
 }
 
 /**

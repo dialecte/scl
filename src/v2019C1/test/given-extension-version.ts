@@ -1,5 +1,6 @@
+import { readFixtureRoot } from './fixture-root'
 import { assertRootOptInReason } from './given-edition'
-import { EXTENSION, ROOT_START_TAG, START_TAG_ATTRIBUTE } from './given-extension-version.constants'
+import { EXTENSION } from './given-extension-version.constants'
 import { CURRENT_6_100_VERSION } from './scl-xmlns.constants'
 
 import type {
@@ -12,23 +13,19 @@ import type {
 /**
  * Whether a document carries the eIEC61850-6-100 namespace (declared on its root or below it) while its `SCL` root states
  * not the extension's version (`<prefix>:version`, the prefix the root binds to the namespace). A document not carrying
- * the namespace, or with no `SCL` root, lacks nothing. Reads the XML text only.
+ * the namespace, or with no `SCL` root, lacks nothing. Reads the XML text only: the root's start tag, parsed
+ * (`readFixtureRoot`).
  *
  * @intent tell whether an SCL fixture carrying the 6-100 extension states its version on its root
  */
 export function lacksExtensionVersion(params: LacksExtensionVersionParams): boolean {
 	const { xml } = params
 	if (!xml.includes(`"${EXTENSION.uri}"`) && !xml.includes(`'${EXTENSION.uri}'`)) return false
-	const root = ROOT_START_TAG.exec(xml)?.[0]
-	if (root === undefined) return false
-	const attributes = new Map(
-		[...root.matchAll(START_TAG_ATTRIBUTE)].map(([, name, , value]) => [name, value] as const),
-	)
-	const prefix = [...attributes].find(
-		([name, value]) => name.startsWith('xmlns:') && value === EXTENSION.uri,
-	)?.[0]
-	if (prefix === undefined) return true
-	return !attributes.has(`${prefix.slice('xmlns:'.length)}:version`)
+	const root = readFixtureRoot({ xml })
+	if (root?.local !== 'SCL') return false
+	return !root.attributes.some(function isExtensionVersion(attribute) {
+		return attribute.uri === EXTENSION.uri && attribute.local === 'version'
+	})
 }
 
 /**

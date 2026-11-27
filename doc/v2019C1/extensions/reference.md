@@ -500,7 +500,7 @@ One entry per pair whose names name exactly one element, in the registry's order
 ```ts
 reference.query.resolveTuples(
   query: Scl.Query | Scl.Transaction,
-  params: { references: readonly { reference: TupleReferenceDraft; parent: Scl.Ref<Scl.ElementsOf> }[] },
+  params: ResolveTuplesParams, // { references: readonly TupleToResolve[] }
 ): Promise<ResolvedTuplePair[][]>
 ```
 

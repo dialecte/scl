@@ -4,7 +4,7 @@ import {
 } from '@/v2019C1/extensions/reference/query/find/named-targets'
 import { readAttribute } from '@/v2019C1/helpers'
 
-import type { LineageReader, TargetLineage, TargetLineages } from './target-lineages.types'
+import type { LineageReader, TargetLineages } from './target-lineages.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type { NamedTarget } from '@/v2019C1/extensions/reference/query/find/named-targets.types'
 import type { AnyTreeRecord } from '@dialecte/core'
