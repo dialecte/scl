@@ -3,6 +3,7 @@ import type { IedCollisions, LifecycleScenario, LifecycleVerb } from '../contrac
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
+import type { DecisionPolicy } from './decision-policy.types'
 import type { KeyTaken } from '@/v2019C1/extensions/lifecycle/constraints/judge-key-taken.types'
 import type { CopyUnbind } from '@/v2019C1/extensions/lifecycle/copy/copy.types'
 import type { SclFileType } from '@/v2019C1/extensions/reference/transaction'
@@ -52,7 +53,9 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
  * - `name-taken`: a first placement of an IED with `collisions: 'refuse'` whose name another IED of the project holds;
  *   accepted with a free name (`values.name`), placed under it; skipped, nothing is placed (`needsName` proposes one);
  * - `name-template`: a first placement of an IED with `collisions: 'refuse'` named `TEMPLATE`, the name of an IED type
- *   not bound to a place in the project: decided as `name-taken` (`needsName` proposes a numbered name).
+ *   not bound to a place in the project: decided as `name-taken` (`needsName` proposes a numbered name);
+ * - `no-default`: the report's decision policy (`every-change`) leaves no change a default: accepted, it is written,
+ *   skipped, it is not.
  */
 export type DecisionRequiredReason =
 	| 'value-outside-enumeration'
@@ -61,6 +64,7 @@ export type DecisionRequiredReason =
 	| 'changes-another-ied'
 	| 'name-taken'
 	| 'name-template'
+	| 'no-default'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -414,6 +418,11 @@ export type DiffReport = {
 	 * built from carry none.
 	 */
 	target?: ReportTarget
+	/**
+	 * How the report's changes are decided (see {@link DecisionPolicy}), written by `query.lifecycle.report`: `apply`
+	 * refuses the decisions it does not take. The per-layer reports the surface is built from carry none.
+	 */
+	decisionPolicy?: DecisionPolicy
 	/** One entry per reported instance (`Application`/`Function`). */
 	instances: ReportInstance[]
 	/**

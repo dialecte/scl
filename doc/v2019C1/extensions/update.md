@@ -23,16 +23,17 @@ The `reconcile` / `diff` primitives below (in `extensions/lifecycle/engine`) are
 The verb-agnostic surface is the recommended consumer entry point. **Dialecte decides the track**, the consumer never picks it: ask for a report, then apply.
 
 ```ts
-query.lifecycle.report({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, resolution? }) // -> DiffReport { target, instances, needsDecisions, summary, mappings, templateInstances, offLevel?, revisionBase? }
+query.lifecycle.report({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, resolution?, decisionPolicy? }) // -> DiffReport { target, decisionPolicy, instances, needsDecisions, summary, mappings, templateInstances, offLevel?, revisionBase? }
 tx.lifecycle.apply({ verb, scenario, sourceQuery, baseQuery?, ref, anchor, report, resolution? }) // -> ApplyResult { report, instances }
 ```
 
-The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution? }`), `LifecycleApplyParams` and `Resolution`; `LifecycleTarget` is a verb arm (`LifecycleVerbTarget`) and a scenario arm (`LifecycleRevisionBase`): only `scenario: 'fork'` takes `baseQuery`.
+The parameter types are exported as `LifecycleReportParams` (`LifecycleTarget & { resolution?, decisionPolicy? }`), `LifecycleApplyParams` and `Resolution`; `LifecycleTarget` is a verb arm (`LifecycleVerbTarget`) and a scenario arm (`LifecycleRevisionBase`): only `scenario: 'fork'` takes `baseQuery`.
 
 - `verb`: `'fsd'` (then `ref` is a `Function` or a `FunctionTemplate` — `FsdFunctionRef`), `'asd'` (then `ref` is an `Application`), `'ssd'` (then `ref` is the topology scope, `Substation`/`VoltageLevel`/`Bay` — see [the note below](#tx-lifecycle-update-ssd)), or `'ied'` (then `ref` is an `IED` and `anchor` the project's `SCL` — see [An IED](#an-ied-—-verb-ied)) — the **layer**;
 - `scenario`: `'instantiate'` | `'copy'` | `'template'` | `'fork'` — the **operation** (see below; defaults to `'template'`). `'template'` and `'fork'` are the two **Update** modes (`UpdateMode`); `'copy'` copies a Function or an Application inside the document itself (see [a copy](#a-copy-inside-one-document-—-scenario-copy));
 - `anchor`: the target parent the instance lives under / is placed into.
 - `baseQuery`: for a `fork` only, the **previous revision** of the file — the one the project was forked from. An element the project holds that the newer revision lacks is removed when the previous revision held it, and is the project's own otherwise (see [the fork](#scenario-—-instantiate-vs-template-vs-fork)). `report` and `apply` each read it once. Refused with `REVISION_BASE_OTHER_FILE` when its `Header` names another file than the newer revision's (both carry a `uuid`, and they differ); another scenario given one is refused with `REVISION_BASE_WITHOUT_FORK`.
+- `decisionPolicy` (`report` only, type `DecisionPolicy`): how the report's changes are decided. `'default'` (when absent): each group takes its suggested action unless it waits for a decision of its own. `'every-change'`: no change takes a default, every group waits for an explicit decision (`requiresDecision: 'no-default'`, a group already waiting keeps its reason; suggested `skip`), and the report needs decisions even for a first placement. The report records the policy it ran (`report.decisionPolicy`); `apply` enforces the report's: decisions that do not name every group are refused with `DECISION_REQUIRED` (`meta: { groupIds }`), nothing written.
 - `resolution`: what the consumer resolved, as one object — `{ decisions?, mappings?, keepNameTypesFrom?, boundLogicalNodeTypes?, referencesByName?, sharedFunctions?, consumerManagedTags?, afterApply? }` (type `Resolution`). `apply` reads all of it but `boundLogicalNodeTypes` and `consumerManagedTags`; `report` reads `mappings`, `boundLogicalNodeTypes`, `referencesByName`, `sharedFunctions` and `consumerManagedTags`, so the report is re-derived from the consumer's choices and shows their consequence:
   - `decisions`: accept / skip (and edited values) per decision group — see [Decision groups](#decision-groups-full-track);
   - `mappings`: where a shared element lands, per source element — see [Shared-element mappings](#shared-element-mappings);
@@ -476,6 +477,7 @@ type DecisionGroup = {
 // 'changes-another-ied': accepting the group changes another IED (report.otherIedImpacts)
 // 'name-taken': a first placement refusing a taken IED name, whose name another IED holds
 // 'name-template': a first placement refusing a taken IED name, named TEMPLATE
+// 'no-default': the report's decision policy (`every-change`) leaves no change a default
 type DecisionRequiredReason =
 	| 'value-outside-enumeration'
 	| 'names-deleted-data'
@@ -483,6 +485,7 @@ type DecisionRequiredReason =
 	| 'changes-another-ied'
 	| 'name-taken'
 	| 'name-template'
+	| 'no-default'
 
 type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'deleted' | 'cleared' }
 

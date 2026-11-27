@@ -3,6 +3,7 @@ import type { Scl, Config } from '@/v2019C1/config'
 import type { TopologyStructuralTag } from '@/v2019C1/constants'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
 import type { AppliedInstances } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
+import type { DecisionPolicy } from '@/v2019C1/extensions/lifecycle/engine/decision-policy.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping/mapping.types'
 import type * as Core from '@dialecte/core'
@@ -242,9 +243,13 @@ export type AfterApplyHook = (
 /**
  * `report` inputs: the target, and what the consumer already resolved. The report is
  * re-derived from it, so it shows the consequence of each choice.
+ *
+ * `decisionPolicy` — how the report's changes are decided (default `'default'`): `'every-change'` leaves no change a
+ * default, every group waiting for an explicit decision. The report records it; `apply` enforces the report's.
  */
 export type LifecycleReportParams = LifecycleTarget & {
 	resolution?: Resolution
+	decisionPolicy?: DecisionPolicy
 }
 
 /**

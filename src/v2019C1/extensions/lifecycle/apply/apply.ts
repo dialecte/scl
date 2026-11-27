@@ -8,6 +8,7 @@ import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting
 import { APPLY_PROGRESS_PHASES } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.constants'
 import {
 	allGroups,
+	assertDecisionPolicyKept,
 	assertDecisionsCoherent,
 	assertNoAcceptedCollision,
 	assertRequiredDecisionsTaken,
@@ -54,7 +55,7 @@ import type * as Core from '@dialecte/core'
  * `report` in. The report + `decisions` gate what is written:
  *
  *  - **fast** (`needsDecisions === false`): first-time instantiate or a
- *    conflict-free change → apply headless: what the report lists is written, each
+ *    conflict-free change, under the default decision policy (`report.decisionPolicy`) → apply headless: what the report lists is written, each
  *    group at its suggested action (an element the project added is kept), nothing
  *    the report does not list. Decisions supplied anyway are honored, user value
  *    edits included.
@@ -64,7 +65,7 @@ import type * as Core from '@dialecte/core'
  *  - **full, decided** (`decisions` present): apply ONLY the accepted groups and
  *    their companions (the gate is passed to the update verb, which threads it
  *    through reconcile and the ASD cascade). A group absent from the map takes
- *    its suggested action. The engine rejects a decision set that accepts a group
+ *    its suggested action; under `decisionPolicy: 'every-change'` it is refused (`DECISION_REQUIRED`). The engine rejects a decision set that accepts a group
  *    whose `dependsOn` parent is skipped.
  *
  * A fork reads the previous revision of the file it is given (`baseQuery`) once, as `report` did:
@@ -131,6 +132,8 @@ async function applyReport(
 	// on either track, a conflict-free instantiate can carry edited editable attributes.
 	const groups = allGroups(report)
 	assertDecisionsCoherent({ groups, decisions })
+	// the decisions the report's decision policy refuses (`every-change`: a group left out), whatever the report's marks
+	assertDecisionPolicyKept({ report, groups, decisions })
 	// a change that cannot be written as suggested is decided by name, never by default
 	assertRequiredDecisionsTaken({ groups, decisions })
 	// where an element lands that the report leaves to the consumer is chosen before anything is written

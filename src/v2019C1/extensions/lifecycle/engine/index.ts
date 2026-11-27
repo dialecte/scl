@@ -16,6 +16,8 @@ export {
 	writtenInstanceIds,
 } from './decide'
 export { visibleAttributes } from './visible-attributes'
+export { assertDecisionPolicyKept, withDecisionPolicy } from './decision-policy'
 
 export type { AcceptedIds, CollisionOverrides } from './decide.types'
+export type { DecisionPolicy } from './decision-policy.types'
 export type * from './diff.types'
