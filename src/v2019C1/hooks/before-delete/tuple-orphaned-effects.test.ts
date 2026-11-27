@@ -22,7 +22,7 @@ describe('delete cascade over references by uuid: what each deletion leaves of i
 				sourceXml: dataSetsSentByThreeBlocks,
 				deleted: { tagName: 'LN', id: 'xcbr7' },
 				expectedQueries: [
-					'//default:ReportControl[@name="RC"][@confRev="4"]',
+					'//default:ReportControl[@name="RC"][@confRev="10003"]',
 					'//default:SampledValueControl[@name="SV"][@confRev="4294967295"]',
 					'//default:GSEControl[@name="GC"][@confRev="1"]',
 					'//default:DataSet[@name="DS2"]/default:FCDA[@lnUuid="cswi7"]',
@@ -48,7 +48,7 @@ describe('delete cascade over references by uuid: what each deletion leaves of i
 			{
 				sourceXml: gooseSubscribedByItsOwnAccessPoint,
 				deleted: { tagName: 'AccessPoint', id: 'ap7b' },
-				expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="2"]'],
+				expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="10001"]'],
 				unexpectedQueries: ['//default:GSEControl/default:IEDName', '//default:FCDA'],
 			},
 		// IED8's IHMI1 subscribes to the GOOSE through its access point AP1 and device LD1

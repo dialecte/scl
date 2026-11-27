@@ -62,7 +62,7 @@ describe('tx.lifecycle.apply - an S-IED update emptying a data set of the projec
 				sourceXml: isdTemplateRevised,
 				targetXml: projectNorthTrips,
 				expectedQueries: [
-					'//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]/default:LN0/default:ReportControl[@name="TripReport"][not(@datSet)][@confRev="2"]',
+					'//default:IED[@name="BCU1"]//default:LDevice[@inst="PROT"]/default:LN0/default:ReportControl[@name="TripReport"][not(@datSet)][@confRev="10001"]',
 				],
 				unexpectedQueries: [
 					'//default:DataSet[@name="Trips"]',

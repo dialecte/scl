@@ -163,7 +163,7 @@ describe("reconcile of the project's own references to deleted data", () => {
 					typeChangeIds: new Set(),
 				},
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:ExtRef[@intAddr="own7"]',
 					'//default:ExtRef[@intAddr="pos8"]',
 					'//default:FCDA[@lnUuid="xcbr2-ins"]',
@@ -185,7 +185,7 @@ describe("reconcile of the project's own references to deleted data", () => {
 					typeChangeIds: new Set(),
 				},
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:FCDA[@daName="q"]',
 				],
 				unexpectedQueries: [
@@ -204,7 +204,7 @@ describe("reconcile of the project's own references to deleted data", () => {
 					typeChangeIds: new Set(['xcbr-s', 'xcbr2-s']),
 				},
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:FCDA[@daName="q"]',
 				],
 				unexpectedQueries: ['//default:FCDA[@daName="origin.orCat"]'],
@@ -246,7 +246,7 @@ describe('reconcile of the update on its own, every change written', () => {
 				sourceXml: templateWithoutBreaker,
 				targetXml: project,
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:ExtRef[@intAddr="own7"]',
 					'//default:ExtRef[@intAddr="pos8"]',
 				],

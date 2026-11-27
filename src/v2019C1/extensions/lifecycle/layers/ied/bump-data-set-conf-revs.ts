@@ -1,5 +1,6 @@
 import { CONF_REV_CONTROL_TAGS } from './bump-data-set-conf-revs.constants'
 import { nextConfRev } from './conf-rev'
+import { DATA_SET_CONF_REV_STEP } from './conf-rev.constants'
 
 import { toRef } from '@dialecte/core/helpers'
 
@@ -24,7 +25,7 @@ import type { AnyRef, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/core'
 /**
  * The configuration revision each control block naming a data set takes when the data set changes: one above its own,
  * for every report, GOOSE or sampled value control block of the data set's logical node whose `datSet` is the data
- * set's name — the project's own blocks included — except one whose lineage (under the scenario's key, or the source
+ * set's name. The common data-set revision step is used. The project's own blocks are included, except one whose lineage (under the scenario's key, or the source
  * uuid it is read as: a block paired by key) names a block the template no longer holds anywhere in the IED (the update
  * removes it). A block the template raises above it itself takes the template's value: its raise is listed for when
  * that block's own change is skipped (`onlyIfBlockSkipped`), and an apply writes it only then. A counter that is no
@@ -65,7 +66,7 @@ export async function readConfRevBumps(
 		const raisedByTemplate =
 			template !== undefined && isAbove({ revision: template.confRev, than: before })
 		if (raisedByTemplate && writesTemplateRevision({ template, ...params })) continue
-		const next = nextConfRev({ value: before, step: 1 })
+		const next = nextConfRev({ value: before, step: DATA_SET_CONF_REV_STEP })
 		if (!('next' in next)) {
 			notRaised.push({ controlBlock: toRef(block), value: before, refusal: next.refusal })
 			continue

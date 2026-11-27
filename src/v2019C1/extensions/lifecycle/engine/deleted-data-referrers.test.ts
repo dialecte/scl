@@ -102,7 +102,7 @@ describe('reconcile of the references to data a newer template deletes', () => {
 					typeChangeIds: new Set(['xcbr-s']),
 				},
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:ExtRef[@intAddr="posQ"][@desc="breaker position quality"]',
 				],
 				unexpectedQueries: [

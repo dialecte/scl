@@ -261,7 +261,7 @@ describe('reconcile of what an IED file imported again names by other uuids', ()
 				identityMode: 'stamp-template',
 				expectedQueries: [
 					'//default:DataSet[@name="DS1"]/default:FCDA[1][@doName="Pos"]',
-					'//default:ReportControl[@name="RC1"][@uuid="rc-ins"][@confRev="2"]',
+					'//default:ReportControl[@name="RC1"][@uuid="rc-ins"][@confRev="10001"]',
 				],
 			},
 		'an update from the file imported again, no group accepted → nothing paired by key names the new uuid':

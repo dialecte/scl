@@ -1,6 +1,7 @@
 import type { IedNode, IedSection } from './ied-section.types'
 import type { ProcessSection } from './process-section.types'
 import type { SupervisionIndex } from './supervisions.types'
+import type { UnusedDataSection } from './unused-data-section.types'
 import type { Config } from '@/v2019C1/config'
 import type { DataTypes } from '@/v2019C1/extensions/data-model/query/data-types.types'
 import type { InfoContext } from '@/v2019C1/extensions/info/query/info-context.types'
@@ -17,6 +18,8 @@ export type DataflowContext = InfoContext & {
 	query: Core.Query<Config>
 	processSection: () => Promise<ProcessSection>
 	iedSection: () => Promise<IedSection>
+	/** Publisher data and capability records, read only by unused-data cleanup. */
+	unusedDataSection: () => Promise<UnusedDataSection>
 	/** The ExtRefs naming each control block, by control block id, in document order. */
 	extRefsByControlBlock: () => Promise<ReadonlyMap<string, readonly IedNode<'ExtRef'>[]>>
 	/** The logical node types, data object types and data attribute types of the document. */

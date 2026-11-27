@@ -132,7 +132,8 @@ It answers what it did to the LN's data and subscriptions, for a consumer to sho
 
 - `removed`: each element removed, a `Val` then the `DAI` / `SDI` / `DOI` it left empty, walking up (values in no set order).
 - `kept`: per `DAI` a `DAS` names whose value stays, `{ dai, specification, reason }`, `reason` one of `not-imported`, `not-one-value`, `setting-group`, `no-specified-value` (no single plain value specified: the `DAS` holds several, blank or setting-group `Val`, or none and its type default is not one plain `Val`), `value-changed` (checked in that order). A `DAS` naming no `DAI` is in neither list.
-- `unsubscribe`: the result of `dataflow.unsubscribe` (`unbound`, `removed`, `unlinked`, `registrations`, `supervisions`, `kept`).
+- `unsubscribe`: the result of `dataflow.unsubscribe` (`unbound`, `removed`, `unlinked`, `registrations`,
+  `supervisions`, `kept`, `fcdas`, `dataSets`, `controlBlocks`, `confRevs`).
 
 ```ts
 const { removed, kept } = await doc.transaction((tx) =>

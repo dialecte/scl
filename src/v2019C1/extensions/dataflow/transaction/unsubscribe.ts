@@ -2,6 +2,7 @@ import { companionsIn } from '../query/companions-of'
 import { createDataflowContext } from '../query/dataflow-context'
 import { describeDocument } from '../query/describe-document'
 import { isFixed, planSubscriptionBookkeeping } from '../query/plan-subscription-bookkeeping'
+import { planUnusedDataCleanup } from '../query/plan-unused-data-cleanup'
 import { signalsByElement } from '../query/signals-by-element'
 import { unlink } from './unlink'
 
@@ -12,6 +13,7 @@ import { inputSourceEffect } from '@/v2019C1/hooks/shared/input-source'
 
 import type { DataflowContext } from '../query/dataflow-context.types'
 import type { IedNode } from '../query/ied-section.types'
+import type { UnusedDataCleanupPlan } from '../query/plan-unused-data-cleanup.types'
 import type {
 	UnsubscribeParams,
 	UnsubscribeRefusalMeta,
@@ -25,10 +27,11 @@ import type * as Core from '@dialecte/core'
  * unless `withCompanions: false`. An ExtRef holding an internal address is kept, its binding and service cleared (the
  * delete cascade's rule), and the signal it implemented unlinked; one holding none is removed. Each registration
  * (`IEDName`, `ClientLN`) and supervision value (`setSrcRef`) no ExtRef of its subscriber uses any more goes, as
- * `planSubscriptionBookkeeping` plans it. Refused, nothing written, when the IED of an ExtRef has the engineering right
- * `fix`.
+ * `planSubscriptionBookkeeping` plans it. With `cleanup: 'unused-data'`, entries no remaining subscriber reads, empty
+ * data sets and then unused control blocks go where the publisher's capabilities allow. Refused, nothing written, when
+ * the IED of an ExtRef has the engineering right `fix`.
  *
- * @intent unsubscribe an ExtRef, end a GOOSE/SV/report subscription, remove an IEDName or ClientLN no ExtRef uses
+ * @intent unsubscribe an ExtRef, end a GOOSE/SV/report subscription, remove subscriptions and unused publisher data
  */
 export async function unsubscribe(
 	tx: Core.Transaction<Config>,
@@ -41,6 +44,10 @@ export async function unsubscribe(
 	const signalOf = signalsByElement({ dataflows })
 	const ending = withCompanions ? await withCompanionsOf({ context, given, signalOf }) : given
 	const bookkeeping = await planSubscriptionBookkeeping({ context, ending })
+	const cleanup =
+		params.cleanup === 'unused-data'
+			? await planUnusedDataCleanup({ context, ending, bookkeeping })
+			: { fcdas: [], dataSets: [], controlBlocks: [], confRevs: [], kept: [] }
 
 	const result: UnsubscribeResult = {
 		unbound: [],
@@ -48,7 +55,15 @@ export async function unsubscribe(
 		unlinked: [],
 		registrations: bookkeeping.registrations,
 		supervisions: bookkeeping.supervisions.map(({ dai }) => dai),
-		kept: bookkeeping.kept,
+		kept: [...bookkeeping.kept, ...cleanup.kept],
+		fcdas: cleanup.fcdas.map((fcda) => fcda.ref),
+		dataSets: cleanup.dataSets.map((dataSet) => dataSet.ref),
+		controlBlocks: cleanup.controlBlocks.map((controlBlock) => controlBlock.ref),
+		confRevs: cleanup.confRevs.map((change) => ({
+			controlBlock: change.controlBlock.ref,
+			from: change.from,
+			to: change.to,
+		})),
 	}
 	for (const extRef of ending) {
 		const effect = inputSourceEffect({ record: extRef.record, scope: 'data' })
@@ -73,7 +88,30 @@ export async function unsubscribe(
 			})
 	}
 	for (const { val } of bookkeeping.supervisions) await tx.delete(val)
+	await applyUnusedDataCleanup(tx, cleanup)
 	return result
+}
+
+async function applyUnusedDataCleanup(
+	tx: Core.Transaction<Config>,
+	cleanup: UnusedDataCleanupPlan,
+): Promise<void> {
+	for (const controlBlock of cleanup.controlBlocks) await tx.delete(controlBlock.ref)
+	const removedWithDataSet = new Set(
+		cleanup.fcdas.flatMap((fcda) =>
+			fcda.record.parent &&
+			cleanup.dataSets.some((dataSet) => dataSet.ref.id === fcda.record.parent?.id)
+				? [fcda.ref.id]
+				: [],
+		),
+	)
+	for (const dataSet of cleanup.dataSets) await tx.delete(dataSet.ref)
+	for (const fcda of cleanup.fcdas) {
+		if (!removedWithDataSet.has(fcda.ref.id)) await tx.delete(fcda.ref)
+	}
+	for (const change of cleanup.confRevs) {
+		await tx.any.update(change.controlBlock.ref, { attributes: { confRev: change.to } })
+	}
 }
 
 /** The ExtRefs given, each once, as the IED section holds them; refused when one is in an IED whose engineering right is `fix`. */

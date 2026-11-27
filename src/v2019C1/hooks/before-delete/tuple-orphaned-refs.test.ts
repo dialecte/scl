@@ -18,7 +18,7 @@ describe('delete cascade over the references naming their target by its address 
 				sourceXml: breakerSubscribedAndControlled,
 				deleted: { tagName: 'LN', id: 'xcbr7' },
 				expectedQueries: [
-					'//default:GSEControl[@name="GC"][@confRev="2"]',
+					'//default:GSEControl[@name="GC"][@confRev="10001"]',
 					'//default:ExtRef[@intAddr="posStVal"][@desc="breaker position"]',
 					'//default:ExtCtrl[@intAddr="posOper"][@desc="breaker control"]',
 				],
@@ -106,7 +106,7 @@ describe('delete cascade over a reference added by names only', () => {
 				lnUuid: 'xcbr7',
 			},
 			deleted: { tagName: 'LN', id: 'xcbr7' },
-			expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="2"]'],
+			expectedQueries: ['//default:GSEControl[@name="GC"][@confRev="10001"]'],
 			unexpectedQueries: ['//default:FCDA'],
 		},
 	}

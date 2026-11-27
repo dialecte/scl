@@ -25,6 +25,8 @@ export type {
 	RegistrationOperation,
 } from './query/plan-subscription-bookkeeping.types'
 export type {
+	KeptCleanup,
+	KeptCleanupReason,
 	UnsubscribeParams,
 	UnsubscribeRefusalMeta,
 	UnsubscribeResult,

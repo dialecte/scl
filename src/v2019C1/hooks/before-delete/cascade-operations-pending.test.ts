@@ -34,7 +34,7 @@ describe("the commit pass's cascade builds on what the commit's other operations
 				deleted: { tagName: 'LN', id: 'xcbr7' },
 				expected: {
 					ext8: { intAddr: 'posMoved' },
-					gc7: { desc: 'position GOOSE', confRev: '2' },
+					gc7: { desc: 'position GOOSE', confRev: '10001' },
 				},
 			},
 	}

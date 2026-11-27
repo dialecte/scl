@@ -102,7 +102,7 @@ describe('the configuration revision of the control blocks of an instance', () =
 		"the template adds an entry to a data set → the data set's GOOSE control block listed raised": {
 			sourceXml: templateTwoEntriesXml,
 			targetXml: instanceOneEntryXml,
-			expected: ['added FCDA:blk-s', 'bump gc1-t 1 -> 2'],
+			expected: ['added FCDA:blk-s', 'bump gc1-t 1 -> 10001'],
 		},
 		"the project's control block at a higher revision than the template's → nothing listed, the revision kept":
 			{
@@ -146,7 +146,7 @@ describe('reconcile of the configuration revision of the control blocks of an in
 				},
 				expectedQueries: [
 					'//default:DataSet[@name="DS1"][count(default:FCDA)=2]',
-					'//default:GSEControl[@name="GC1"][@confRev="2"]',
+					'//default:GSEControl[@name="GC1"][@confRev="10001"]',
 				],
 			},
 		"the removal of an entry of the project's own accepted → the entry removed, the data set's GOOSE control block raised":
@@ -184,7 +184,7 @@ describe('reconcile of the configuration revision of the control blocks of an in
 				},
 				expectedQueries: [
 					'//default:DataSet[@name="DS1"][count(default:FCDA)=2]',
-					'//default:GSEControl[@name="GC1"][@confRev="2"]',
+					'//default:GSEControl[@name="GC1"][@confRev="10001"]',
 				],
 				unexpectedQueries: ['//default:FCDA[@doName="BlkCls"]'],
 			},
@@ -217,8 +217,8 @@ describe('reconcile of the configuration revision of the control blocks of an in
 					</SCL>
 				`,
 				expectedQueries: [
-					'//default:GSEControl[@name="GC1"][@confRev="2"]',
-					'//default:GSEControl[@name="GC2"][@confRev="8"]',
+					'//default:GSEControl[@name="GC1"][@confRev="10001"]',
+					'//default:GSEControl[@name="GC2"][@confRev="10007"]',
 				],
 			},
 		"the project's control block already above the template's revision, the template reorders the data set, the fast track → raised from the project's":
@@ -247,7 +247,7 @@ describe('reconcile of the configuration revision of the control blocks of an in
 						</DataTypeTemplates>
 					</SCL>
 				`,
-				expectedQueries: ['//default:GSEControl[@name="GC1"][@confRev="3"]'],
+				expectedQueries: ['//default:GSEControl[@name="GC1"][@confRev="10002"]'],
 			},
 		"the project's control block at a higher revision than the template's, the fast track → the revision kept":
 			{

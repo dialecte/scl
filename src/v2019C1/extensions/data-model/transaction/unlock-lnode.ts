@@ -144,6 +144,10 @@ function emptyUnsubscribeResult(): UnsubscribeResult {
 		registrations: [],
 		supervisions: [],
 		kept: [],
+		fcdas: [],
+		dataSets: [],
+		controlBlocks: [],
+		confRevs: [],
 	}
 }
 

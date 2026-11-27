@@ -1093,13 +1093,13 @@
 			"root": "tx",
 			"otherRoutes": [],
 			"signature": "(params: UnsubscribeParams) => Promise<UnsubscribeResult>",
-			"summary": "Transaction extension: ends the subscriptions of ExtRefs, with the ExtRefs implementing the same data object signal unless `withCompanions: false`. An ExtRef holding an internal address is kept, its binding and service cleared (the delete cascade's rule), and the signal it implemented unlinked; one holding none is removed. Each registration (`IEDName`, `ClientLN`) and supervision value (`setSrcRef`) no ExtRef of its subscriber uses any more goes, as `planSubscriptionBookkeeping` plans it. Refused, nothing written, when the IED of an ExtRef has the engineering right `fix`.",
+			"summary": "Transaction extension: ends the subscriptions of ExtRefs, with the ExtRefs implementing the same data object signal unless `withCompanions: false`. An ExtRef holding an internal address is kept, its binding and service cleared (the delete cascade's rule), and the signal it implemented unlinked; one holding none is removed. Each registration (`IEDName`, `ClientLN`) and supervision value (`setSrcRef`) no ExtRef of its subscriber uses any more goes, as `planSubscriptionBookkeeping` plans it. With `cleanup: 'unused-data'`, entries no remaining subscriber reads, empty data sets and then unused control blocks go where the publisher's capabilities allow. Refused, nothing written, when the IED of an ExtRef has the engineering right `fix`.",
 			"intents": [
 				"unsubscribe an ExtRef",
 				"end a GOOSE/SV/report subscription",
-				"remove an IEDName or ClientLN no ExtRef uses"
+				"remove subscriptions and unused publisher data"
 			],
-			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/unsubscribe.ts:33"
+			"declaredAt": "src/v2019C1/extensions/dataflow/transaction/unsubscribe.ts:36"
 		},
 		{
 			"path": "tx.dataModel.importTypes",

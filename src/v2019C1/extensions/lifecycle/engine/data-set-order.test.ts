@@ -116,7 +116,7 @@ describe('the order of the entries of a data set an instance holds', () => {
 				sourceXml: templateXml,
 				targetXml: instanceReorderedXml,
 				expectedGroups: [
-					'modified DataSet:ds1-t accept order FCDA, confRev rc1-t 1 -> 2',
+					'modified DataSet:ds1-t accept order FCDA, confRev rc1-t 1 -> 10001',
 					'target-only FCDA:beh-t skip',
 				],
 			},
@@ -193,7 +193,7 @@ describe('reconcile of the order of the entries of a data set an instance holds'
 					'//default:DataSet[@name="DS1"]/default:FCDA[1][@doName="Pos"]',
 					'//default:DataSet[@name="DS1"]/default:FCDA[2][@doName="BlkOpn"]',
 					'//default:DataSet[@name="DS1"]/default:FCDA[3][@doName="Beh"]',
-					'//default:ReportControl[@name="RC1"][@confRev="2"]',
+					'//default:ReportControl[@name="RC1"][@confRev="10001"]',
 					'//default:ReportControl[@name="RC2"][@confRev="1"]',
 				],
 			},
