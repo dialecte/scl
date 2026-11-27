@@ -6,11 +6,14 @@ import { describe, expect } from 'vitest'
 import { ALL_XMLNS_NAMESPACES, runSclTestCases } from '@/v2019C1/test'
 
 import type { Config, Scl } from '@/v2019C1/config'
+import type { IedCollisions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffNode } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
 import type * as Core from '@dialecte/core'
 
 const ns = ALL_XMLNS_NAMESPACES
+
+type InstanceCase = SclTest.BaseXmlTestCase & { collisions?: IedCollisions }
 
 /** A project holding another IED named BCU1 (its own uuid), on its station bus, and no substation. */
 const projectWithAnotherBcu1 = /* xml */ `
@@ -40,10 +43,11 @@ const projectHoldingTheSubNetwork = /* xml */ `
 // An ISD instance file (its IED named for the project it was exported from) placed as a fork: its IED and its
 // specification keep the identity the file gives them (uuids and lineage as written), the frame it names is placed as
 // written where the project holds nothing of it, each LNode stays bound to its logical node; the IED records the ISD it
-// came from, beside what it already listed. A name another IED holds is numbered, never taken over: that IED and what
-// names it are left as they are. What apply writes is what the report lists.
+// came from, beside what it already listed. A name another IED holds is numbered when the consumer asks for it
+// (`collisions: 'number'`), never taken over: that IED and what names it are left as they are. What apply writes is what
+// the report lists.
 describe('tx.lifecycle.apply - an ISD instance placed as a fork, keeping its identity', () => {
-	const testCases: SclTest.TestCases = {
+	const testCases: SclTest.TestCases<InstanceCase> = {
 		'the instance ISD of BCU1 placed in South → BCU1 and North / E1 / Q01 written with their uuids and lineage, each LNode bound to BCU1, the ISD recorded on BCU1':
 			{
 				// South holds substation South and R1, nothing of BCU1 or North
@@ -68,8 +72,9 @@ describe('tx.lifecycle.apply - an ISD instance placed as a fork, keeping its ide
 					'/default:SCL/default:Communication[count(default:SubNetwork)=1]/default:SubNetwork[@uuid="b0000000-0000-4000-8000-000000000006"][count(default:ConnectedAP)=1]/default:ConnectedAP[@iedName="BCU1"][@apUuid="b0000000-0000-4000-8000-000000000031"]',
 				],
 			},
-		'the instance ISD of BCU1 placed where another IED is named BCU1 → BCU1_1 with its LNodes and specification naming it, the other BCU1 left as it is':
+		'the instance ISD of BCU1 placed where another IED is named BCU1, collisions number → BCU1_1 with its LNodes and specification naming it, the other BCU1 left as it is':
 			{
+				collisions: 'number',
 				// the instance's BCU1 and North / E1 / Q01; the project's own BCU1 has another uuid
 				sourceXml: isdInstanceOfBcu1,
 				targetXml: projectWithAnotherBcu1,
@@ -88,7 +93,7 @@ describe('tx.lifecycle.apply - an ISD instance placed as a fork, keeping its ide
 		project,
 		target,
 		testCase,
-	}: SclTest.ActParams<SclTest.BaseXmlTestCase>): Promise<SclTest.ActResult> {
+	}: SclTest.ActParams<InstanceCase>): Promise<SclTest.ActResult> {
 		if (!target) throw new Error('target required')
 		const imported = await project.importFile(
 			new File([testCase.sourceXml], 'BCU1.isd', { type: 'text/xml' }),
@@ -100,6 +105,7 @@ describe('tx.lifecycle.apply - an ISD instance placed as a fork, keeping its ide
 			ref: await onlyIed(sourceQuery),
 			anchor: await projectRoot(target.query),
 			scenario: 'fork',
+			collisions: testCase.collisions,
 		} as const
 		const reported = target.query.lifecycle.report(lifecycle)
 		// an instance is placed as a fork, the report lists it

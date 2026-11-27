@@ -55,12 +55,6 @@ export type ScenarioPolicy = {
 	 */
 	namesFollow: NamesFollow
 	/**
-	 * Whose a subnetwork's own settings (its bit rate, text, private data) are when an IED's connections land on one the
-	 * target holds: the target's (`project`, an update of a template's instance) or the source's (`source`: a first
-	 * placement brings them, a fork takes the other version's).
-	 */
-	subNetworkSettings: 'project' | 'source'
-	/**
 	 * Where a placement lands: on the levels its template says, those the structure lacks created, the references to
 	 * the template's own levels naming where it landed (`template-levels`), or by the levels its content sits on in the
 	 * source, each landing that content under the level of its tag and name where the level above lands, else there

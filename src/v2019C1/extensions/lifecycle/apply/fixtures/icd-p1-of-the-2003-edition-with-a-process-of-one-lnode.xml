@@ -1,0 +1,27 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2003">
+	<Header id="P1_ICD" version="1" revision="A"/>
+	<Process name="TEMPLATE">
+		<LNode iedName="None" lnClass="XCBR" lnInst="1"/>
+	</Process>
+	<IED name="TEMPLATE" manufacturer="ACME" type="P1">
+		<AccessPoint name="AP1">
+			<Server>
+				<Authentication/>
+				<LDevice inst="LD0">
+					<LN0 lnClass="LLN0" inst="" lnType="A_LLN0"/>
+				</LDevice>
+			</Server>
+		</AccessPoint>
+	</IED>
+	<DataTypeTemplates>
+		<LNodeType id="A_LLN0" lnClass="LLN0">
+			<DO name="Beh" type="A_ENS"/>
+		</LNodeType>
+		<DOType id="A_ENS" cdc="ENS">
+			<DA name="stVal" bType="Enum" type="A_Beh" fc="ST"/>
+		</DOType>
+		<EnumType id="A_Beh">
+			<EnumVal ord="1">on</EnumVal>
+		</EnumType>
+	</DataTypeTemplates>
+</SCL>

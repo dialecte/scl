@@ -246,6 +246,7 @@ async function reportVerb(
 				pass,
 				targetInstance: target.targetInstance,
 				removalBase,
+				collisions: target.collisions,
 			})
 	}
 }

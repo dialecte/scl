@@ -1,0 +1,12 @@
+### Added
+
+- `collisions: 'number' | 'refuse'` on an IED's report, apply and `instantiate.ied`: with `refuse`, a first placement whose IED name another IED of the project holds waits for a name (`requiresDecision: 'name-taken'`, `needsName: { taken, proposal }`, the proposal being the name numbering would write) and the apply refuses a taken name with the new `IED_NAME_TAKEN` (`SCL2017`, `meta: { name }`), nothing written.
+- The report of a first placement from a file that is not an ISD and holds a process part (a `Substation`, `Process` or `Line`) warns `process-section-not-placed` (`{ fileType, lnodes }`): that part is never placed.
+- An IED placed from an ICD of a previous edition (before 2007 C 5; a root stating no version is a 2003 file) that states no original edition takes the edition of its file (`originalSclVersion`, `originalSclRevision`, `originalSclRelease` from the file's root; a 2003 file the version only).
+- An IED placed from an ICD records the ICD in its `IEDSourceFiles` whatever the scenario, a fork included.
+
+### Changed
+
+- **Behaviour change: a first placement of an IED keeps the project's subnetwork as it is.** Joining a `SubNetwork` the project holds, the IED adds its `ConnectedAP`s only: the subnetwork's own attributes and settings (`BitRate`, `Text`, `Private`) stay the project's, whatever the file holds, for an ICD and an ISD alike (an update already did so). A subnetwork the project lacks is still added whole.
+- **Behaviour change: a fork placement refuses a taken IED name by default.** An ISD instance placed into a project where another IED holds its name now waits for a name (`collisions` defaults to `refuse` for a placement keeping the file's identity); pass `collisions: 'number'` to keep numbering it, or give the name (`values.name` in the decision; `tx.lifecycle.update.ied` takes `collisions` and the report's decisions too). A template ISD or an ICD is still numbered by default.
+- **Behaviour change: no invented file identity in provenance.** A source of an edition before 2007 C 5 (a root stating no version included) holds no file uuid of its own; the `SclFileReference` written for it (an IED's, a function's, a document's) carries no `fileUuid`, and is matched by its file name. This includes a file exported from a document created before `@dialecte/core` 0.17, whose root states no version: it reads as a 2003 file.

@@ -12,6 +12,7 @@ import {
 	assertDecisionsCoherent,
 	assertRequiredDecisionsTaken,
 	collisionOverrides,
+	firstTimeGroups,
 	followsSource,
 	groupsForInstance,
 	reportInstanceById,
@@ -68,7 +69,6 @@ async function connectAccessPoints(
 		matchKey,
 		placeholderLineages: params.placeholderLineages,
 		redirectMappings,
-		keepsSubNetworkSettings: policy.subNetworkSettings === 'project',
 	})
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: communication.cloneMappings,
@@ -115,8 +115,9 @@ async function reconcileFileCommunication(
  * project holds several, `TARGET_INSTANCE_REQUIRED`), or place it when the project holds none (`instantiate.ied`); with
  * `scenario: 'fork'`, the IED of an open ISD with another version of the same file, its Communication and its
  * specification with it.
- * Given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left out
- * refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
+ * A placement follows `collisions` and reads the report's decisions for the IED's name only. Updating an IED the project
+ * holds, given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left
+ * out refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
  * IED with its cleanup included: run `query.lifecycle.report` first to see and decide what would. The specification an
  * ISD carries beside the IED is updated with it.
  *
@@ -145,6 +146,11 @@ export async function ied(
 			fileType,
 			scenario,
 			keepNameTypesFrom: params.keepNameTypesFrom,
+			collisions: params.collisions,
+			overrides: collisionOverrides({
+				groups: firstTimeGroups(params.report, {}),
+				decisions: params.decisions ?? new Map(),
+			}),
 		})
 		return [{ ref: placed.iedRef, placement: 'placed' }]
 	}

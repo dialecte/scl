@@ -997,12 +997,15 @@ For `verb: 'ssd'`, `report`/`apply` act on the element `ref` names (same resolut
 ## `tx.lifecycle.update.ied`
 
 `tx.lifecycle.update.ied({ sourceQuery, iedRef, anchor, fileType, scenario?, targetInstance?, report?, decisions?,
-keepNameTypesFrom?, takeOver? })` updates the IED of the project placed from a template ISD with a newer revision of it
+keepNameTypesFrom?, takeOver?, collisions? })` updates the IED of the project placed from a template ISD with a newer revision of it
 (`scenario: 'template'`, the default), or the IED of an open ISD with another version of it (`scenario: 'fork'`, see
 [An IED](#an-ied-—-verb-ied)),
 as `apply` does for an IED's report (see [An IED](#an-ied-—-verb-ied)), or places it when the project holds none
-([`instantiate.ied`](./instantiate#ied)). Given a report and decisions, a group waiting for a decision left out is refused
-(`DECISION_REQUIRED`) before anything is written. Without them, it writes everything the revision brings, a change to
+([`instantiate.ied`](./instantiate#ied)), following `collisions` for a name another IED of the project holds: a fork
+refuses it by default with `IED_NAME_TAKEN`, `collisions: 'number'` numbers it, and a name given in the decisions
+(`values.name`) is placed; such a placement reads the report's decisions for the name only (to decide its groups, use
+`report` and `apply`). Updating an IED the project holds, given a report and decisions, a group waiting for a decision
+left out is refused (`DECISION_REQUIRED`) before anything is written. Without them, it writes everything the revision brings, a change to
 another IED with its cleanup included: run `report` first to see and decide what would. Returns the IED, `placed` or
 `reconciled`.
 

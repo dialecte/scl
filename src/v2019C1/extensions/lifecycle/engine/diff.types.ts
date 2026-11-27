@@ -48,13 +48,16 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
  * - `unbinds-another-ied`: the removal, in the specification of an IED an update updates, deletes an LNode the project
  *   bound to another IED; accepted, it goes with that binding (nothing in the other IED changes), skipped, it stays;
  * - `changes-another-ied`: accepting the group, in an IED update, changes another IED (`report.otherIedImpacts` lists
- *   what); accepted, it is written with that change, skipped, the other IED stays as it is.
+ *   what); accepted, it is written with that change, skipped, the other IED stays as it is;
+ * - `name-taken`: a first placement of an IED with `collisions: 'refuse'` whose name another IED of the project holds;
+ *   accepted with a free name (`values.name`), placed under it; skipped, nothing is placed (`needsName` proposes one).
  */
 export type DecisionRequiredReason =
 	| 'value-outside-enumeration'
 	| 'names-deleted-data'
 	| 'unbinds-another-ied'
 	| 'changes-another-ied'
+	| 'name-taken'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -260,6 +263,11 @@ export type DecisionGroup = {
 	 * `DECISION_REQUIRED`. Why, from its primary: see `DecisionRequiredReason`.
 	 */
 	requiresDecision?: DecisionRequiredReason
+	/**
+	 * A first placement of an IED asking for a name (`requiresDecision: 'name-taken'`): the name the project holds
+	 * (`taken`) and the one numbering would write (`proposal`), so every consumer offers the same proposal.
+	 */
+	needsName?: { taken: string; proposal: string }
 	/**
 	 * The primary element's user-editable attributes with their edit mode
 	 * (schema-derived via the attribute classifier), tagged at report time so the UI
@@ -543,6 +551,15 @@ export type ReportWarning =
 			code: 'specification-instance-unresolved'
 			/** The template's application or function. */
 			source: AnyRefOrRecord
+	  }
+	| {
+			/**
+			 * A first placement of an IED from a file that is not an ISD and holds a process part (a `Substation`, a `Process`
+			 * or a `Line`): that part is not placed, its LNodes match nothing (`lnodes`, their number).
+			 */
+			code: 'process-section-not-placed'
+			fileType: SclFileType
+			lnodes: number
 	  }
 	| {
 			/**

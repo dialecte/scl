@@ -1,6 +1,6 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type { IedCollisions, TakeOvers } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionMap, DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { RemovalBase } from '@/v2019C1/extensions/lifecycle/engine/removal-base.types'
@@ -35,6 +35,11 @@ export type UpdateIedParams = {
 	takeOver?: TakeOvers
 	/** The consumer's choices for the specification: where its levels land (`Resolution.mappings`). */
 	decisionMappings?: DecisionMappings
+	/**
+	 * A first placement (the project holds no instance): what a name another IED holds does, see `IedCollisions`; a fork
+	 * refuses it by default, `number` numbers it; a name given in the decisions is placed (`values.name`).
+	 */
+	collisions?: IedCollisions
 }
 
 export type ReconcileIedParams = Omit<UpdateIedParams, 'fileType' | 'targetInstance'> & {

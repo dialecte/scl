@@ -1,5 +1,8 @@
 import type { Config, Scl } from '@/v2019C1/config'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	IedCollisions,
+	LifecycleScenario,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffPolicy } from '@/v2019C1/extensions/lifecycle/engine/diff-policy.types'
 import type {
 	DiffReport,
@@ -34,6 +37,8 @@ export type ReportIedParams = {
 	targetInstance?: Scl.Ref<'IED'>
 	/** What tells an element the template dropped from one the project added, read once for the whole report. */
 	removalBase: RemovalBase
+	/** What a first placement does with a name the project holds: see `IedCollisions`. */
+	collisions?: IedCollisions
 }
 
 export type WithCompanionParams = {

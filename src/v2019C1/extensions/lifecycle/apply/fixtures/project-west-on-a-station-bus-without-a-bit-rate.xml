@@ -1,0 +1,11 @@
+<SCL xmlns="http://www.iec.ch/61850/2003/SCL" xmlns:eIEC61850-6-100="http://www.iec.ch/61850/2019/SCL/6-100" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2007" revision="C" release="5" eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1">
+	<Header id="West" fileType="SCD" uuid="f0000000-0000-4000-8000-000000000081" version="1" revision="A"/>
+	<Communication>
+		<SubNetwork name="StationBus" type="8-MMS" uuid="e0000000-0000-4000-8000-000000000016">
+			<ConnectedAP iedName="X" apName="S1" apUuid="e0000000-0000-4000-8000-000000000033"/>
+		</SubNetwork>
+	</Communication>
+	<IED name="X" manufacturer="M" uuid="e0000000-0000-4000-8000-000000000032">
+		<AccessPoint name="S1" uuid="e0000000-0000-4000-8000-000000000033"/>
+	</IED>
+</SCL>

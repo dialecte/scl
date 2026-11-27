@@ -62,6 +62,7 @@ export async function applyIed(
 		decisionMappings: target.resolution?.mappings,
 		// what the consumer left out of the specification is not placed
 		leftOut: leftOutRefIds({ groups, decisions }).sourceIds,
+		collisions: target.collisions,
 	})
 	// the IED and its specification are placed in one pass: every instance of the report is annotated from it
 	const added = sourceToTargetMap(placed.cloneMappings)

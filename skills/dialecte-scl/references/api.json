@@ -1313,7 +1313,7 @@
 				"place an ISD with its specification (functions and LNodes) in a project",
 				"import an ISD instance keeping its identity"
 			],
-			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:49"
+			"declaredAt": "src/v2019C1/extensions/lifecycle/instantiate/transaction/ied.ts:59"
 		},
 		{
 			"path": "tx.lifecycle.instantiate.resolveTargetStructure",
@@ -1494,7 +1494,7 @@
 				"add an SclFileReference to a Function/Application/IED/Header",
 				"write source file provenance"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:42"
+			"declaredAt": "src/v2019C1/extensions/reference/transaction/write-provenance.ts:47"
 		},
 		{
 			"path": "tx.specification.buildIed",

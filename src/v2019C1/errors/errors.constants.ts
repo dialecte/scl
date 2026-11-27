@@ -233,6 +233,14 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The selected IED has no network address',
 	},
 	/**
+	 * A first placement of an IED with `collisions: 'refuse'` under a name another IED of the project holds: the name
+	 * the consumer chose, or the file's when it chose none. Nothing is written. `meta: { name }`.
+	 */
+	IED_NAME_TAKEN: {
+		code: 'SCL2017',
+		message: 'Another IED of the project holds this name',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */
