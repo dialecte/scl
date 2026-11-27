@@ -16,16 +16,25 @@ const F1_TO_B2: CopyCase = { verb: 'fsd', ref: ref('Function', 'f1'), anchor: re
 describe('fsd copy of a Function whose behaviour variable repeats the LNode of its input', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
 		copy: CopyCase
-		expected: { refusals: string[]; commit: string; copiesHoldingLNodeUuid: number }
+		expected: {
+			refusals: string[]
+			commit: string
+			/** The copies of FB's Trip input: whether each holds its inputUuid and its lnodeUuid. */
+			copiedTrips: { inputUuid: boolean; lnodeUuid: boolean }[]
+		}
 	}
 
 	const testCases: SclTest.TestCases<TestCase> = {
 		// stray.xml: F1 copied under B2, its FB and GAPC2 with it
-		'F1 to B2 → the report lists no refusal, the copy commits, the copied variable without lnodeUuid':
+		'F1 to B2 → the report lists no refusal, the copy commits, its one copied Trip input holding its inputUuid, no lnodeUuid':
 			{
 				sourceXml: strayXml,
 				copy: F1_TO_B2,
-				expected: { refusals: [], commit: 'committed', copiesHoldingLNodeUuid: 0 },
+				expected: {
+					refusals: [],
+					commit: 'committed',
+					copiedTrips: [{ inputUuid: true, lnodeUuid: false }],
+				},
 			},
 	}
 
@@ -34,14 +43,17 @@ describe('fsd copy of a Function whose behaviour variable repeats the LNode of i
 			async function thenApply(report) {
 				const commit = await applyCopy({ document: source, copy: testCase.copy })
 				const variables = await source.query.getRecordsByTagName('InputVar')
-				const copiesHoldingLNodeUuid = variables.filter(
-					(variable) =>
-						variable.id !== 'fb-trip' &&
-						['inputUuid', 'lnodeUuid'].every((name) =>
-							variable.attributes.some((attribute) => attribute.name === name),
-						),
-				).length
-				return { refusals: describeRefusals(report.refusals ?? []), commit, copiesHoldingLNodeUuid }
+				const copiedTrips = variables
+					.filter(
+						(variable) =>
+							variable.id !== 'fb-trip' &&
+							variable.attributes.some(({ name, value }) => name === 'varName' && value === 'trip'),
+					)
+					.map((variable) => ({
+						inputUuid: variable.attributes.some(({ name }) => name === 'inputUuid'),
+						lnodeUuid: variable.attributes.some(({ name }) => name === 'lnodeUuid'),
+					}))
+				return { refusals: describeRefusals(report.refusals ?? []), commit, copiedTrips }
 			},
 		)
 		await expect(outcome).resolves.toEqual(testCase.expected)

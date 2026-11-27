@@ -22,4 +22,6 @@ export type StrayLNodeUuid = {
 	removed: string[]
 	kept: ReferencePair
 	targetUuid: string
+	/** The data-less `dataName` it holds, when it holds one: it must name the LNode `lnodeUuid` names. */
+	dataName?: string
 }

@@ -15,3 +15,4 @@ export type {
 } from '@/v2019C1/hooks/before-commit/commit-plan.types'
 export type { OutOfScopeVariable } from './query/out-of-scope-variables.types'
 export type { RepairedVariables } from './transaction/repair-out-of-scope-variables.types'
+export type { NormalisedReferenceGroups } from '@/v2019C1/hooks/shared/stray-lnode-uuid.types'

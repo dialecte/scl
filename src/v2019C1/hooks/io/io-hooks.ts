@@ -44,7 +44,7 @@ import { createMappedDataImport } from '@/v2019C1/hooks/io/mapped-data-import'
 import { createTupleReferenceImport } from '@/v2019C1/hooks/io/tuple-reference-import'
 import { unwrittenPathReason } from '@/v2019C1/hooks/io/unwritten-path-reason'
 import { exclusiveGroupsHeld } from '@/v2019C1/hooks/shared/exclusive-groups'
-import { strayLNodeUuidOf } from '@/v2019C1/hooks/shared/stray-lnode-uuid'
+import { namesLNode, strayLNodeUuidOf } from '@/v2019C1/hooks/shared/stray-lnode-uuid'
 
 import type {
 	AttributeChanges,
@@ -370,8 +370,13 @@ function judgeBothGroups(params: {
 			found && (stray?.kept.target as readonly string[] | undefined)?.includes(found.tagName)
 				? found
 				: undefined
-		const lnode = target?.path.segments.findLast((segment) => segment.ref.tagName === 'LNode')
-		if (stray && lnode && uuidOfRecord.get(lnode.ref.id ?? '') === stray.lnodeUuid) {
+		const segments = target?.path.segments ?? []
+		const at = segments.findLastIndex((segment) => segment.ref.tagName === 'LNode')
+		const lnode = segments[at]
+		// a dataName held beside it must name that LNode too
+		const lnodeSegments = segments.slice(0, at + 1).map(({ segment }) => segment)
+		const dataNamed = !stray?.dataName || namesLNode({ dataName: stray.dataName, lnodeSegments })
+		if (stray && lnode && dataNamed && uuidOfRecord.get(lnode.ref.id ?? '') === stray.lnodeUuid) {
 			unwritten.set(record.id, stray.removed)
 			return redundantLNodeUuidDiagnostic({
 				ref: { tagName: record.tagName, id: record.id },

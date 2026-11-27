@@ -190,18 +190,28 @@ export async function releasedLNodes({
  * that `lnodeUuid`, and a `dataName` naming that LNode alone, dropped, instead of `uuidReferences` refusing both groups.
  * Each variable so written is kept in the state (`normalised`), so the commit's preview says what it dropped. Nothing is
  * read unless a written variable holds both groups in that shape. A near miss (the `lnodeUuid` of another LNode, a data
- * object) is left to `uuidReferences`, which refuses it.
+ * object, judged on the record as the transaction wrote it, before a hook cut a data path to its LNode) is left to
+ * `uuidReferences`, which refuses it.
  */
 export async function repeatedLNodeUuids({
 	plan,
 	writes,
 }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query } = plan
+	// the record as the transaction wrote it, before a hook rewrote its path from its uuid (a data path cut to its LNode)
+	const firstWritten = new Map<string, AnyRawRecord>()
+	for (const operation of operations) {
+		if (operation.status === 'deleted' || firstWritten.has(operation.newRecord.id)) continue
+		firstWritten.set(operation.newRecord.id, operation.newRecord as AnyRawRecord)
+	}
 	const candidates = [...foldChanges({ operations, pending: writes.pending }).values()].flatMap(
 		function strayOf(change) {
 			if (writes.gone.has(change.after.id) || groupsTogetherOf({ change }).length === 0) return []
 			const stray = strayLNodeUuidOf({ record: change.after })
-			return stray ? [stray] : []
+			const asWritten = strayLNodeUuidOf({
+				record: firstWritten.get(change.after.id) ?? change.after,
+			})
+			return stray && asWritten ? [{ ...stray, dataName: asWritten.dataName }] : []
 		},
 	)
 	if (candidates.length === 0) return { operations: [] }

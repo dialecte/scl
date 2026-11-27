@@ -1,6 +1,7 @@
 import nearMissXml from './fixtures/stray-lnode-uuid/near-miss.xml?raw'
 import strayXml from './fixtures/stray-lnode-uuid/stray.xml?raw'
 import wrongKindXml from './fixtures/stray-lnode-uuid/wrong-kind.xml?raw'
+import { namesLNode } from './stray-lnode-uuid'
 
 import { createDiagnostic, toDialecteError } from '@dialecte/core'
 import { describe, expect, it } from 'vitest'
@@ -128,21 +129,32 @@ describe('the commit drops the lnodeUuid a written behaviour variable only repea
 	runSclTestCases.withExport({ testCases, act })
 })
 
-describe('the commit preview lists the variable it drops a repeated lnodeUuid of, and refuses a near miss', () => {
+describe('the commit preview lists the variable it drops a repeated lnodeUuid of, and refuses every other both-groups shape', () => {
 	type TestCase = SclTest.BaseXmlTestCase & {
-		lnodeUuid: string
+		/** The variable FB gets, as a copy or an instantiate creates it. */
+		variable: { tagName: string; attributes: Record<string, string> }
 		expected: { normalised: NormalisedReferenceGroups[]; refusals: string[]; commit: string }
 	}
 
+	const REFUSED = { normalised: [], commit: 'REFERENCE_INCOHERENT' }
+
 	const testCases: SclTest.TestCases<TestCase> = {
-		// stray.xml: FB gets a second input repeating GAPC2, the LNode holding the SourceRef its inputUuid names
-		'repeating the LNode of its input → listed with that LNode, no refusal, committed': {
+		// stray.xml: FB gets an input naming GAPC2's Trip, repeating GAPC2, the LNode holding that SourceRef
+		'an input repeating the LNode of its input → listed with that LNode, no refusal, committed': {
 			sourceXml: strayXml,
-			lnodeUuid: 'ln-gapc',
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-gapc',
+				},
+			},
 			expected: {
 				normalised: [
 					{
-						element: { tagName: 'InputVar', id: 'trip2' },
+						element: { tagName: 'InputVar', id: 'v2' },
 						removed: ['dataName', 'lnodeUuid'],
 						kept: 'inputUuid',
 						lnode: { tagName: 'LNode', id: 'gapc2' },
@@ -152,15 +164,114 @@ describe('the commit preview lists the variable it drops a repeated lnodeUuid of
 				commit: 'committed',
 			},
 		},
-		// stray.xml: FB gets a second input naming GAPC2's Trip, holding XCBR1's uuid, an LNode that does not hold it
-		'naming another LNode → not listed, refused groups-together': {
-			sourceXml: strayXml,
-			lnodeUuid: 'ln-xcbr',
-			expected: {
-				normalised: [],
-				refusals: ['groups-together inputUuid', 'data-missing lnodeUuid'],
-				commit: 'REFERENCE_INCOHERENT',
+		// wrong-kind.xml: FB gets an output naming GAPC2's Op ControlRef by uuid, repeating GAPC2
+		'an output repeating the LNode of its control → listed with that LNode, no refusal, committed':
+			{
+				allowIncoherentReferences:
+					'wrong-kind.xml holds an input naming a ControlRef by uuid; only the output added here is judged',
+				sourceXml: wrongKindXml,
+				variable: {
+					tagName: 'OutputVar',
+					attributes: { varName: 'v2', outputUuid: 'cr-op', lnodeUuid: 'ln-gapc' },
+				},
+				expected: {
+					normalised: [
+						{
+							element: { tagName: 'OutputVar', id: 'v2' },
+							removed: ['dataName', 'lnodeUuid'],
+							kept: 'outputUuid',
+							lnode: { tagName: 'LNode', id: 'gapc2' },
+						},
+					],
+					refusals: [],
+					commit: 'committed',
+				},
 			},
+		// stray.xml: FB gets an input naming GAPC2's Trip, holding XCBR1's uuid, an LNode that does not hold it
+		'an input holding the uuid of another LNode → not listed, refused': {
+			sourceXml: strayXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-xcbr',
+				},
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid', 'data-missing lnodeUuid'] },
+		},
+		// stray.xml: FB gets an input naming GAPC2's Trip, repeating GAPC2 with a data object (Op): a data reference
+		'an input beside GAPC2 and its data object → not listed, refused': {
+			sourceXml: strayXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-gapc',
+					doName: 'Op',
+				},
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid'] },
+		},
+		// stray.xml: FB gets an input naming GAPC2's Trip, repeating GAPC2 with a data object and attribute (Op.general)
+		'an input beside GAPC2, its data object and attribute → not listed, refused': {
+			sourceXml: strayXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-gapc',
+					doName: 'Op',
+					daName: 'general',
+				},
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid'] },
+		},
+		// stray.xml: FB gets an input naming GAPC2's Trip, and GAPC2's data Op.general by its path and uuid
+		"an input beside a data path naming GAPC2's data → not listed, refused": {
+			sourceXml: strayXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-gapc',
+					dataName: 'GAPC2.Op.general',
+				},
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid', 'data-missing lnodeUuid'] },
+		},
+		// stray.xml: FB gets an input naming GAPC2's Trip, repeating GAPC2, with a dataName naming XCBR1, another LNode
+		'an input repeating GAPC2 beside a dataName naming another LNode → not listed, refused': {
+			sourceXml: strayXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: {
+					varName: 'v2',
+					inputName: 'GAPC2.Trip',
+					inputUuid: 'sr-trip',
+					lnodeUuid: 'ln-gapc',
+					dataName: 'XCBR1',
+				},
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid', 'data-missing lnodeUuid'] },
+		},
+		// wrong-kind.xml: FB gets an input naming by uuid GAPC2's Op ControlRef, which no input names, repeating GAPC2
+		'an input naming what an input may not name, repeating its LNode → not listed, refused': {
+			allowIncoherentReferences:
+				'wrong-kind.xml holds an input naming a ControlRef by uuid, the shape a near miss is judged beside',
+			sourceXml: wrongKindXml,
+			variable: {
+				tagName: 'InputVar',
+				attributes: { varName: 'v2', inputUuid: 'cr-op', lnodeUuid: 'ln-gapc' },
+			},
+			expected: { ...REFUSED, refusals: ['groups-together inputUuid', 'data-missing lnodeUuid'] },
 		},
 	}
 
@@ -170,15 +281,10 @@ describe('the commit preview lists the variable it drops a repeated lnodeUuid of
 		const commit = source
 			.transaction(async function createAndPreview(tx) {
 				await tx.any.addChild(FB, {
-					tagName: 'InputVar',
-					id: 'trip2',
-					attributes: {
-						varName: 'trip2',
-						inputName: 'GAPC2.Trip',
-						inputUuid: 'sr-trip',
-						lnodeUuid: testCase.lnodeUuid,
-					},
-				})
+					tagName: testCase.variable.tagName,
+					id: 'v2',
+					attributes: testCase.variable.attributes,
+				} as never)
 				const preview = await tx.cleanUp.commitPrune({ collect: true })
 				normalised = preview.normalised
 				refusals = preview.refusals.map((refusal) =>
@@ -215,4 +321,48 @@ describe('the import of a behaviour variable repeating the LNode of its input te
 		})
 		expect(told.at(-1)).toEqual({ done: 1, total: 1 })
 	})
+})
+
+describe('namesLNode tells whether a data-less dataName names an LNode by its path segments', () => {
+	type TestCase = { dataName: string; lnodeSegments: string[]; expected: boolean }
+
+	// the LNode GAPC2 of F1 in S1/VL1/B1: its segments, as its path names it
+	const GAPC2 = ['S1', 'VL1', 'B1', 'F1', 'GAPC2']
+
+	const testCases: Record<string, TestCase> = {
+		'the LNode alone, from the level above it → true': {
+			dataName: 'GAPC2',
+			lnodeSegments: GAPC2,
+			expected: true,
+		},
+		'a path from its Function → true': {
+			dataName: 'F1/GAPC2',
+			lnodeSegments: GAPC2,
+			expected: true,
+		},
+		'its whole path → true': {
+			dataName: 'S1/VL1/B1/F1/GAPC2',
+			lnodeSegments: GAPC2,
+			expected: true,
+		},
+		'another LNode → false': { dataName: 'XCBR1', lnodeSegments: GAPC2, expected: false },
+		'an LNode of that name in another Function → false': {
+			dataName: 'F2/GAPC2',
+			lnodeSegments: GAPC2,
+			expected: false,
+		},
+		"a path longer than the LNode's → false": {
+			dataName: 'X/S1/VL1/B1/F1/GAPC2',
+			lnodeSegments: GAPC2,
+			expected: false,
+		},
+	}
+
+	for (const [description, testCase] of Object.entries(testCases)) {
+		it(description, () => {
+			expect(
+				namesLNode({ dataName: testCase.dataName, lnodeSegments: testCase.lnodeSegments }),
+			).toBe(testCase.expected)
+		})
+	}
 })
