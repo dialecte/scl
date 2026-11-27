@@ -1,3 +1,4 @@
+import { holdsOwnFileIdentity, readSclEdition } from './source-file-edition'
 import { ROOT_ANCHORS } from './write-provenance.constants'
 
 import { throwDialecteError } from '@dialecte/core'
@@ -33,7 +34,11 @@ import type { AnyRawRecord, AnyTrackedRecord, AnyTreeRecord } from '@dialecte/co
  * - `ied` — appended to the selected IED's `IEDSourceFiles`, unless that file type, identity, version and revision
  *   are already listed. Older versions and other files are retained in order; the target Header is left unchanged.
  *
- * `version` / `revision` fall back to empty strings when the (optional) Header attributes are absent. Returns whether
+ * `fileUuid` is the source Header's uuid when the file holds one of its own (an edition from 2007 C 5 on; a root stating
+ * no version is a 2003 file), else empty:
+ * an import gives the Header of an earlier file a uuid that names no file; such a reference is matched by its file name, so
+ * two earlier files of one name, version and revision read as one. `version` / `revision` fall back to empty
+ * strings when the (optional) Header attributes are absent. Returns whether
  * it changed what is recorded (`changed`): an element that records that file version already, as its only reference
  * to that file, is left as it is. An IED or document already listing that file version is also left unchanged.
  *
@@ -109,6 +114,9 @@ async function readSourceFileReference(params: {
 	const { sourceQuery, fileType } = params
 	const [header] = await sourceQuery.getRecordsByTagName('Header')
 	const headerAttributes = header ? await sourceQuery.getAttributes(header) : undefined
+	// a file of an edition before the Header uuid holds none of its own: the one its import gave it names nothing
+	const sourceRoot = await sourceQuery.getRoot()
+	const ownIdentity = holdsOwnFileIdentity(readSclEdition(sourceRoot))
 
 	const { name, extension } = await sourceQuery.getDocumentInfo()
 
@@ -118,7 +126,7 @@ async function readSourceFileReference(params: {
 			version: headerAttributes?.version ?? '',
 			revision: headerAttributes?.revision ?? '',
 			fileName: name ? `${name}${extension}` : '',
-			fileUuid: headerAttributes?.uuid ?? '',
+			fileUuid: (ownIdentity && headerAttributes?.uuid) || '',
 		},
 		nameWithoutExtension: name,
 	}

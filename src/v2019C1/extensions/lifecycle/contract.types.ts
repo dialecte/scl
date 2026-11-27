@@ -135,7 +135,21 @@ export type LifecycleVerbTarget =
 			 * `TARGET_INSTANCE_REQUIRED`. Not read by a `fork` nor by `instantiate`.
 			 */
 			targetInstance?: Scl.Ref<'IED'>
+			/**
+			 * What a first placement does when another IED of the project holds the placed IED's name: `number` gives it the
+			 * next free name; `refuse` asks the consumer for one (see {@link IedCollisions}). Default: `number` for a
+			 * placement stamping the template's identity, `refuse` for one keeping the file's (a fork).
+			 */
+			collisions?: IedCollisions
 	  }
+
+/**
+ * What a first placement of an IED does with a name the project already holds: `number` writes the next free name;
+ * `refuse` makes the IED's group wait for a name (`requiresDecision: 'name-taken'`, `needsName` proposing the name
+ * numbering would write), and the apply refuses a name the project holds with `IED_NAME_TAKEN`. Under `refuse` the type
+ * name `TEMPLATE` asks for a name too (`requiresDecision: 'name-template'`), refused unnamed with `IED_NAME_INVALID`.
+ */
+export type IedCollisions = 'number' | 'refuse'
 
 /**
  * Whether an LNode bound to an IED takes the type a newer template gives it: `follow` (the type is part of what the

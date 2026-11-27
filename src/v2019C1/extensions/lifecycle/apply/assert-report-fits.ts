@@ -7,6 +7,7 @@ import {
 } from '@/v2019C1/extensions/lifecycle/report/report-target'
 import { REPORT_TARGET_FIELDS } from '@/v2019C1/extensions/lifecycle/report/report-target.constants'
 
+import type { AssertReportCollisionsParams } from './assert-report-fits.types'
 import type { Config } from '@/v2019C1/config'
 import type { LifecycleTarget } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type {
@@ -51,6 +52,15 @@ export async function assertReportFits(
 		if ('existing' in choice)
 			await assertStillHeld(tx, { element: choice.existing, kind: 'mapping' })
 	}
+}
+
+/**
+ * Refuse, before anything is written, a first placement asked with other collisions than the report given was made
+ * with (`REPORT_TARGET_MISMATCH`, `meta: { field: 'collisions' }`): the decisions name the IED as that report asked.
+ */
+export function assertReportCollisions(params: AssertReportCollisionsParams): void {
+	const made = params.report?.target?.collisions
+	if (made && made !== params.collisions) refuseTarget({ field: 'collisions' })
 }
 
 /** Whether a field of the target a report was made for is the one asked for: elements by tag and record id. */

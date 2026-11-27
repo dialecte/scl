@@ -2,6 +2,7 @@ import { reconcileIedSpecification } from './ied-specification'
 
 import { toRef } from '@dialecte/core/helpers'
 
+import { assertReportCollisions } from '@/v2019C1/extensions/lifecycle/apply/assert-report-fits'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import {
 	annotateInstance,
@@ -12,6 +13,7 @@ import {
 	assertDecisionsCoherent,
 	assertRequiredDecisionsTaken,
 	collisionOverrides,
+	firstTimeGroups,
 	followsSource,
 	groupsForInstance,
 	reportInstanceById,
@@ -23,6 +25,7 @@ import { resolveRemovalBase } from '@/v2019C1/extensions/lifecycle/engine/remova
 import { repointAddedReferences } from '@/v2019C1/extensions/lifecycle/engine/repoint-added-references'
 import { ied as instantiateIed } from '@/v2019C1/extensions/lifecycle/instantiate/transaction'
 import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
+import { resolveIedCollisions } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-name-collision'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import {
 	bindConnections,
@@ -45,6 +48,7 @@ import type {
 } from './ied.types'
 import type { Config, Scl } from '@/v2019C1/config'
 import type { AppliedInstance } from '@/v2019C1/extensions/lifecycle/apply/apply.types'
+import type { DecisionGroup } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { MatchKey } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 import type * as Core from '@dialecte/core'
 
@@ -68,7 +72,6 @@ async function connectAccessPoints(
 		matchKey,
 		placeholderLineages: params.placeholderLineages,
 		redirectMappings,
-		keepsSubNetworkSettings: policy.subNetworkSettings === 'project',
 	})
 	await finalizeClonedIdentity(tx, {
 		cloneMappings: communication.cloneMappings,
@@ -115,8 +118,9 @@ async function reconcileFileCommunication(
  * project holds several, `TARGET_INSTANCE_REQUIRED`), or place it when the project holds none (`instantiate.ied`); with
  * `scenario: 'fork'`, the IED of an open ISD with another version of the same file, its Communication and its
  * specification with it.
- * Given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left out
- * refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
+ * A placement follows `collisions` and reads the report's decisions for the IED's name only. Updating an IED the project
+ * holds, given a report and decisions, writes what they accept (see `reconcileIed`), a group waiting for a decision left
+ * out refused (`DECISION_REQUIRED`) before anything is written; without, everything the revision brings, a change to another
  * IED with its cleanup included: run `query.lifecycle.report` first to see and decide what would. The specification an
  * ISD carries beside the IED is updated with it.
  *
@@ -138,6 +142,14 @@ export async function ied(
 		operation: 'apply (ied)',
 	})
 	if (!instance) {
+		// the decisions name the IED as the report asked: a placement asked with other collisions is refused
+		assertReportCollisions({
+			report: params.report,
+			collisions: resolveIedCollisions({
+				collisions: params.collisions,
+				placementIdentity: policy.placementIdentity,
+			}),
+		})
 		const placed = await instantiateIed(tx, {
 			sourceQuery,
 			iedRef,
@@ -145,6 +157,12 @@ export async function ied(
 			fileType,
 			scenario,
 			keepNameTypesFrom: params.keepNameTypesFrom,
+			collisions: params.collisions,
+			// the decisions name the IED only: what the specification's groups give is not read here
+			overrides: collisionOverrides({
+				groups: firstTimeGroups(params.report, {}).filter(isIedGroup),
+				decisions: params.decisions ?? new Map(),
+			}),
 		})
 		return [{ ref: placed.iedRef, placement: 'placed' }]
 	}
@@ -256,4 +274,9 @@ export async function reconcileIed(
 		})
 	}
 	return [{ ref: instanceRef, placement: 'reconciled' }]
+}
+
+/** Whether a group is the placed IED's own, the one its name is decided in. */
+function isIedGroup(group: DecisionGroup): boolean {
+	return group.primary.tagName === 'IED'
 }

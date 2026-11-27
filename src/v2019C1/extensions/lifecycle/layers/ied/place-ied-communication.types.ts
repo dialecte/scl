@@ -15,11 +15,6 @@ export type IedCommunicationParams = {
 	placeholderLineages?: PlaceholderLineages
 	/** The source elements an IED of the project stands for, on an update: a connection to one names the project's. */
 	redirectMappings?: readonly RedirectMapping[]
-	/**
-	 * An update: a subnetwork of the source landing on one of the project contributes its connections only, its
-	 * settings are the project's (shared by every IED on it).
-	 */
-	keepsSubNetworkSettings?: boolean
 }
 
 export type ReadCommunicationOfParams = {

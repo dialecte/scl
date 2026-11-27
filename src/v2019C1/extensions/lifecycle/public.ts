@@ -36,6 +36,7 @@ export type {
 export type {
 	AfterApplyHook,
 	BoundLogicalNodeTypes,
+	IedCollisions,
 	ReferencesByName,
 	SharedFunctions,
 	LifecycleApplyParams,

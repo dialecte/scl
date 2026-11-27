@@ -238,6 +238,23 @@ export const SCL_ERRORS = defineErrors({
 		message: 'The IED is not tied to an LNode the extract writes',
 	},
 	/**
+	 * A first placement of an IED with `collisions: 'refuse'` under a name another IED of the project holds: the name
+	 * the consumer chose, or the file's when it chose none. Nothing is written. `meta: { name }`.
+	 */
+	IED_NAME_TAKEN: {
+		code: 'SCL2018',
+		message: 'Another IED of the project holds this name',
+	},
+	/**
+	 * A first placement of an IED under a name no placed IED may take: one the IED name type refuses (empty, the reserved
+	 * `None`, a pattern it breaks), or, with `collisions: 'refuse'`, the type name `TEMPLATE`. Nothing is written.
+	 * `meta: { name, issue }`, `issue` the step of the IED name type that refused it, or `template`.
+	 */
+	IED_NAME_INVALID: {
+		code: 'SCL2019',
+		message: 'This name is no name for a placed IED',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */

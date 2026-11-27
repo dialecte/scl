@@ -6,10 +6,12 @@ import { toRef } from '@dialecte/core/helpers'
 import { assembleReport, diff } from '@/v2019C1/extensions/lifecycle/engine/diff'
 import { withUpdateHolds } from '@/v2019C1/extensions/lifecycle/engine/reference-retargets'
 import { readFileCommunications } from '@/v2019C1/extensions/lifecycle/layers/ied/file-communication'
+import { withNameClaim } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-name-collision'
 import { readInstanceRedirects } from '@/v2019C1/extensions/lifecycle/layers/ied/instance-redirects'
 import { linkSpecificationBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/link-specification-bindings'
 import { markOtherIedBindings } from '@/v2019C1/extensions/lifecycle/layers/ied/mark-other-ied-bindings'
 import { describeIedCommunication } from '@/v2019C1/extensions/lifecycle/layers/ied/place-ied-communication'
+import { readProcessSectionWarning } from '@/v2019C1/extensions/lifecycle/layers/ied/process-section-warning'
 import { readIedSpecification } from '@/v2019C1/extensions/lifecycle/layers/ied/read-ied-specification'
 import { resolveIedScenario } from '@/v2019C1/extensions/lifecycle/layers/ied/resolve-ied-instance'
 import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
@@ -44,7 +46,9 @@ import type { AnyTrackedRecord } from '@dialecte/core'
  * A first placement: one instance with no root in the project, every element of the IED added, on the fast track
  * (`needsDecisions: false`), and what its Communication part adds to the project's (its access points' `ConnectedAP`s,
  * a subnetwork the project lacks) as companions of the IED's group, as `apply` writes them. An IED name the project
- * already holds does not change the track. The specification an ISD carries beside its IED (a substation section) is
+ * already holds does not change the track, unless the placement refuses a taken name (`collisions: 'refuse'`, the
+ * default of a fork): its group then waits for a name (`requiresDecision: 'name-taken'`, `needsName`) and the report
+ * needs decisions. A file other than an ISD holding a process part warns `process-section-not-placed`. The specification an ISD carries beside its IED (a substation section) is
  * reported as `report.ssd` reports a first placement of a substation scope, its instances after the IED's. An update
  * reports the IED's specification with it, as `report.ssd` reports an update of a substation scope.
  *
@@ -97,15 +101,28 @@ async function reportIedPlacement(
 		placeholderLineages: params.placeholderLineages,
 	})
 	const instanceDiff = withCompanion({ instanceDiff: iedDiff, iedRef, companion: communication })
-	const reportInstance = await buildReportInstance(query, {
+	const built = await buildReportInstance(query, {
 		instanceDiff,
 		instance: undefined,
 		sourceQuery,
 		sourceRef: iedRef,
 	})
-	// an ISD carries the specification of its IED; another file's substation section is no part of the placement
-	if (fileType !== 'ISD')
-		return assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+	// a name the project holds waits for one when the placement asks for it
+	const reportInstance = await withNameClaim(query, {
+		reportInstance: built,
+		sourceQuery,
+		iedRef,
+		anchor: params.anchor,
+		collisions: params.collisions,
+		placementIdentity: scenarioPolicy({ scenario }).placementIdentity,
+	})
+	// an ISD carries the specification of its IED; another file's process part is no part of the placement
+	if (fileType !== 'ISD') {
+		const report = assembleReport({ instances: [reportInstance], templateRoots: [reportInstance] })
+		const warning = await readProcessSectionWarning(sourceQuery, { fileType })
+		const warned = warning ? { ...report, warnings: [...(report.warnings ?? []), warning] } : report
+		return withNameDecision(warned)
+	}
 	// the specification beside the IED: a first placement, whatever a placement made earlier left in the project
 	const specification = await reportSsd(query, {
 		sourceQuery,
@@ -116,7 +133,17 @@ async function reportIedPlacement(
 		diffPolicy: params.diffPolicy,
 		placeholderLineages: params.placeholderLineages,
 	})
-	return withSpecification({ reportInstance, communicationInstances: [], specification })
+	return withNameDecision(
+		withSpecification({ reportInstance, communicationInstances: [], specification }),
+	)
+}
+
+/** A first placement waiting for a name is no longer on the fast track: the consumer decides it. */
+function withNameDecision(report: DiffReport): DiffReport {
+	const waits = report.instances.some((instance) =>
+		instance.groups.some((group) => group.requiresDecision === 'name-taken'),
+	)
+	return waits ? { ...report, needsDecisions: true } : report
 }
 
 /**
@@ -194,7 +221,6 @@ async function reportIedUpdate(
 				diffPolicy: params.diffPolicy,
 				placeholderLineages: params.placeholderLineages,
 				redirectMappings,
-				keepsSubNetworkSettings: policy.subNetworkSettings === 'project',
 			})
 	const instanceDiff = withCompanion({ instanceDiff: iedDiff, iedRef, companion: communication })
 	const reportInstance = await buildReportInstance(query, {

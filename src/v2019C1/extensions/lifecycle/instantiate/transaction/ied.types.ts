@@ -1,6 +1,9 @@
 import type { Config, Scl } from '@/v2019C1/config'
 import type { KeepNameTypesFrom } from '@/v2019C1/extensions/data-model/transaction'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	IedCollisions,
+	LifecycleScenario,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { CollisionOverrides } from '@/v2019C1/extensions/lifecycle/engine/decide.types'
 import type { PlaceholderLineages } from '@/v2019C1/extensions/lifecycle/engine/placeholder-lineages.types'
 import type { DecisionMappings } from '@/v2019C1/extensions/lifecycle/mapping'
@@ -34,6 +37,12 @@ export type IedParams = {
 	decisionMappings?: DecisionMappings
 	/** The source elements of the specification the consumer left out (record ids). */
 	leftOut?: ReadonlySet<string>
+	/**
+	 * What a name another IED of the project holds does: `number` (the default of a placement stamping the template's
+	 * identity) gives the next free name, `refuse` (the default of a fork) refuses it with `IED_NAME_TAKEN`, the name
+	 * chosen in `overrides` included, before anything is written.
+	 */
+	collisions?: IedCollisions
 }
 
 export type CloneSpecificationParams = IedParams & {
