@@ -41,3 +41,26 @@ export type ResolveIedCollisionsParams = {
 	collisions: IedCollisions | undefined
 	placementIdentity: ScenarioPolicy['placementIdentity']
 }
+
+export type AssertPlacedIedNameParams = IedNameClaimParams & {
+	/** Whether the name is the one the consumer chose (checked against the IED name type), not the source IED's. */
+	chosen: boolean
+	/** What the placement does with a taken name, resolved. */
+	collisions: IedCollisions
+}
+
+/** Why a placement asks for a name, and the name it proposes. */
+export type AskedName = { reason: 'name-taken' | 'name-template'; proposal: string }
+
+export type AskedNameParams = {
+	anchor: Scl.Ref<'SCL'>
+	name: string
+	/** The name's claim, already read. */
+	claim: IedNameClaim
+}
+
+export type RefuseIedNameParams = {
+	name: string
+	/** The step of the IED name type that refused it, or `template`. */
+	issue: string
+}

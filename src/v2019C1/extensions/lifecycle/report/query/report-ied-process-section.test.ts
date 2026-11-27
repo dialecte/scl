@@ -1,18 +1,17 @@
 import vendorIcdOf2003 from '../../apply/fixtures/icd-p1-of-the-2003-edition-with-a-process-of-one-lnode.xml?raw'
 import vendorIcd from '../../apply/fixtures/icd-p1-of-the-2007-b-4-edition-on-w1-with-its-own-subnetwork-settings.xml?raw'
+import vendorIcdWithLine from '../../apply/fixtures/icd-p1-of-the-current-edition-with-a-line-of-three-lnodes.xml?raw'
 import vendorIcdWithProcess from '../../apply/fixtures/icd-p1-stating-its-original-edition-with-a-substation-of-two-lnodes.xml?raw'
 import projectOnBareW1 from '../../apply/fixtures/project-on-w1-without-settings.xml?raw'
+import { importSource, onlyIed, projectRoot } from '../../apply/ied-placement-test-steps'
 import isdTemplate from '../../integration/ied/fixtures/isd-template-of-a-bay-controller.xml?raw'
 
 import { describe, expect } from 'vitest'
 
-import { readAttribute } from '@/v2019C1/helpers'
 import { runSclTestCases } from '@/v2019C1/test'
 
-import type { Config, Scl } from '@/v2019C1/config'
 import type { ReportWarning } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
-import type * as Core from '@dialecte/core'
 
 type WarningCase = SclTest.BaseXmlTestCase & {
 	sourceFileName: string
@@ -36,6 +35,13 @@ describe('query.lifecycle.report - a device file whose process part is not place
 			targetXml: projectOnBareW1,
 			sourceFileName: 'P1.icd',
 			expected: [{ code: 'process-section-not-placed', fileType: 'ICD', lnodes: 1 }],
+		},
+		// vendorIcdWithLine: the current edition, a Line TEMPLATE holding three LNodes
+		'the vendor ICD with a line of three LNodes → one warning, three LNodes': {
+			sourceXml: vendorIcdWithLine,
+			targetXml: projectOnBareW1,
+			sourceFileName: 'P1.icd',
+			expected: [{ code: 'process-section-not-placed', fileType: 'ICD', lnodes: 3 }],
 		},
 		// isdTemplate: the bay controller's template ISD, its substation section its specification (placed with it)
 		'a template ISD with a substation section → no warning': {
@@ -71,28 +77,3 @@ describe('query.lifecycle.report - a device file whose process part is not place
 
 	runSclTestCases.withoutExport({ testCases, act })
 })
-
-/** A source file imported into the test project, by name, as a read query. */
-async function importSource(params: {
-	project: SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
-	xml: string
-	fileName: string
-}): Promise<Core.Query<Config>> {
-	const { project, xml, fileName } = params
-	const imported = await project.importFile(new File([xml], fileName, { type: 'text/xml' }))
-	return project.openDocument(imported.documentId).query
-}
-
-/** The first IED of a source file. */
-async function onlyIed(params: { sourceQuery: Core.Query<Config> }): Promise<Scl.Ref<'IED'>> {
-	const [ied] = await params.sourceQuery.getRecordsByTagName('IED')
-	if (!ied || !readAttribute({ record: ied, name: 'name' }))
-		throw new Error('the source holds no IED')
-	return { tagName: 'IED', id: ied.id }
-}
-
-/** The root of the project the IED is placed under. */
-async function projectRoot(query: Core.Query<Config>): Promise<Scl.Ref<'SCL'>> {
-	const root = await query.getRoot()
-	return { tagName: 'SCL', id: root.id }
-}

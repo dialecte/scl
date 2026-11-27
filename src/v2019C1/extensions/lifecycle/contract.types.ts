@@ -146,7 +146,8 @@ export type LifecycleVerbTarget =
 /**
  * What a first placement of an IED does with a name the project already holds: `number` writes the next free name;
  * `refuse` makes the IED's group wait for a name (`requiresDecision: 'name-taken'`, `needsName` proposing the name
- * numbering would write), and the apply refuses a name the project holds with `IED_NAME_TAKEN`.
+ * numbering would write), and the apply refuses a name the project holds with `IED_NAME_TAKEN`. Under `refuse` the type
+ * name `TEMPLATE` asks for a name too (`requiresDecision: 'name-template'`), refused unnamed with `IED_NAME_INVALID`.
  */
 export type IedCollisions = 'number' | 'refuse'
 

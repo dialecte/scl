@@ -5,7 +5,7 @@ import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cut
 import { REAL_DEVICE_FILE_TYPES } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.constants'
 import { assertIedPlacementOffered } from '@/v2019C1/extensions/lifecycle/layers/ied/assert-ied-placement'
 import {
-	assertIedNameFree,
+	assertPlacedIedName,
 	readPlacedIedName,
 	resolveIedCollisions,
 } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-name-collision'
@@ -134,7 +134,10 @@ export async function placeIed(
 	return { iedRef: placed, cloneMappings }
 }
 
-/** Refuse a taken name, before anything is written, when the placement refuses one (`collisions`). */
+/**
+ * Refuse, before anything is written, a name the IED cannot be placed under: one the consumer chose that is no IED name,
+ * and, when the placement refuses a taken name (`collisions`), `TEMPLATE` or a name the project holds.
+ */
 async function assertPlacedNameAllowed(
 	tx: Core.Transaction<Config>,
 	params: CloneSpecificationParams,
@@ -144,13 +147,9 @@ async function assertPlacedNameAllowed(
 		collisions: params.collisions,
 		placementIdentity: policy.placementIdentity,
 	})
-	if (collisions !== 'refuse') return
-	const name = await readPlacedIedName({
-		sourceQuery,
-		iedRef,
-		chosen: overrides?.get(iedRef.id)?.name,
-	})
-	await assertIedNameFree(tx, { anchor, name })
+	const chosen = overrides?.get(iedRef.id)?.name
+	const name = await readPlacedIedName({ sourceQuery, iedRef, chosen })
+	await assertPlacedIedName(tx, { anchor, name, chosen: Boolean(chosen), collisions })
 }
 
 /**

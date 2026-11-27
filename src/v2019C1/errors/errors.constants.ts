@@ -246,6 +246,15 @@ export const SCL_ERRORS = defineErrors({
 		message: 'Another IED of the project holds this name',
 	},
 	/**
+	 * A first placement of an IED under a name no placed IED may take: one the IED name type refuses (empty, the reserved
+	 * `None`, a pattern it breaks), or, with `collisions: 'refuse'`, the type name `TEMPLATE`. Nothing is written.
+	 * `meta: { name, issue }`, `issue` the step of the IED name type that refused it, or `template`.
+	 */
+	IED_NAME_INVALID: {
+		code: 'SCL2019',
+		message: 'This name is no name for a placed IED',
+	},
+	/**
 	 * A signal linked to an element it cannot be implemented by (a `SourceRef` to an `ExtCtrl`).
 	 * `meta: { signal: { tagName, id }, implementation: { tagName, id } }`
 	 */

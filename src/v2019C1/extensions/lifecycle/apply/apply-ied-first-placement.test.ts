@@ -8,17 +8,18 @@ import isdInstanceOnStationBusWithBitRate from './fixtures/isd-instance-of-bcu1-
 import projectOnW1WithSettings from './fixtures/project-on-w1-with-its-own-bit-rate-and-text.xml?raw'
 import projectOnBareW1 from './fixtures/project-on-w1-without-settings.xml?raw'
 import projectOnStationBusWithoutBitRate from './fixtures/project-west-on-a-station-bus-without-a-bit-rate.xml?raw'
+import { importSource, onlyIed, projectRoot } from './ied-placement-test-steps'
 
 import { describe, expect } from 'vitest'
 
-import { readAttribute } from '@/v2019C1/helpers'
 import { runSclTestCases } from '@/v2019C1/test'
 
-import type { Config, Scl } from '@/v2019C1/config'
-import type { LifecycleScenario } from '@/v2019C1/extensions/lifecycle/contract.types'
+import type {
+	IedCollisions,
+	LifecycleScenario,
+} from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DiffReport } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
-import type * as Core from '@dialecte/core'
 
 /** A vendor ICD of the first edition: its root states no version (inline: a first-edition file is no fixture file). */
 const vendorIcdOfFirstEdition = /* xml */ `
@@ -54,6 +55,7 @@ const FIRST_EDITION_ICD = 'a vendor ICD of the first edition, its root stating n
 type PlacementCase = SclTest.BaseXmlTestCase & {
 	sourceFileName: string
 	scenario?: LifecycleScenario
+	collisions?: IedCollisions
 }
 
 // A first placement joining a subnetwork the project holds brings its connections only: the subnetwork's own settings
@@ -199,6 +201,8 @@ describe('tx.lifecycle.apply - the source file a first placement of an IED recor
 				targetXml: projectOnBareW1,
 				sourceFileName: 'P1.icd',
 				scenario: 'fork',
+				// a fork keeping the name TEMPLATE asks for one by default: numbering keeps it here
+				collisions: 'number',
 				expectedQueries: [
 					'/default:SCL/default:IED[@name="TEMPLATE"][not(@templateUuid)]/default:IEDSourceFiles/default:SclFileReference[@fileType="ICD"][@fileUuid="a1000000-0000-4000-8000-000000000001"]',
 				],
@@ -299,7 +303,14 @@ async function placeAndCheckReport({
 	})
 	const ref = await onlyIed({ sourceQuery })
 	const anchor = await projectRoot(target.query)
-	const lifecycle = { verb: 'ied', sourceQuery, ref, anchor, scenario: testCase.scenario } as const
+	const lifecycle = {
+		verb: 'ied',
+		sourceQuery,
+		ref,
+		anchor,
+		scenario: testCase.scenario,
+		collisions: testCase.collisions,
+	} as const
 	const report = await target.query.lifecycle.report(lifecycle)
 	await target.transaction(async function applyIed(tx) {
 		await tx.lifecycle.apply({ ...lifecycle, report })
@@ -317,29 +328,4 @@ function settingsListed(report: DiffReport): string[] {
 			(node) => node.change === 'added' && ['BitRate', 'Text', 'Private'].includes(node.tagName),
 		)
 		.map((node) => node.tagName)
-}
-
-/** A source file imported into the test project, by name, as a read query. */
-async function importSource(params: {
-	project: SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
-	xml: string
-	fileName: string
-}): Promise<Core.Query<Config>> {
-	const { project, xml, fileName } = params
-	const imported = await project.importFile(new File([xml], fileName, { type: 'text/xml' }))
-	return project.openDocument(imported.documentId).query
-}
-
-/** The first IED of a source file. */
-async function onlyIed(params: { sourceQuery: Core.Query<Config> }): Promise<Scl.Ref<'IED'>> {
-	const [ied] = await params.sourceQuery.getRecordsByTagName('IED')
-	if (!ied || !readAttribute({ record: ied, name: 'name' }))
-		throw new Error('the source holds no IED')
-	return { tagName: 'IED', id: ied.id }
-}
-
-/** The root of the project the IED is placed under. */
-async function projectRoot(query: Core.Query<Config>): Promise<Scl.Ref<'SCL'>> {
-	const root = await query.getRoot()
-	return { tagName: 'SCL', id: root.id }
 }

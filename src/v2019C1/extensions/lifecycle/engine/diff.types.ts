@@ -1,5 +1,5 @@
 import type { EditableAttribute, IdentityCollision } from '../constraints'
-import type { LifecycleScenario, LifecycleVerb } from '../contract.types'
+import type { IedCollisions, LifecycleScenario, LifecycleVerb } from '../contract.types'
 import type { OffLevel } from '../layers/topology/resolve-primary-placement.types'
 import type { ReportMapping } from '../mapping/mapping.types'
 import type { ReferenceOutsideScope } from './contribution-scope.types'
@@ -50,7 +50,9 @@ export type KeptTextChange = TextChange & { reason: KeptAttributeReason }
  * - `changes-another-ied`: accepting the group, in an IED update, changes another IED (`report.otherIedImpacts` lists
  *   what); accepted, it is written with that change, skipped, the other IED stays as it is;
  * - `name-taken`: a first placement of an IED with `collisions: 'refuse'` whose name another IED of the project holds;
- *   accepted with a free name (`values.name`), placed under it; skipped, nothing is placed (`needsName` proposes one).
+ *   accepted with a free name (`values.name`), placed under it; skipped, nothing is placed (`needsName` proposes one);
+ * - `name-template`: a first placement of an IED with `collisions: 'refuse'` named `TEMPLATE`, the name of an IED type
+ *   not bound to a place in the project: decided as `name-taken` (`needsName` proposes a numbered name).
  */
 export type DecisionRequiredReason =
 	| 'value-outside-enumeration'
@@ -58,6 +60,7 @@ export type DecisionRequiredReason =
 	| 'unbinds-another-ied'
 	| 'changes-another-ied'
 	| 'name-taken'
+	| 'name-template'
 
 /**
  * One element's attributes compared: the changes an accepted update writes, its type references naming a type of other
@@ -264,8 +267,9 @@ export type DecisionGroup = {
 	 */
 	requiresDecision?: DecisionRequiredReason
 	/**
-	 * A first placement of an IED asking for a name (`requiresDecision: 'name-taken'`): the name the project holds
-	 * (`taken`) and the one numbering would write (`proposal`), so every consumer offers the same proposal.
+	 * A first placement of an IED asking for a name (`requiresDecision: 'name-taken'` or `'name-template'`): the name it
+	 * cannot keep (`taken`: one the project holds, or `TEMPLATE`) and the one numbering would write (`proposal`), so every
+	 * consumer offers the same proposal.
 	 */
 	needsName?: { taken: string; proposal: string }
 	/**
@@ -396,6 +400,8 @@ export type ReportTarget = {
 	targetInstance?: ReportedElement
 	/** The type of file the source is (`.isd`, `.icd`, `.iid`, or `.scd`, `.xml` and none for an SCD): an IED's report only. */
 	fileType?: SclFileType
+	/** What a first placement does with a taken name, asked or the scenario's default: an IED's report only. */
+	collisions?: IedCollisions
 }
 
 /** What a report applied to another target differs on first: `report` when it carries no target. */

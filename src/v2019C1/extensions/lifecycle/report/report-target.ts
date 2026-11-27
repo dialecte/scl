@@ -1,5 +1,7 @@
 import { IED_SOURCE_EXTENSIONS } from './report-target.constants'
 
+import { resolveIedCollisions } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-name-collision'
+import { scenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy'
 import { readSourceFileType } from '@/v2019C1/extensions/lifecycle/source-file-type'
 
 import type { Config } from '@/v2019C1/config'
@@ -15,7 +17,8 @@ import type { AnyRefOrRecord } from '@dialecte/core'
 /**
  * The target a report is made for, read from the target it is asked for and the documents: what `apply` compares the
  * report with. The operation is `template` when none is asked for. For an IED, the type of file the source is, read from
- * its extension: an extension no IED is placed from is refused with `OPTION_NOT_AVAILABLE`.
+ * its extension: an extension no IED is placed from is refused with `OPTION_NOT_AVAILABLE`, and what a first placement does
+ * with a taken name, asked or the scenario's default.
  */
 export async function reportTargetOf(
 	query: Core.Query<Config>,
@@ -24,15 +27,24 @@ export async function reportTargetOf(
 	const { id: document } = await query.getDocumentInfo()
 	const { id: source } = await target.sourceQuery.getDocumentInfo()
 	const fileType = target.verb === 'ied' ? await iedSourceFileType(target.sourceQuery) : undefined
+	const scenario = target.scenario ?? 'template'
+	const collisions =
+		target.verb === 'ied'
+			? resolveIedCollisions({
+					collisions: target.collisions,
+					placementIdentity: scenarioPolicy({ scenario }).placementIdentity,
+				})
+			: undefined
 	return {
 		document,
 		source,
 		verb: target.verb,
 		ref: reportedElement(target.ref),
 		anchor: reportedElement(target.anchor),
-		scenario: target.scenario ?? 'template',
+		scenario,
 		...(target.targetInstance ? { targetInstance: reportedElement(target.targetInstance) } : {}),
 		...(fileType ? { fileType } : {}),
+		...(collisions ? { collisions } : {}),
 	}
 }
 

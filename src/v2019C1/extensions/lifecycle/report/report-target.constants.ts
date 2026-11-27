@@ -11,6 +11,7 @@ const REPORT_TARGET_FIELD_ORDER = {
 	scenario: true,
 	targetInstance: true,
 	fileType: true,
+	collisions: true,
 } as const satisfies Record<keyof ReportTarget, true>
 
 /** The fields of a report's target, in the order a report applied to another target is told apart. */

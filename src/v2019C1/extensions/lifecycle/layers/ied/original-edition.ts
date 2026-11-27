@@ -1,10 +1,9 @@
-import { EDITION_WITHOUT_REVISION } from './original-edition.constants'
-
 import { REAL_DEVICE_FILE_TYPES } from '@/v2019C1/extensions/lifecycle/ied/classify-ieds.constants'
 import {
 	isPreviousEdition,
 	readSclEdition,
 } from '@/v2019C1/extensions/reference/transaction/source-file-edition'
+import { FIRST_EDITION } from '@/v2019C1/extensions/reference/transaction/source-file-edition.constants'
 import { readAttribute } from '@/v2019C1/helpers'
 
 import type { FillOriginalEditionParams, OriginalEdition } from './original-edition.types'
@@ -29,17 +28,21 @@ export async function fillOriginalEdition(
 	if (!record || readAttribute({ record, name: 'originalSclVersion', defaults: 'none' })) return
 	const sourceRoot = await sourceQuery.getRoot()
 	const edition = readSclEdition(sourceRoot)
+	// a file of an edition before the current one (2007 C 5) is upgraded on import (6-amd.md:785, I.4.3.3 at
+	// 6-amd.md:3093-3101); a 2007 C file of a release below 5 is ordered before it too, the release being part of the
+	// edition the attributes state
 	if (!isPreviousEdition(edition)) return
 	await tx.update(placed, { attributes: originalEditionOf(edition) })
 }
 
 /**
  * The original edition an IED placed from a file of this edition records when it states none: the file's version,
- * revision and release, no revision for a 2003 file.
+ * revision and release (each states the original file's, 6-amd.md:785), no revision for a 2003 file (I.4.3.3,
+ * 6-amd.md:3099).
  */
 function originalEditionOf(edition: SclEdition): OriginalEdition {
 	const { version, revision, release } = edition
-	if (version === EDITION_WITHOUT_REVISION) return { originalSclVersion: version }
+	if (version === FIRST_EDITION.version) return { originalSclVersion: version }
 	return {
 		...(version ? { originalSclVersion: version } : {}),
 		...(revision ? { originalSclRevision: revision } : {}),

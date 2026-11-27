@@ -3,21 +3,19 @@ import vendorIcd from './fixtures/icd-p1-of-the-2007-b-4-edition-on-w1-with-its-
 import projectHoldingTemplate from './fixtures/project-holding-ieds-template-and-template-1.xml?raw'
 import projectOnBareW1 from './fixtures/project-on-w1-without-settings.xml?raw'
 import projectWithAnotherBcu1 from './fixtures/project-west-with-another-bcu1.xml?raw'
+import { importSource, onlyIed, projectRoot } from './ied-placement-test-steps'
 
 import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
-import { readAttribute } from '@/v2019C1/helpers'
 import { runSclTestCases } from '@/v2019C1/test'
 
-import type { Config, Scl } from '@/v2019C1/config'
 import type {
 	IedCollisions,
 	LifecycleScenario,
 } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { DecisionGroup, GroupDecision } from '@/v2019C1/extensions/lifecycle/engine/diff.types'
 import type { SclTest } from '@/v2019C1/test'
-import type * as Core from '@dialecte/core'
 
 type CollisionCase = SclTest.BaseXmlTestCase & {
 	sourceFileName: string
@@ -126,17 +124,21 @@ describe('tx.lifecycle.apply - the name of a placed IED the project holds', () =
 				],
 			},
 		// vendorIcd: 2007 B 4, no uuid, Header without one, IED TEMPLATE (ACME P1, no original edition) on W1 with the vendor's bit rate 10, text and private data
-		'the vendor ICD, collisions refuse, its name free → no decision, placed as TEMPLATE': {
-			sourceXml: vendorIcd,
-			targetXml: projectOnBareW1,
-			sourceFileName: 'P1.icd',
-			collisions: 'refuse',
-			expectedGroup: {},
-			decision: 'accept',
-			expectedQueries: [
-				'/default:SCL[count(default:IED)=2]/default:IED[@name="TEMPLATE"][@manufacturer="ACME"]',
-			],
-		},
+		'the vendor ICD, collisions refuse, its name TEMPLATE free → the report asks for a name proposing TEMPLATE_1, placed as BAY1_P1':
+			{
+				sourceXml: vendorIcd,
+				targetXml: projectOnBareW1,
+				sourceFileName: 'P1.icd',
+				collisions: 'refuse',
+				decision: { action: 'accept', values: { name: 'BAY1_P1' } },
+				expectedGroup: {
+					requiresDecision: 'name-template',
+					needsName: { taken: 'TEMPLATE', proposal: 'TEMPLATE_1' },
+				},
+				expectedQueries: [
+					'/default:SCL[count(default:IED)=2]/default:IED[@name="BAY1_P1"][@manufacturer="ACME"]',
+				],
+			},
 	}
 
 	async function act({
@@ -315,28 +317,3 @@ describe('tx.lifecycle.update.ied - a fork placement whose IED name the project 
 
 	runSclTestCases.withExport({ testCases, act })
 })
-
-/** A source file imported into the test project, by name, as a read query. */
-async function importSource(params: {
-	project: SclTest.ActParams<SclTest.BaseXmlTestCase>['project']
-	xml: string
-	fileName: string
-}): Promise<Core.Query<Config>> {
-	const { project, xml, fileName } = params
-	const imported = await project.importFile(new File([xml], fileName, { type: 'text/xml' }))
-	return project.openDocument(imported.documentId).query
-}
-
-/** The first IED of a source file. */
-async function onlyIed(params: { sourceQuery: Core.Query<Config> }): Promise<Scl.Ref<'IED'>> {
-	const [ied] = await params.sourceQuery.getRecordsByTagName('IED')
-	if (!ied || !readAttribute({ record: ied, name: 'name' }))
-		throw new Error('the source holds no IED')
-	return { tagName: 'IED', id: ied.id }
-}
-
-/** The root of the project the IED is placed under. */
-async function projectRoot(query: Core.Query<Config>): Promise<Scl.Ref<'SCL'>> {
-	const root = await query.getRoot()
-	return { tagName: 'SCL', id: root.id }
-}

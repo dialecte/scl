@@ -63,13 +63,20 @@ finds nothing left to change.
 
 ### An IED — `verb: 'ied'`
 
-`report({ verb: 'ied', sourceQuery, ref, anchor, targetInstance? })` answers what placing the IED `ref` of a source file
+`report({ verb: 'ied', sourceQuery, ref, anchor, targetInstance?, collisions? })` answers what placing the IED `ref` of a source file
 in the project would add, or what a newer revision of its template changes in the IED of the project placed from it,
 `anchor` being the project's `SCL` root.
 
 **First placement.** When the project holds no IED placed from it (or `scenario: 'instantiate'`): one instance with no
 root in the project (`rootRef` undefined), every element of the IED `added` — the `IEDSourceFiles` of an ISD among
-them —, on the fast track (`needsDecisions: false`), even when the project holds another IED of the same name. What its
+them —, on the fast track (`needsDecisions: false`) when the IED's name may be placed: numbered where another IED of the
+project holds it (`collisions: 'number'`, the default of a placement stamping the template's identity). With
+`collisions: 'refuse'` (the default of a fork), a name another IED holds puts the IED's group on the full track
+(`requiresDecision: 'name-taken'`, `needsName: { taken, proposal }`, the proposal being the name numbering would write),
+and so does the type name `TEMPLATE` (`requiresDecision: 'name-template'`, the first numbered name free proposed): the
+apply places the IED under the name the decision gives (`values.name`), refusing a name the project holds
+(`IED_NAME_TAKEN`) or no IED may take (`IED_NAME_INVALID`). The report records the collisions it was made with
+(`report.target.collisions`): an apply asking for others is refused (`REPORT_TARGET_MISMATCH`). What its
 access points' `ConnectedAP`s add to the project's `Communication` rides the IED's group as companions (see
 [`instantiate.ied`](./instantiate#ied)). The specification the file carries beside its IED (its substation section)
 follows, reported as an SSD's first placement: where each level lands (`report.mappings`, a level the project holds
@@ -465,7 +472,17 @@ type DecisionGroup = {
 
 // 'value-outside-enumeration': the project's value of an IED is no longer one its type allows
 // 'names-deleted-data': a reference names data the update deletes
-type DecisionRequiredReason = 'value-outside-enumeration' | 'names-deleted-data'
+// 'unbinds-another-ied': the removal deletes an LNode the project bound to another IED
+// 'changes-another-ied': accepting the group changes another IED (report.otherIedImpacts)
+// 'name-taken': a first placement refusing a taken IED name, whose name another IED holds
+// 'name-template': a first placement refusing a taken IED name, named TEMPLATE
+type DecisionRequiredReason =
+	| 'value-outside-enumeration'
+	| 'names-deleted-data'
+	| 'unbinds-another-ied'
+	| 'changes-another-ied'
+	| 'name-taken'
+	| 'name-template'
 
 type RemovalSideEffect = { element: { tagName: string; id: string }; effect: 'deleted' | 'cleared' }
 
@@ -799,7 +816,8 @@ The engine always **owns uniqueness**, in one format: a taken value is numbered 
 and a value that already ends with a number gets the next free one instead of a second number (`Prot_1`
 taken → `Prot_2`, never `Prot_1_1`). A `values` override lets the user set an editable field (typically
 `name`): the user's value is applied first, then uniqueness is re-ensured — a user name that itself
-collides is still numbered. Only attributes listed in the group's `editableAttributes` are honoured.
+collides is still numbered, except the name of an IED placed with `collisions: 'refuse'`, refused instead
+(`IED_NAME_TAKEN`). Only attributes listed in the group's `editableAttributes` are honoured.
 
 Which values must be unique is read from the uniqueness rules of the schema (the identity constraints of
 the parent's definition, read with `query.getDefinition`), as the schema writes them:

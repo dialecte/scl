@@ -1,3 +1,5 @@
+import { SCL_DIALECTE_CONFIG } from '@/v2019C1/config'
+
 import type { IedCollisions } from '@/v2019C1/extensions/lifecycle/contract.types'
 import type { ScenarioPolicy } from '@/v2019C1/extensions/lifecycle/scenario-policy.types'
 
@@ -16,3 +18,9 @@ export const DEFAULT_IED_COLLISIONS: Readonly<
 
 /** The attribute an IED is named by under the project root. */
 export const IED_NAME_ATTRIBUTE = 'name'
+
+/** The IED name type (`tIEDName`): what a name chosen for a placed IED is checked against. */
+export const IED_NAME_TYPE = SCL_DIALECTE_CONFIG.definition.IED.attributes.details.name.type
+
+/** The suffix of the first numbered name, the engine's numbering: `TEMPLATE` proposed as `TEMPLATE_1`. */
+export const FIRST_NUMBER_SUFFIX = '_1'
