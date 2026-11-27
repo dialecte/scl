@@ -8,14 +8,16 @@ const FIRST_EDITION_ROOT = XMLNS_SCL_NAMESPACE
 
 type EditionCase = {
 	sourceXml: string
+	targetXml?: string
 	editionOneRoot?: string
 	/** The message the call rejects with, absent when the project opens. */
 	expected: ReturnType<typeof expect.stringContaining> | undefined
 }
 
 // A given document states the SCL edition of its root, as every file of the current edition does: a root stating its
-// version states its revision and release too, always; a root stating no version is a first-edition file, refused unless the test says it is one on purpose (`editionOneRoot`, with the
-// reason). An opt-in on a root stating its version, or without a reason, is refused too.
+// version states its revision and release too, always; a root stating no version is a first-edition file, refused
+// unless the test says it is one on purpose (`editionOneRoot`, with the reason). An opt-in on a root stating its
+// version, or without a reason, is refused too.
 describe('createSclTestProject - the edition a given document states', () => {
 	const testCases: Record<string, EditionCase> = {
 		'a root stating version 2007 revision C release 5 → opens': {
@@ -58,6 +60,13 @@ describe('createSclTestProject - the edition a given document states', () => {
 					'the source document states SCL version 2007 but not its release',
 				),
 			},
+		'a target stating version and revision without release → refused, naming the target': {
+			sourceXml: /* xml */ `<SCL ${ALL_XMLNS_NAMESPACES}><Header id="h"/></SCL>`,
+			targetXml: /* xml */ `<SCL ${XMLNS_SCL_NAMESPACE} version="2007" revision="C"><Header id="t"/></SCL>`,
+			expected: expect.stringContaining(
+				'the target document states SCL version 2007 but not its release',
+			),
+		},
 		'a root stating no version, editionOneRoot empty → refused, no reason': {
 			sourceXml: /* xml */ `<SCL ${FIRST_EDITION_ROOT}><Header id="h"/></SCL>`,
 			editionOneRoot: '',
@@ -69,6 +78,7 @@ describe('createSclTestProject - the edition a given document states', () => {
 		it(title, async () => {
 			const opened = createSclTestProject({
 				sourceXml: testCase.sourceXml,
+				targetXml: testCase.targetXml,
 				editionOneRoot: testCase.editionOneRoot,
 			}).then(
 				() => undefined,

@@ -11,14 +11,18 @@ import type { QualifiedTag } from 'sax'
  * A document's root element, read from its start tag by a namespace-aware XML parser (the one core imports with): what
  * precedes the root (declaration, processing instructions, comments, document type) skipped, attribute values in either
  * quote, entities decoded, the prefixes resolved through the namespaces the root declares. The reading stops at the
- * root's start tag. `undefined` for a text holding no element; a text not well-formed before the root ends throws the
- * parser's error.
+ * root's start tag. `undefined` for a text holding no element; a text not well-formed up to the end of the root's
+ * start tag throws the parser's error.
  *
  * @intent read the root element of a fixture's XML text, its attributes and namespaces, without a full parse
  */
 export function readFixtureRoot(params: FixtureXmlParams): FixtureRoot | undefined {
 	const parser = sax.parser(true, { xmlns: true, position: false })
 	const read: { root?: FixtureRoot } = {}
+	// sax only records an error and reads on: refuse at once, so no text not well-formed is read as a root
+	parser.onerror = function refuse(error) {
+		throw error
+	}
 	parser.onopentag = function readRoot(tag) {
 		const { name, prefix, local, uri, attributes } = tag as QualifiedTag
 		read.root = { name, prefix, local, uri, attributes: Object.values(attributes) }
@@ -33,8 +37,8 @@ export function readFixtureRoot(params: FixtureXmlParams): FixtureRoot | undefin
 }
 
 /**
- * What a fixture's `SCL` root lacks of the SCL edition, as attributes of its own (unprefixed): `[]` when it states it
- * whole, `version` among them for a first-edition file. `undefined` for a text with no `SCL` root.
+ * What a fixture's `SCL` root lacks of the SCL edition, as attributes of its own (unprefixed), one written empty
+ * stating nothing (as the store guard reads it): `[]` when it states it whole, `version` among them for a first-edition file. `undefined` for a text with no `SCL` root.
  *
  * @intent tell what a fixture root lacks of the SCL edition, find a first-edition fixture or one stating its version only
  */
@@ -44,7 +48,8 @@ export function missingSclEdition(params: FixtureXmlParams): SclEditionAttribute
 	return missingSclEditionAttributes({
 		states: function statesOwn(name) {
 			return root.attributes.some(
-				(attribute) => attribute.prefix === '' && attribute.local === name,
+				(attribute) =>
+					attribute.prefix === '' && attribute.local === name && attribute.value !== '',
 			)
 		},
 	})

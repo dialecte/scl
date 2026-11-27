@@ -1,4 +1,4 @@
-import { missingSclEdition } from './fixture-root'
+import { missingSclEdition, readFixtureRoot } from './fixture-root'
 
 import { describe, expect, it } from 'vitest'
 
@@ -39,6 +39,10 @@ describe('missingSclEdition - the SCL edition a fixture root lacks', () => {
 			xml: `<SCL xmlns="${SCL_URI}" version="2007" revision="C"/>`,
 			expected: ['release'],
 		},
+		'a root writing its version empty → lacks the version': {
+			xml: `<SCL xmlns="${SCL_URI}" version="" revision="C" release="5"/>`,
+			expected: ['version'],
+		},
 		'no SCL root → nothing to say': {
 			xml: `<Other xmlns="urn:other"/>`,
 			expected: undefined,
@@ -47,6 +51,24 @@ describe('missingSclEdition - the SCL edition a fixture root lacks', () => {
 	for (const [title, testCase] of Object.entries(testCases)) {
 		it(title, () => {
 			expect(missingSclEdition({ xml: testCase.xml })).toEqual(testCase.expected)
+		})
+	}
+})
+
+// A text that is not well-formed up to the end of the root's start tag is refused with the parser's error, never read
+// as a root.
+describe('readFixtureRoot - a root not well-formed', () => {
+	const testCases: Record<string, { xml: string }> = {
+		'an unquoted attribute value → throws': { xml: `<SCL xmlns="${SCL_URI}" version=2007/>` },
+		'an attribute prefix bound to no namespace → throws': {
+			xml: `<SCL xmlns="${SCL_URI}" x:version="2007"/>`,
+		},
+		'a start tag left open → throws': { xml: `<SCL xmlns="${SCL_URI}" version="2007"` },
+		'text before the root → throws': { xml: `junk<SCL xmlns="${SCL_URI}" ${EDITION}/>` },
+	}
+	for (const [title, testCase] of Object.entries(testCases)) {
+		it(title, () => {
+			expect(() => readFixtureRoot({ xml: testCase.xml })).toThrow()
 		})
 	}
 })
