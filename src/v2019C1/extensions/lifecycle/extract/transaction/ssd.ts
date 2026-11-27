@@ -1,12 +1,12 @@
 import { readScopeInstanceContent } from './instance-content'
 import { postExtractionCleanup } from './post-extraction-cleanup'
-import { readImplementationUuids } from './read-implementation-uuids'
 import { satelliteWarnings } from './satellite-warnings'
 import { selectCarriedIeds } from './select-carried-ieds'
 import { ALL_BOUND_IEDS } from './ssd.constants'
 
 import { TEMPLATE_NAME } from '@/v2019C1/constants'
 import { importTypes } from '@/v2019C1/extensions/data-model/transaction'
+import { readImplementationTargetUuids } from '@/v2019C1/extensions/dataflow/query/read-implementation-target-uuids'
 import { history } from '@/v2019C1/extensions/history'
 import { cloneAppliedSatellites } from '@/v2019C1/extensions/lifecycle/cross-cutting/clone-applied-satellites'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
@@ -246,7 +246,13 @@ async function readCarriedIedSections(
 		ieds: selection.carried.map(({ ied, name }) => ({ ied, name })),
 		addresses,
 	})
-	const implementationUuids = await readImplementationUuids(sourceQuery)
+	// what an LNode may name in the source's IEDs, whatever its tag: only its presence is asked
+	const uuidsByTag = await readImplementationTargetUuids(sourceQuery)
+	const implementationUuids = new Set(
+		[...uuidsByTag.values()].flatMap(function tagUuids(uuids) {
+			return [...uuids]
+		}),
+	)
 	const incomplete: ExtractWarning[] =
 		fileType === 'SCD' && addresses === 'drop' ? [{ code: 'scd-incomplete' }] : []
 	return {

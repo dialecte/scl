@@ -1,16 +1,9 @@
-import {
-	IMPLEMENTATION_PAIRS_BY_REF,
-	IMPLEMENTATION_TARGET_TAGS,
-} from './orphan-lnode-bindings.constants'
-
 import { UNALLOCATED_IED_NAME } from '@/v2019C1/constants'
 import { isLNodeLocked } from '@/v2019C1/extensions/data-model/query'
 import { releaseLNodeBindings } from '@/v2019C1/extensions/data-model/transaction/release-lnode-binding'
-import { IED_SECTION_SELECT } from '@/v2019C1/extensions/dataflow/constants/ied-section.constants'
-import { nativeSectionNodesOf } from '@/v2019C1/extensions/dataflow/query/section-nodes'
-import { collectWithAncestry } from '@/v2019C1/extensions/reference/query/find/collect-with-ancestry'
+import { IMPLEMENTATION_PAIRS_BY_REF } from '@/v2019C1/extensions/dataflow/constants/implementation-targets.constants'
+import { readImplementationTargetUuids } from '@/v2019C1/extensions/dataflow/query/read-implementation-target-uuids'
 import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve'
-import { readAttribute } from '@/v2019C1/helpers'
 
 import type { ResetLNodesParams } from './orphan-lnode-bindings.types'
 import type { Scl, Config } from '@/v2019C1/config'
@@ -48,7 +41,7 @@ export async function resetLNodes(
 	params: ResetLNodesParams = {},
 ): Promise<void> {
 	const lnodes = await readLNodes(tx, params)
-	const uuidsByTag = await collectTargetUuids(tx)
+	const uuidsByTag = await readImplementationTargetUuids(tx)
 	const mapped = await resolveMappedLNodes(tx, { lnodes })
 
 	const released: Scl.Ref<'LNode'>[] = []
@@ -101,20 +94,6 @@ async function readReferrers(
 	)
 	const records = await tx.getRecords([...given])
 	return records.filter((record) => record !== undefined)
-}
-
-/** The uuids of every native element an implementation can name, per tag, read once. */
-async function collectTargetUuids(tx: Core.Transaction<Config>): Promise<Map<string, Set<string>>> {
-	const collected = await collectWithAncestry(tx, { select: IED_SECTION_SELECT })
-	const uuidsByTag = new Map<string, Set<string>>()
-	for (const { record } of nativeSectionNodesOf(collected)) {
-		if (!IMPLEMENTATION_TARGET_TAGS.has(record.tagName)) continue
-		const uuids = uuidsByTag.get(record.tagName) ?? new Set<string>()
-		const uuid = readAttribute({ record, name: 'uuid', defaults: 'none' })
-		if (uuid) uuids.add(uuid)
-		uuidsByTag.set(record.tagName, uuids)
-	}
-	return uuidsByTag
 }
 
 /** Whether one of `tagNames` in the document carries `uuid`. */
