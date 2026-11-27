@@ -18,7 +18,9 @@ export type RootEditionParams = {
 	document: GatedDocument['document'] | undefined
 }
 
-/** A document's root as its edition reads: the version it states, `''` when none, and the edition attributes it lacks. */
+/**
+ * A document's root as its edition reads: the version it states, `''` when none, and the edition attributes it lacks.
+ */
 export type RootEdition = {
 	role: 'source' | 'target'
 	version: string

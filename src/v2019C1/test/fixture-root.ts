@@ -11,8 +11,8 @@ import type { QualifiedTag } from 'sax'
  * A document's root element, read from its start tag by a namespace-aware XML parser (the one core imports with): what
  * precedes the root (declaration, processing instructions, comments, document type) skipped, attribute values in either
  * quote, entities decoded, the prefixes resolved through the namespaces the root declares. The reading stops at the
- * root's start tag. `undefined` for a text holding no element; a text not well-formed up to the end of the root's
- * start tag throws the parser's error.
+ * root's start tag. `undefined` for a text holding no element; an error the parser reports up to the end of the root's
+ * start tag (an unquoted value, an unbound prefix, a tag left open) is thrown.
  *
  * @intent read the root element of a fixture's XML text, its attributes and namespaces, without a full parse
  */
@@ -38,7 +38,8 @@ export function readFixtureRoot(params: FixtureXmlParams): FixtureRoot | undefin
 
 /**
  * What a fixture's `SCL` root lacks of the SCL edition, as attributes of its own (unprefixed), one written empty
- * stating nothing (as the store guard reads it): `[]` when it states it whole, `version` among them for a first-edition file. `undefined` for a text with no `SCL` root.
+ * stating nothing (as the store guard reads it): `[]` when it states it whole, `version` among them for a
+ * first-edition file. `undefined` for a text with no `SCL` root.
  *
  * @intent tell what a fixture root lacks of the SCL edition, find a first-edition fixture or one stating its version only
  */
