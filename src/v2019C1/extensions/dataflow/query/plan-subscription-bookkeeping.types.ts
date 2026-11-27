@@ -28,8 +28,8 @@ export type SubscriptionBookkeeping = {
 export type PlanSubscriptionBookkeepingParams = {
 	/** The pre-read state of the call: nothing is read again, nothing kept after it. */
 	context: DataflowContext
-	/** The ExtRefs whose subscription ends. */
-	ending: readonly IedNode<'ExtRef'>[]
+	/** The ExtRefs whose subscription ends, or control blocks removed with their publisher. */
+	ending: readonly (IedNode<'ExtRef'> | ControlBlockNode)[]
 }
 
 /** The ending ExtRefs of one subscriber IED naming one control block. */

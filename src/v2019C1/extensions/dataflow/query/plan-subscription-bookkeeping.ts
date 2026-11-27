@@ -23,6 +23,7 @@ import type {
 	EndedSubscription,
 	PlanSubscriptionBookkeepingParams,
 	SubscriptionBookkeeping,
+	SupervisionOperation,
 } from './plan-subscription-bookkeeping.types'
 import type { Subscriber } from './resolve-registration.types'
 import type { Scl } from '@/v2019C1/config'
@@ -47,11 +48,24 @@ export async function planSubscriptionBookkeeping(
 	const iedSection = await context.iedSection()
 	const byControlBlock = await context.extRefsByControlBlock()
 	const supervisionIndex = await context.supervisionIndex()
-	const endingIds = new Set(ending.map((extRef) => extRef.record.id))
-	const bookkeeping: SubscriptionBookkeeping = { registrations: [], supervisions: [], kept: [] }
+	const endingExtRefs = ending.filter(
+		(node): node is IedNode<'ExtRef'> => node.record.tagName === 'ExtRef',
+	)
+	const endingControlBlocks = new Map(
+		ending
+			.filter(
+				(node): node is ControlBlockNode =>
+					node.record.tagName === 'GSEControl' ||
+					node.record.tagName === 'SampledValueControl' ||
+					node.record.tagName === 'ReportControl',
+			)
+			.map((controlBlock) => [controlBlock.record.id, controlBlock]),
+	)
+	const endingIds = new Set(endingExtRefs.map((extRef) => extRef.record.id))
+	let bookkeeping: SubscriptionBookkeeping = { registrations: [], supervisions: [], kept: [] }
 	const removing = new Map<string, ControlBlockNode>()
 
-	for (const subscription of await endedSubscriptions({ context, ending })) {
+	for (const subscription of await endedSubscriptions({ context, ending: endingExtRefs })) {
 		const { controlBlock, subscriber, extRefs } = subscription
 		const remaining = (byControlBlock.get(controlBlock.record.id) ?? []).filter(
 			(extRef) => extRef.ied.id === subscriber.id && !endingIds.has(extRef.record.id),
@@ -60,6 +74,9 @@ export async function planSubscriptionBookkeeping(
 
 		if (remaining.length === 0) {
 			// a GOOSE / SV subscriber is its IED, a report client the logical node an ending ExtRef sits in
+			const supervision = supervisionIndex.supervisionOf({ controlBlock, subscriber })
+			if (supervision) bookkeeping = withSupervision({ bookkeeping, supervision })
+			if (endingControlBlocks.has(controlBlock.record.id)) continue
 			const nodes = subscribesAsIed(controlBlock)
 				? logicalNodesOf({ iedSection, ied: subscriber })
 				: extRefs
@@ -70,8 +87,6 @@ export async function planSubscriptionBookkeeping(
 					bookkeeping.kept.push({ element: registration.ref, why: 'eng-right-fix' })
 				else removing.set(registration.record.id, controlBlock)
 			}
-			const supervision = supervisionIndex.supervisionOf({ controlBlock, subscriber })
-			if (supervision) bookkeeping.supervisions.push({ dai: supervision.dai, val: supervision.val })
 			continue
 		}
 
@@ -121,7 +136,31 @@ export async function planSubscriptionBookkeeping(
 		bookkeeping.registrations.push(...removed.registrations)
 		bookkeeping.kept.push(...removed.kept)
 	}
+	for (const controlBlock of endingControlBlocks.values()) {
+		const subscribers = new Set(
+			(byControlBlock.get(controlBlock.record.id) ?? []).map((extRef) => extRef.ied.id),
+		)
+		for (const subscriber of subscribers) {
+			const supervision = supervisionIndex.supervisionOf({
+				controlBlock,
+				subscriber: { tagName: 'IED', id: subscriber },
+			})
+			if (supervision) bookkeeping = withSupervision({ bookkeeping, supervision })
+		}
+	}
 	return bookkeeping
+}
+
+function withSupervision(params: {
+	bookkeeping: SubscriptionBookkeeping
+	supervision: SupervisionOperation
+}): SubscriptionBookkeeping {
+	const { bookkeeping, supervision } = params
+	if (bookkeeping.supervisions.some(({ val }) => val.id === supervision.val.id)) return bookkeeping
+	return {
+		...bookkeeping,
+		supervisions: [...bookkeeping.supervisions, supervision],
+	}
 }
 
 /** Whether the IED an element sits in, read from the records above it, has the engineering right `fix`. */

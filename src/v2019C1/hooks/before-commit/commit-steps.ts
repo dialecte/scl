@@ -12,6 +12,7 @@ import {
 	releasedLNodeBindings,
 } from './release-deleted-logical-nodes'
 import { specificationIedsOfCreated } from './specification-ieds-of-created'
+import { subscriptionBookkeeping } from './subscription-bookkeeping'
 import { writeTupleNamesAtCommit } from './tuple-names'
 import { writeTupleReferencesAtCommit } from './tuple-references'
 import { planUuidReferencesAtCommit } from './uuid-references'
@@ -191,7 +192,8 @@ export async function uuidReferences({
 }: CommitStepParams): Promise<CommitStepResult> {
 	const { operations, query, state, collect } = plan
 	const places = state.movePlaces
-	return await planUuidReferencesAtCommit({
+	const subscriptions = await subscriptionBookkeeping({ plan, writes })
+	const references = await planUuidReferencesAtCommit({
 		operations,
 		query,
 		pending: writes.pending,
@@ -199,6 +201,10 @@ export async function uuidReferences({
 		moved: places ? { ids: places.movedBy.keys(), read: places.read } : undefined,
 		collect,
 	})
+	return {
+		...references,
+		operations: [...subscriptions.operations, ...references.operations],
+	}
 }
 
 /**
