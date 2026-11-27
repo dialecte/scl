@@ -1,4 +1,4 @@
-import type { ROOT_OPT_IN_NEEDS } from './given-edition.constants'
+import type { ROOT_OPT_IN_NEEDS, SCL_EDITION_ATTRIBUTES } from './given-edition.constants'
 import type { GatedDocument } from './output-gate.types'
 
 export type AssertGivenEditionsParams = {
@@ -12,7 +12,26 @@ export type AssertGivenEditionsParams = {
 	editionOneRoot: string | undefined
 }
 
-export type RootVersionParams = { document: GatedDocument['document'] | undefined }
+export type RootEditionParams = {
+	/** Names the document in a refusal. */
+	role: 'source' | 'target'
+	document: GatedDocument['document'] | undefined
+}
+
+/** A document's root as its edition reads: the version it states, `''` when none, and the edition attributes it lacks. */
+export type RootEdition = {
+	role: 'source' | 'target'
+	version: string
+	missing: readonly SclEditionAttribute[]
+}
+
+/** An attribute an `SCL` root states its edition by. */
+export type SclEditionAttribute = (typeof SCL_EDITION_ATTRIBUTES)[number]
+
+export type MissingSclEditionParams = {
+	/** Whether the root states the attribute, as an attribute of its own. */
+	states: (name: SclEditionAttribute) => boolean
+}
 
 export type RootOptInReasonParams = {
 	/** The opt-in, as the case names it. */

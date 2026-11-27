@@ -320,7 +320,8 @@ Every given document's root states its SCL edition: a root stating no version is
 `runSclTestCases`, `createSclTestProject` and `openSclDocument` unless the case (or the call) sets `editionOneRoot` with
 the reason it is one on purpose. Build such a root from `XMLNS_SCL_NAMESPACE` (a first-edition file carries no
 eIEC61850-6-100 content), never by removing the edition from `ALL_XMLNS_NAMESPACES`. An opt-in without a reason, or on
-documents that all state their version, is refused.
+documents that all state their version, is refused. A root stating its version states its `revision` and `release` too:
+one stating its version alone, or without one of the two, is refused whatever the case sets.
 
 Every given document carrying the eIEC61850-6-100 namespace (declared on its root or below it) states the extension's
 version on its root, `CURRENT_6_100_VERSION`, the release paired with the SCL edition 2007 C 5. One that does not is

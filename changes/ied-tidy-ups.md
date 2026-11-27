@@ -4,6 +4,7 @@
 
 ### Changed
 
+- The test helpers (`runSclTestCases`, `createSclTestProject`, `openSclDocument`) refuse a given document whose `SCL` root states its version without its `revision` and `release`, whatever the case sets; `editionOneRoot` still opts in a root stating no version.
 - `sax` (`^1.4.3`, the parser `@dialecte/core` already depends on) is a direct dependency: the test helpers read a fixture's root with it.
 
 ### Fixed

@@ -17,7 +17,6 @@ import type {
 	WithoutMovedOutParams,
 	LinkMovesParams,
 	MovedInAdded,
-	PendingMove,
 	ReplaceAddedParams,
 	TreeParentsParams,
 	WriteMovesParams,

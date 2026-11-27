@@ -1,8 +1,10 @@
 import { ROOT_READ } from './fixture-root.constants'
+import { missingSclEditionAttributes } from './given-edition'
 
 import sax from 'sax'
 
 import type { FixtureRoot, FixtureXmlParams } from './fixture-root.types'
+import type { SclEditionAttribute } from './given-edition.types'
 import type { QualifiedTag } from 'sax'
 
 /**
@@ -31,15 +33,19 @@ export function readFixtureRoot(params: FixtureXmlParams): FixtureRoot | undefin
 }
 
 /**
- * Whether a fixture's `SCL` root states no SCL version of its own (an unprefixed `version`): a first-edition file. A
- * text with no `SCL` root states nothing to refuse.
+ * What a fixture's `SCL` root lacks of the SCL edition, as attributes of its own (unprefixed): `[]` when it states it
+ * whole, `version` among them for a first-edition file. `undefined` for a text with no `SCL` root.
  *
- * @intent tell whether an SCL fixture is a first-edition file, its root stating no SCL version
+ * @intent tell what a fixture root lacks of the SCL edition, find a first-edition fixture or one stating its version only
  */
-export function statesNoSclVersion(params: FixtureXmlParams): boolean {
+export function missingSclEdition(params: FixtureXmlParams): SclEditionAttribute[] | undefined {
 	const root = readFixtureRoot(params)
-	if (root?.local !== 'SCL') return false
-	return !root.attributes.some(function isSclVersion(attribute) {
-		return attribute.prefix === '' && attribute.local === 'version'
+	if (root?.local !== 'SCL') return undefined
+	return missingSclEditionAttributes({
+		states: function statesOwn(name) {
+			return root.attributes.some(
+				(attribute) => attribute.prefix === '' && attribute.local === name,
+			)
+		},
 	})
 }

@@ -188,24 +188,24 @@ const SCL_URI = 'http://www.iec.ch/61850/2003/SCL'
 describe('lacksExtensionVersion - a root written in any well-formed way', () => {
 	const testCases: Record<string, { xml: string; expected: boolean }> = {
 		'the extension version before the namespace declaration → lacks nothing': {
-			xml: `<SCL eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1" xmlns:eIEC61850-6-100="${EXTENSION_URI}" xmlns="${SCL_URI}" version="2007"/>`,
+			xml: `<SCL eIEC61850-6-100:version="2019" eIEC61850-6-100:revision="C" eIEC61850-6-100:release="1" xmlns:eIEC61850-6-100="${EXTENSION_URI}" xmlns="${SCL_URI}" version="2007" revision="C" release="5"/>`,
 			expected: false,
 		},
 		'the declaration and the version in single quotes → lacks nothing': {
-			xml: `<SCL xmlns='${SCL_URI}' xmlns:eIEC61850-6-100='${EXTENSION_URI}' eIEC61850-6-100:version='2019' version='2007'/>`,
+			xml: `<SCL xmlns='${SCL_URI}' xmlns:eIEC61850-6-100='${EXTENSION_URI}' eIEC61850-6-100:version='2019' version='2007' revision='C' release='5'/>`,
 			expected: false,
 		},
 		'a comment before the root holding an SCL start tag without the version → the root read, lacks nothing':
 			{
-				xml: `<?xml version="1.0"?><!-- <SCL xmlns:eIEC61850-6-100="${EXTENSION_URI}"> --><SCL xmlns="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" eIEC61850-6-100:version="2019" version="2007"/>`,
+				xml: `<?xml version="1.0"?><!-- <SCL xmlns:eIEC61850-6-100="${EXTENSION_URI}"> --><SCL xmlns="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" eIEC61850-6-100:version="2019" version="2007" revision="C" release="5"/>`,
 				expected: false,
 			},
 		'a > inside an attribute value before the version → lacks nothing': {
-			xml: `<SCL xmlns="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" xmlns:dev="urn:a>b" eIEC61850-6-100:version="2019" version="2007"/>`,
+			xml: `<SCL xmlns="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" xmlns:dev="urn:a>b" eIEC61850-6-100:version="2019" version="2007" revision="C" release="5"/>`,
 			expected: false,
 		},
 		'a prefixed root declaring the extension without its version → lacks it': {
-			xml: `<scl:SCL xmlns:scl="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" version="2007"/>`,
+			xml: `<scl:SCL xmlns:scl="${SCL_URI}" xmlns:eIEC61850-6-100="${EXTENSION_URI}" version="2007" revision="C" release="5"/>`,
 			expected: true,
 		},
 	}

@@ -175,8 +175,13 @@ async function readLabels(params: {
 			? await query.any.getChildrenOfEach(everyContainer, { tagName: 'Label' })
 			: []
 
+	const labelsByContainer = new Map(
+		everyContainer.map(function labelsOfContainer(container, position) {
+			return [container.id, labelsOfContainers[position] ?? []] as const
+		}),
+	)
+
 	let heldPosition = 0
-	let containerPosition = 0
 	const labels: (Record<string, Record<string, string>> | undefined)[] = []
 	for (const record of records) {
 		if (!record) {
@@ -184,8 +189,8 @@ async function readLabels(params: {
 			continue
 		}
 		const entries: LabelEntry[] = []
-		for (let count = 0; count < containers[heldPosition].length; count++) {
-			for (const label of labelsOfContainers[containerPosition++]) {
+		for (const container of containers[heldPosition]) {
+			for (const label of labelsByContainer.get(container.id) ?? []) {
 				const attributes = readRecordAttributes({ record: label })
 				const lang = (attributes['lang'] ?? '').toLowerCase()
 				const text = (label.value ?? '').trim()

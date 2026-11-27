@@ -22,7 +22,6 @@ import { DATA_SET_SENDER_TAGS } from '@/v2019C1/hooks/shared/data-set-entry.cons
 
 import type { LNodeReads, SideEffectReadParams } from './removal-side-effects.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { TypeReads } from '@/v2019C1/extensions/data-model/query/unused-types.types'
 import type {
 	DecisionGroup,
 	DiffNode,
