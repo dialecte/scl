@@ -13,7 +13,7 @@ import type {
 /**
  * Whether a document carries the eIEC61850-6-100 namespace (declared on its root or below it) while its `SCL` root states
  * not the extension's version (`<prefix>:version`, the prefix the root binds to the namespace). A document not carrying
- * the namespace, or with no `SCL` root, lacks nothing. Reads the XML text only: the root's start tag as XML reads it
+ * the namespace, or with no `SCL` root, lacks nothing. Reads the XML text only: the root's start tag, parsed
  * (`readFixtureRoot`).
  *
  * @intent tell whether an SCL fixture carrying the 6-100 extension states its version on its root
