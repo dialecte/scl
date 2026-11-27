@@ -1,3 +1,4 @@
+import { toDialecteError } from '@dialecte/core'
 import { describe, expect } from 'vitest'
 
 import { ALL_XMLNS_NAMESPACES, CUSTOM_RECORD_ID_ATTRIBUTE, runSclTestCases } from '@/v2019C1/test'
@@ -86,6 +87,61 @@ describe('extract IED as IID - the project the IED goes back to is the document 
 			})
 		})
 		expect(result).toMatchObject({ fileName: 'R.iid' })
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act })
+})
+
+describe('extract IED as IID - a project recorded as source without a Header id', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		'IED holding no owner, the project as provenance holding no Header -> ASSERTION_FAILED, nothing written':
+			{
+				sourceXml: stagingXml,
+				targetXml: emptyTarget,
+				provenance: {
+					fileName: 'project.scd',
+					xml: /* xml */ `<SCL ${ns} ${id}="project-root"/>`,
+				},
+				expectedQueries: ['/default:SCL[count(*)=0]'],
+			},
+		'IED holding no owner, the project as provenance holding a Header with an empty id -> ASSERTION_FAILED, nothing written':
+			{
+				sourceXml: stagingXml,
+				targetXml: emptyTarget,
+				provenance: {
+					fileName: 'project.scd',
+					xml: /* xml */ `
+						<SCL ${ns} ${id}="project-root">
+							<Header id="" fileType="SCD" uuid="10000000-0000-4000-8000-000000000009" version="3" revision="C"/>
+						</SCL>
+					`,
+				},
+				expectedQueries: ['/default:SCL[count(*)=0]'],
+			},
+	}
+
+	async function act({
+		project,
+		source,
+		target,
+		testCase,
+	}: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		if (!target) throw new Error('target required')
+		const provenance = await importProvenance({ project, testCase })
+		const refused = await target
+			.transaction(async function extract(tx) {
+				return tx.lifecycle.extract.ied({
+					...IID,
+					sourceQuery: source.query,
+					provenanceQuery: provenance.query,
+				})
+			})
+			.then(
+				() => undefined,
+				(error: unknown) => error,
+			)
+		expect(toDialecteError(refused)?.key).toBe('ASSERTION_FAILED')
 		return { assertOn: 'target' }
 	}
 

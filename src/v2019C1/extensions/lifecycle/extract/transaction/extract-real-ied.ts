@@ -10,8 +10,10 @@ import { readIedSourceFileType } from './read-ied-source-file-type'
 import { refuseTargetNotEmpty } from './refuse-ied-export'
 
 import { throwDialecteError } from '@dialecte/core'
+import { invariant } from '@dialecte/core/utils'
 
 import { SCL_ERRORS } from '@/v2019C1/errors'
+import { readProcessSection } from '@/v2019C1/extensions/dataflow/query/process-section'
 import { startFile } from '@/v2019C1/extensions/history/transaction/start-file'
 import { finalizeClonedIdentity } from '@/v2019C1/extensions/lifecycle/cross-cutting/finalize-cloned-identity'
 import { withProgressPhases } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases'
@@ -38,6 +40,7 @@ import {
 import { readLinkedSections } from '@/v2019C1/extensions/lifecycle/linked-sections/read'
 import { deep } from '@/v2019C1/extensions/lifecycle/transplant/transaction/deep'
 import { isNativeRecord } from '@/v2019C1/extensions/reference/query/find/is-native-record'
+import { resolveMappedLNodes } from '@/v2019C1/extensions/reference/query/resolve/resolve-mapped-lnodes'
 import { writeProvenance } from '@/v2019C1/extensions/reference/transaction/write-provenance'
 import { readAttribute } from '@/v2019C1/helpers'
 
@@ -55,10 +58,7 @@ import type {
 	EnterPhase,
 	IedExtractProgressPhaseKey,
 } from '@/v2019C1/extensions/lifecycle/cross-cutting/progress-phases.types'
-import type {
-	IedProcessPlan,
-	IedProcessSource,
-} from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
+import type { IedProcessPlan } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type { ReferencePolicy } from '@/v2019C1/extensions/lifecycle/layers/reference-closure/reference-closure.types'
 import type * as Core from '@dialecte/core'
 
@@ -256,9 +256,8 @@ async function readProcessPart(
 ): Promise<{ process: IedProcessPlan | undefined; warnings: ExtractWarning[] }> {
 	const { iedRef, includeSubstation, fileType } = params.params
 	const listed = REAL_IED_EXPORT_FILES[fileType].listsBoundLNodes
-	if (!includeSubstation && !listed) return { process: undefined, warnings: [] }
-	const source = await readIedProcessSource(query, { iedRef })
 	if (includeSubstation) {
+		const source = await readIedProcessSource(query, { iedRef })
 		const process = planIedProcess({
 			source,
 			iedRef,
@@ -267,18 +266,25 @@ async function readProcessPart(
 		})
 		return { process, warnings: [...process.warnings] }
 	}
-	return { process: undefined, warnings: boundLNodesWarnings({ source, iedRef }) }
+	if (!listed) return { process: undefined, warnings: [] }
+	return { process: undefined, warnings: await readBoundLNodesWarnings(query, { iedRef }) }
 }
 
-/** The LNodes of the substation part the IED implements, the file not holding them: one warning naming them, none if none. */
-function boundLNodesWarnings(params: {
-	source: IedProcessSource
-	iedRef: Scl.Ref<'IED'>
-}): ExtractWarning[] {
-	const { source, iedRef } = params
+/**
+ * The LNodes of the substation part the IED implements, the file not holding them: one warning naming them, none if none.
+ * Reads the process section and what implements its LNodes, nothing of the IED's own content.
+ */
+async function readBoundLNodesWarnings(
+	query: Core.Query<Config>,
+	params: { iedRef: Scl.Ref<'IED'> },
+): Promise<ExtractWarning[]> {
+	const { iedRef } = params
+	const section = await readProcessSection(query)
+	const lnodes = [...section.lnodes.values()].map((lnode) => lnode.ref)
+	const mapped = await resolveMappedLNodes(query, { lnodes })
 	const { ids } = selectProcessLNodes({
-		index: indexProcessSection(source.section),
-		mapped: source.mapped,
+		index: indexProcessSection(section),
+		mapped,
 		iedRef,
 		iedLeaveOut: new Set(),
 	})
@@ -305,7 +311,12 @@ async function readWrittenOwner(
 	const ied = await query.getRecord(iedRef)
 	if (ied && readAttribute({ record: ied, name: 'owner', defaults: 'none' })) return undefined
 	const [header] = await provenanceQuery.getRecordsByTagName('Header')
-	return header ? readAttribute({ record: header, name: 'id', defaults: 'none' }) : undefined
+	const projectId = header && readAttribute({ record: header, name: 'id', defaults: 'none' })
+	invariant(projectId, {
+		key: 'ASSERTION_FAILED',
+		detail: `extract.ied: the project recorded as the source of an ${fileType} names itself in no Header id, the IED's owner cannot be written`,
+	})
+	return projectId
 }
 
 /**

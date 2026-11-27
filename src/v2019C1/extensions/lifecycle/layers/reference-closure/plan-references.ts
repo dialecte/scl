@@ -36,8 +36,6 @@ import type {
 	Landing,
 } from './reference-closure.types'
 import type { Config, Scl } from '@/v2019C1/config'
-import type { ExtractWarning } from '@/v2019C1/extensions/lifecycle/extract/transaction/extract.types'
-import type { RecordEdit } from '@/v2019C1/extensions/lifecycle/layers/ied/ied-process.types'
 import type * as Core from '@dialecte/core'
 
 /**

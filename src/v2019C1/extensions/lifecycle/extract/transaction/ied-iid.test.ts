@@ -4,6 +4,7 @@ import RealIedBesideAnotherXml from './fixtures/cid-real-ied-beside-another.xml?
 import RealIedWithClientsAndSupervisionXml from './fixtures/cid-real-ied-with-clients-and-supervision.xml?raw'
 import RealIedWithInputsBoundElsewhereXml from './fixtures/cid-real-ied-with-inputs-bound-elsewhere.xml?raw'
 import RealIedWithSubstationPartXml from './fixtures/cid-real-ied-with-substation-part.xml?raw'
+import RealIedBesideAnUnassignedLNodeXml from './fixtures/iid-real-ied-beside-an-unassigned-lnode.xml?raw'
 import RealIedOwnedElsewhereXml from './fixtures/iid-real-ied-owned-elsewhere.xml?raw'
 
 import { describe, expect } from 'vitest'
@@ -136,6 +137,23 @@ describe('extract IED as IID - the IED as the project holds it, alone in the fil
 					'//default:ConnectedAP[@iedName="Other"]',
 				],
 			},
+		// Selected's LN0 holds OutSet; the templates hold the types of Selected, of Other (GGIO_Type, Ind_Type) and Unused_Type
+		'IED beside Other with types of its own and of Other -> its data set kept, only the types its logical nodes use':
+			{
+				sourceXml: RealIedBesideAnotherXml,
+				targetXml: emptyTarget,
+				expectedQueries: [
+					`${selected}//default:LN0/default:DataSet[@name="OutSet"]/default:FCDA[@lnClass="PTOC"][@doName="Op"]`,
+					'/default:SCL/default:DataTypeTemplates/default:LNodeType[@id="LLN0_Type"]',
+					'/default:SCL/default:DataTypeTemplates/default:LNodeType[@id="PTOC_Type"]',
+					'/default:SCL/default:DataTypeTemplates/default:DOType[@id="Status_Type"]',
+				],
+				unexpectedQueries: [
+					'//default:LNodeType[@id="GGIO_Type"]',
+					'//default:LNodeType[@id="Unused_Type"]',
+					'//default:DOType[@id="Ind_Type"]',
+				],
+			},
 		// Selected holds no MinRequestedSCDFiles
 		'IED with no list of minimum project files -> none written': {
 			sourceXml: RealIedWithInputsBoundElsewhereXml,
@@ -258,6 +276,58 @@ describe('extract IED as IID - the LNodes of the substation part the IED impleme
 	runSclTestCases.withExport({ testCases, act })
 })
 
+describe('extract IED as IID - the warnings, each once and nothing else', () => {
+	const testCases: SclTest.TestCases<TestCase> = {
+		// Selected's LN0 and PTOC hold nine inputs and outputs bound to Other or Ghost, and inputs relative to itself, bound to itself or not bound
+		'every reference of Selected to an IED the file does not hold -> one warning each, nothing else':
+			{
+				sourceXml: RealIedWithInputsBoundElsewhereXml,
+				targetXml: emptyTarget,
+				expectedQueries: [`${selected}`],
+				expectedWarnings: [
+					inputBoundOutside('extref-SystemInput', 'Other'),
+					inputBoundOutside('extref-BlockIn', 'Other'),
+					inputBoundOutside('extref-SystemPoll', 'Other'),
+					inputBoundOutside('extref-SiblingA', 'Other'),
+					inputBoundOutside('extref-SiblingB', 'Other'),
+					inputBoundOutside('extref-GhostIn', 'Ghost'),
+					inputBoundOutside('extref-NoDescIn', 'Other'),
+					{
+						code: 'input-bound-outside',
+						source: { tagName: 'ExtCtrl', id: 'extctrl-TripOut' },
+						iedName: 'Other',
+					},
+					{
+						code: 'input-bound-outside',
+						source: { tagName: 'ExtCtrl', id: 'extctrl-OutputWithoutAddress' },
+						iedName: 'Other',
+					},
+				],
+			},
+		// Bay B1 holds one LNode assigned to no IED; Selected implements none
+		'IED implementing no LNode of the substation part -> nothing written of it, nothing listed': {
+			sourceXml: RealIedBesideAnUnassignedLNodeXml,
+			targetXml: emptyTarget,
+			expectedQueries: [`${selected}`],
+			unexpectedQueries: ['/default:SCL/default:Substation', '//default:LNode'],
+			expectedWarnings: [],
+		},
+	}
+
+	async function actExactWarnings(params: SclTest.ActParams<TestCase>): Promise<SclTest.ActResult> {
+		const { source, target, testCase } = params
+		if (!target) throw new Error('target required')
+		const { warnings } = await target.transaction(async function exportIid(tx) {
+			return tx.lifecycle.extract.ied({ ...IID, sourceQuery: source.query })
+		})
+		expect(warnings).toHaveLength(testCase.expectedWarnings?.length ?? 0)
+		for (const warning of testCase.expectedWarnings ?? []) expect(warnings).toContainEqual(warning)
+		return { assertOn: 'target' }
+	}
+
+	runSclTestCases.withExport({ testCases, act: actExactWarnings })
+})
+
 async function act({
 	source,
 	target,
@@ -269,6 +339,7 @@ async function act({
 	})
 	await expect(exported).resolves.toMatchObject({ fileName: 'Selected.iid' })
 	const { warnings } = await exported
+	expect(new Set(warnings.map((warning) => JSON.stringify(warning))).size).toBe(warnings.length)
 	for (const warning of testCase.expectedWarnings ?? []) {
 		expect(warnings).toContainEqual(warning)
 	}
