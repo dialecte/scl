@@ -1,9 +1,5 @@
-import {
-	FIRST_EDITION_FIXTURE_FILES,
-	SCL_FIXTURE_FILES,
-	SCL_ROOT_START_TAG,
-	SCL_ROOT_VERSION_ATTRIBUTE,
-} from './fixture-files-edition.constants'
+import { FIRST_EDITION_FIXTURE_FILES, SCL_FIXTURE_FILES } from './fixture-files-edition.constants'
+import { statesNoSclVersion } from './fixture-root'
 
 import { describe, expect, it } from 'vitest'
 
@@ -12,10 +8,7 @@ import { describe, expect, it } from 'vitest'
 describe('the SCL fixture files of the package', () => {
 	it('each root states its SCL version, but the first-edition files listed with their reason', () => {
 		const withoutVersion = Object.entries(SCL_FIXTURE_FILES)
-			.filter(([, xml]) => {
-				const root = SCL_ROOT_START_TAG.exec(xml)?.[0]
-				return root !== undefined && !SCL_ROOT_VERSION_ATTRIBUTE.test(root)
-			})
+			.filter(([, xml]) => statesNoSclVersion({ xml }))
 			.map(([path]) => path)
 		expect(withoutVersion).toEqual(Object.keys(FIRST_EDITION_FIXTURE_FILES))
 	})

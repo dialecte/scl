@@ -6,6 +6,7 @@ export type {
 	ResolvedReference,
 	ResolveMappedDataParams,
 	ResolvedTuplePair,
+	ResolveTuplesParams,
 	TupleReferenceDraft,
 	TupleToResolve,
 } from './query'

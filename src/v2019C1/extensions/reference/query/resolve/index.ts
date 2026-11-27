@@ -14,4 +14,9 @@ export type {
 export { resolveMappedData } from './resolve-mapped-data'
 export type { MappedData, ResolveMappedDataParams } from './resolve-mapped-data.types'
 export { resolveTuple, resolveTuples } from './resolve-tuple'
-export type { ResolvedTuplePair, TupleReferenceDraft, TupleToResolve } from './resolve-tuple.types'
+export type {
+	ResolvedTuplePair,
+	ResolveTuplesParams,
+	TupleReferenceDraft,
+	TupleToResolve,
+} from './resolve-tuple.types'

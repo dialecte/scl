@@ -17,12 +17,6 @@ export const SCL_FIXTURE_FILES: Readonly<Record<string, string>> = import.meta.g
 /** The fixture files that are first-edition files on purpose, their root stating no SCL version, each with why. */
 export const FIRST_EDITION_FIXTURE_FILES: Readonly<Record<string, string>> = {}
 
-/** The start tag of an SCL root, as a fixture file writes it. */
-export const SCL_ROOT_START_TAG = /<SCL\b[^>]*>/
-
-/** A `version` attribute of the SCL root itself, not one of a prefixed namespace (`eIEC61850-6-100:version`). */
-export const SCL_ROOT_VERSION_ATTRIBUTE = /\sversion="/
-
 /**
  * The fixture files whose root carries the eIEC61850-6-100 namespace without stating its version on purpose, each with
  * why.

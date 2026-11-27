@@ -925,19 +925,19 @@
 				"find the element an ExtRef or FCDA names by its names",
 				"resolve a tuple reference's names to a uuid"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:31"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:36"
 		},
 		{
 			"path": "doc.query.reference.resolveTuples",
 			"root": "q",
 			"otherRoutes": [],
-			"signature": "(params: { references: readonly TupleToResolve[]; }) => Promise<ResolvedTuplePair[][]>",
+			"signature": "(params: ResolveTuplesParams) => Promise<ResolvedTuplePair[][]>",
 			"summary": "The answer of `resolveTuple` for each of `references`, in input order (a parent naming nothing answers nothing).",
 			"intents": [
 				"bind many references created by names",
 				"resolve the names of many tuple references to uuids in one pass"
 			],
-			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:47"
+			"declaredAt": "src/v2019C1/extensions/reference/query/resolve/resolve-tuple.ts:52"
 		},
 		{
 			"path": "doc.query.signature.elementSignature",

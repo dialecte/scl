@@ -16,3 +16,6 @@ export type ResolvedTuplePair = {
 
 /** A tuple reference about to be written, and the element it will sit in. */
 export type TupleToResolve = { reference: TupleReferenceDraft; parent: Scl.Ref<Scl.ElementsOf> }
+
+/** The references `resolveTuples` resolves, each with the element it will sit in: answered in input order. */
+export type ResolveTuplesParams = { references: readonly TupleToResolve[] }
